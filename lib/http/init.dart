@@ -145,31 +145,39 @@ class Request {
       enableSystemProxy = false;
     }
 
+    HttpClient createHttpClient() {
+      final client = HttpClient()
+        ..idleTimeout = const Duration(seconds: 15)
+        ..autoUncompress = false; // Http2Adapter没有自动解压, 统一行为
+      if (enableSystemProxy) {
+        client.findProxy = (_) => 'PROXY $systemProxyHost:$systemProxyPort';
+      }
+      if (Pref.badCertificateCallback) {
+        client.badCertificateCallback = (cert, host, port) => true;
+      }
+      return client;
+    }
+
     final http11Adapter = IOHttpClientAdapter(
-      createHttpClient: enableSystemProxy
-          ? () => HttpClient()
-              ..idleTimeout = const Duration(seconds: 15)
-              ..autoUncompress = false
-              ..findProxy = ((_) => 'PROXY $systemProxyHost:$systemProxyPort')
-              ..badCertificateCallback = (cert, host, port) => true
-          : () => HttpClient()
-              ..idleTimeout = const Duration(seconds: 15)
-              ..autoUncompress = false, // Http2Adapter没有自动解压, 统一行为
+      createHttpClient: createHttpClient,
     );
 
     final connectionManager = _enableHttp2
         ? ConnectionManager(
             idleTimeout: const Duration(seconds: 15),
-            onClientCreate: enableSystemProxy
-                ? (_, config) => config
-                    ..proxy = Uri(
-                      scheme: 'http',
-                      host: systemProxyHost,
-                      port: systemProxyPort,
-                    )
-                    ..onBadCertificate = (_) => true
-                : Pref.badCertificateCallback
-                ? (_, config) => config.onBadCertificate = (_) => true
+            onClientCreate: enableSystemProxy || Pref.badCertificateCallback
+                ? (_, config) {
+                    if (enableSystemProxy) {
+                      config.proxy = Uri(
+                        scheme: 'http',
+                        host: systemProxyHost,
+                        port: systemProxyPort,
+                      );
+                    }
+                    if (Pref.badCertificateCallback) {
+                      config.onBadCertificate = (_) => true;
+                    }
+                  }
                 : null,
           )
         : null;
@@ -331,9 +339,7 @@ class Request {
     } on DioException catch (e) {
       // if (kDebugMode) debugPrint('downloadFile error: $e');
       return Response(
-        data: {
-          'message': await AccountManager.dioError(e),
-        },
+        data: {'message': await AccountManager.dioError(e)},
         statusCode: e.response?.statusCode ?? -1,
         requestOptions: e.requestOptions,
       );

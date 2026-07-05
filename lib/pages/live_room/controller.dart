@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:PiliPlus/common/widgets/in_app_mini_player.dart';
 import 'package:PiliPlus/common/widgets/dialog/report.dart';
 import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
 import 'package:PiliPlus/http/live.dart';
@@ -53,9 +54,7 @@ class LiveRoomController extends GetxController {
   int roomId = Get.arguments;
   int? ruid;
   DanmakuController<DanmakuExtra>? danmakuController;
-  final plPlayerController = PlPlayerController.getInstance(
-    isLive: true,
-  );
+  final plPlayerController = PlPlayerController.getInstance(isLive: true);
 
   final isLoaded = false.obs;
   final roomInfoH5 = Rxn<RoomInfoH5Data>();
@@ -92,10 +91,7 @@ class LiveRoomController extends GetxController {
     }
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 12,
-        color: Colors.white,
-      ),
+      style: const TextStyle(fontSize: 12, color: Colors.white),
     );
   });
 
@@ -140,10 +136,7 @@ class LiveRoomController extends GetxController {
     if (watchedShow.value case final watchedShow?) {
       return Text(
         watchedShow,
-        style: const TextStyle(
-          fontSize: 12,
-          color: Colors.white,
-        ),
+        style: const TextStyle(fontSize: 12, color: Colors.white),
       );
     }
     return const SizedBox.shrink();
@@ -180,6 +173,34 @@ class LiveRoomController extends GetxController {
       isVertical: isPortrait.value,
       autoFullScreenFlag: autoFullScreenFlag,
     );
+  }
+
+  Future<void> openInAppMiniPlayer() async {
+    final currentRoomId = roomId;
+    final success = await InAppMiniPlayerService.instance.show(
+      sourceController: plPlayerController,
+      title: title.value.isEmpty ? '直播间 $currentRoomId' : title.value,
+      isLive: true,
+      onOpenSource: (_) async {
+        await Get.toNamed(
+          '/liveRoom',
+          arguments: currentRoomId,
+          preventDuplicates: false,
+        );
+      },
+    );
+
+    if (!success) {
+      return;
+    }
+
+    if (plPlayerController.controlsLock.value) {
+      plPlayerController.onLockControl(false);
+    }
+    if (plPlayerController.isFullScreen.value) {
+      await plPlayerController.triggerFullScreen(status: false);
+    }
+    SmartDialog.showToast('已转入应用内小窗');
   }
 
   Future<void> queryLiveUrl({bool autoFullScreenFlag = false}) async {
@@ -275,10 +296,7 @@ class LiveRoomController extends GetxController {
     // 以服务端返回的码率为准
     currentQn = item.currentQn;
     acceptQnList = item.acceptQn.map((e) {
-      return (
-        code: e,
-        desc: LiveQuality.fromCode(e)?.desc ?? e.toString(),
-      );
+      return (code: e, desc: LiveQuality.fromCode(e)?.desc ?? e.toString());
     }).toList();
     currentQnDesc.value =
         LiveQuality.fromCode(currentQn)?.desc ?? currentQn.toString();
@@ -331,9 +349,7 @@ class LiveRoomController extends GetxController {
     EasyThrottle.throttle(
       'liveDm',
       const Duration(milliseconds: 500),
-      () => WidgetsBinding.instance.addPostFrameCallback(
-        _scrollToBottom,
-      ),
+      () => WidgetsBinding.instance.addPostFrameCallback(_scrollToBottom),
     );
   }
 
@@ -529,10 +545,7 @@ class LiveRoomController extends GetxController {
           Owner? reply;
           final replyMid = extra['reply_mid'];
           if (replyMid != null && replyMid != 0) {
-            reply = Owner(
-              mid: replyMid,
-              name: extra['reply_uname'],
-            );
+            reply = Owner(mid: replyMid, name: extra['reply_uname']);
           }
           addDm(
             DanmakuMsg(
@@ -626,10 +639,7 @@ class LiveRoomController extends GetxController {
   }
 
   void onLikeTapUp([_]) {
-    likeClickTimer ??= Timer(
-      const Duration(milliseconds: 800),
-      onLike,
-    );
+    likeClickTimer ??= Timer(const Duration(milliseconds: 800), onLike);
   }
 
   Future<void> onLike() async {

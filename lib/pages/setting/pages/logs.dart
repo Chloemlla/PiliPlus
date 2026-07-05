@@ -6,6 +6,7 @@ import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:PiliPlus/services/logger.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
+import 'package:PiliPlus/utils/log_redactor.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
@@ -75,7 +76,7 @@ class _LogsPageState extends State<LogsPage> {
 
   void copyLogs() {
     Utils.copyText(
-      '```\n${logsContent.join('\n\n')}```',
+      LogRedactor.redactText('```\n${logsContent.join('\n\n')}```'),
       needToast: false,
     );
     if (mounted) {
@@ -135,19 +136,13 @@ class _LogsPageState extends State<LogsPage> {
                 },
                 child: Text('${enableLog ? '关闭' : '开启'}日志'),
               ),
-              PopupMenuItem(
-                onTap: copyLogs,
-                child: const Text('复制日志'),
-              ),
+              PopupMenuItem(onTap: copyLogs, child: const Text('复制日志')),
               PopupMenuItem(
                 onTap: () =>
                     PageUtils.launchURL('${Constants.sourceCodeUrl}/issues'),
                 child: const Text('错误反馈'),
               ),
-              PopupMenuItem(
-                onTap: clearLogs,
-                child: const Text('清空日志'),
-              ),
+              PopupMenuItem(onTap: clearLogs, child: const Text('清空日志')),
             ],
           ),
           const SizedBox(width: 6),
@@ -196,11 +191,7 @@ class _InfoCard extends StatelessWidget {
 
   const _InfoCard({required this.info});
 
-  Widget _buildMapSection(
-    Color color,
-    String title,
-    Map<String, dynamic> map,
-  ) {
+  Widget _buildMapSection(Color color, String title, Map<String, dynamic> map) {
     if (map.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -222,9 +213,7 @@ class _InfoCard extends StatelessWidget {
                   text: '• ${entry.key}: ',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
-                TextSpan(
-                  text: entry.value.toString(),
-                ),
+                TextSpan(text: entry.value.toString()),
               ],
             ),
           ),
@@ -240,11 +229,7 @@ class _InfoCard extends StatelessWidget {
       Row(
         spacing: 8,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 22,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.info_outline, size: 22, color: colorScheme.primary),
           const Expanded(
             child: Text(
               '相关信息',
@@ -257,9 +242,7 @@ class _InfoCard extends StatelessWidget {
             size: 34,
             iconSize: 22,
             tooltip: info.isExpanded ? '收起' : '展开',
-            icon: Icon(
-              info.isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
+            icon: Icon(info.isExpanded ? Icons.expand_less : Icons.expand_more),
             onPressed: () {
               info.isExpanded = !info.isExpanded;
               (context as Element).markNeedsBuild();
@@ -320,7 +303,10 @@ class _ReportCard extends StatelessWidget {
             iconSize: 22,
             tooltip: '复制',
             onPressed: () {
-              Utils.copyText('```\n$report```', needToast: false);
+              Utils.copyText(
+                LogRedactor.redactText('```\n$report```'),
+                needToast: false,
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('已将 $dateTime 复制至剪贴板'),
@@ -418,10 +404,7 @@ Widget _card(List<Widget> contents) {
   return Card(
     child: Padding(
       padding: const .all(12),
-      child: Column(
-        crossAxisAlignment: .stretch,
-        children: contents,
-      ),
+      child: Column(crossAxisAlignment: .stretch, children: contents),
     ),
   );
 }

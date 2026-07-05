@@ -33,13 +33,25 @@ abstract final class Accounts {
     );
   }
 
-  static Future<void> refresh() {
-    for (final a in account.values) {
+  static Future<void> refresh() async {
+    for (int i = 0; i < AccountType.values.length; i++) {
+      accountMode[i] = AnonymousAccount();
+    }
+    final invalidKeys = <dynamic>[];
+    for (final entry in account.toMap().entries) {
+      final a = entry.value;
+      if (!a.shouldKeep) {
+        invalidKeys.add(entry.key);
+        continue;
+      }
       for (final t in a.type) {
         accountMode[t.index] = a;
       }
     }
-    return Future.wait(
+    if (invalidKeys.isNotEmpty) {
+      await account.deleteAll(invalidKeys);
+    }
+    await Future.wait(
       (accountMode.toSet()..removeWhere((i) => i.activated)).map(
         Request.buvidActive,
       ),

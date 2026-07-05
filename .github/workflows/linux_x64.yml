@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
 
@@ -41,7 +41,7 @@ jobs:
         shell: bash
 
       - name: Setup flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           channel: stable
           flutter-version-file: pubspec.yaml
@@ -185,9 +185,12 @@ jobs:
         shell: bash
 
       - name: Package AppImage
+        env:
+          APPIMAGETOOL_SHA256: a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0
         run: |
           printf "下载 appimagetool...\n"
           wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          printf '%s  appimagetool-x86_64.AppImage\n' "$APPIMAGETOOL_SHA256" | sha256sum -c -
           chmod +x appimagetool-x86_64.AppImage
 
           printf "建立 AppDir 目录结构...\n"
@@ -229,7 +232,7 @@ jobs:
 
       - name: Release
         if: ${{ github.event.inputs.tag != '' }}
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           tag_name: ${{ github.event.inputs.tag }}
           name: ${{ github.event.inputs.tag }}
@@ -240,28 +243,28 @@ jobs:
             PiliPlus_linux_*.AppImage
 
       - name: Upload linux targz package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Linux_targz_amd64_packege
           path: PiliPlus_linux_*.tar.gz
 
       - name: Upload linux deb package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Linux_deb_amd64_package
           path: PiliPlus_linux_*.deb
 
       - name: Upload linux rpm package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Linux_rpm_amd64_package
           path: PiliPlus_linux_*.rpm
 
       - name: Upload linux AppImage package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Linux_AppImage_amd64_package

@@ -10,6 +10,7 @@ import 'package:PiliPlus/utils/accounts/account_type_adapter.dart';
 import 'package:PiliPlus/utils/accounts/cookie_jar_adapter.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/set_int_adapter.dart';
+import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:hive_ce/hive.dart';
@@ -79,7 +80,7 @@ abstract final class GStorage {
 
   static String exportAllSettings() {
     return Utils.jsonEncoder.convert({
-      setting.name: setting.toMap(),
+      setting.name: sanitizeSettingsForExport(setting.toMap()),
       video.name: video.toMap(),
     });
   }
@@ -87,14 +88,46 @@ abstract final class GStorage {
   static Future<void> importAllSettings(String data) =>
       importAllJsonSettings(jsonDecode(data));
 
-  static Future<List<void>> importAllJsonSettings(
-    Map<String, dynamic> map,
-  ) {
-    return Future.wait([
-      setting.clear().then((_) => setting.putAll(map[setting.name])),
-      video.clear().then((_) => video.putAll(map[video.name])),
-    ]);
+  static Future<void> importAllJsonSettings(Map<String, dynamic> map) async {
+    final settingData = validateSettingsSection(map, setting.name);
+    final videoData = validateSettingsSection(map, video.name);
+    if (!settingData.containsKey(SettingBoxKey.webdavPassword)) {
+      final currentPassword = setting.get(SettingBoxKey.webdavPassword);
+      if (currentPassword != null) {
+        settingData[SettingBoxKey.webdavPassword] = currentPassword;
+      }
+    }
+    final settingSnapshot = setting.toMap();
+    final videoSnapshot = video.toMap();
+
+    try {
+      await setting.clear();
+      await setting.putAll(settingData);
+      await video.clear();
+      await video.putAll(videoData);
+    } catch (_) {
+      await setting.clear();
+      await setting.putAll(settingSnapshot);
+      await video.clear();
+      await video.putAll(videoSnapshot);
+      rethrow;
+    }
   }
+
+  static Map<dynamic, dynamic> validateSettingsSection(
+    Map<String, dynamic> map,
+    String boxName,
+  ) {
+    final section = map[boxName];
+    if (section is! Map) {
+      throw FormatException('Invalid settings backup: missing $boxName');
+    }
+    return Map<dynamic, dynamic>.from(section);
+  }
+
+  static Map<dynamic, dynamic> sanitizeSettingsForExport(
+    Map<dynamic, dynamic> settings,
+  ) => Map<dynamic, dynamic>.of(settings)..remove(SettingBoxKey.webdavPassword);
 
   static void regAdapter() {
     Hive

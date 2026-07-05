@@ -41,7 +41,7 @@ dependencies:
     git:
       url: https://github.com/bggRGjQaUbCoE/audio_service.git
       path: audio_service
-      ref: main
+      ref: 81cf56d5a8b8e9c8aa5a4c9396aebe094e09622f
   audio_session: ^0.2.2
   battery_plus: ^7.0.0
   brotli: ^0.6.0
@@ -49,21 +49,21 @@ dependencies:
     git:
       url: https://github.com/My-Responsitories/flutter_cached_network_image_ce.git
       path: cached_network_image
-      ref: develop
+      ref: 6ad91e9bf71254803e222b7d254751576f2f6d7b
   canvas_danmaku:
     git:
       url: https://github.com/bggRGjQaUbCoE/canvas_danmaku.git
-      ref: main
+      ref: 697d4516df2fc3ba7417c7ce9aba079d34ba13e5
   catcher_2:
     git:
       url: https://github.com/My-Responsitories/catcher_2.git
-      ref: dev
+      ref: 9138d8d2aeefc564efd2f35fde3f54ad1b7e89a7
   characters: ^1.4.1
   chat_bottom_container:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_chat_packages.git
       path: packages/chat_bottom_container
-      ref: dev
+      ref: 227fe87aeedcd53573b17d6a6e5c08834fbc4e45
   collection: ^1.19.1
   connectivity_plus: ^7.1.1
   cookie_jar: ^4.0.8
@@ -71,7 +71,7 @@ dependencies:
   desktop_webview_window:
     git:
       url: https://github.com/Predidit/linux_webview_window
-      ref: main
+      ref: b429f8ba6b8a99cd0f7eb5fe8d1621f325635c3d
   device_info_plus: ^13.1.0
   dio: ^5.9.1
   dio_http2_adapter: ^2.7.1
@@ -83,11 +83,11 @@ dependencies:
   extended_nested_scroll_view:
     git:
       url: https://github.com/bggRGjQaUbCoE/extended_nested_scroll_view.git
-      ref: mod
+      ref: 161cd202c20bf0ba2394e3a86381d58864dc9e4e
   file_picker:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_file_picker.git
-      ref: dev
+      ref: 02eb0aede6ca2278bea54eb5cc9ec520bf8165fc
   fixnum: ^1.1.1
   fl_chart: ^1.0.0
   flex_seed_scheme: ^4.0.1
@@ -97,21 +97,21 @@ dependencies:
   flutter_smart_dialog:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_smart_dialog.git
-      ref: main
+      ref: 1dbede0ee22f161ec2c928e1e82f0ae9339a097d
   flutter_sortable_wrap:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_sortable_wrap.git
-      ref: master
+      ref: ed2d47c7a8cc0d218bc322ab770fd19c0b56a863
   flutter_svg: ^2.0.14
   flutter_volume_controller: ^2.0.0
   font_awesome_flutter:
     git:
       url: https://github.com/bggRGjQaUbCoE/font_awesome_flutter.git
-      ref: v10.9.0
+      ref: cf4a19ece5cb296d73d90f0d73106f779c85fa26
   get:
     git:
       url: https://github.com/bggRGjQaUbCoE/getx.git
-      ref: version_4.7.2
+      ref: 388fcb22ef24ac0a693949148d29fa6b4922159f
   hive_ce: ^2.19.3
   html: ^0.15.4
   http2: ^2.3.1
@@ -126,7 +126,7 @@ dependencies:
   material_design_icons_flutter:
     git:
       url: https://github.com/bggRGjQaUbCoE/material_design_icons_flutter.git
-      ref: const
+      ref: 2bb68d1de3c7bb8c6117fce54d43da65a2387163
   material_new_shapes: ^1.0.0
   media_kit: 1.1.11
   media_kit_libs_video: 1.0.5
@@ -135,7 +135,7 @@ dependencies:
   native_device_orientation:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_native_device_orientation.git
-      ref: master
+      ref: 7be186c79adca7d3ff5abc34bc75d171c68c2694
   package_info_plus: ^10.1.0
   path: ^1.9.1
   path_provider: ^2.1.5
@@ -153,7 +153,7 @@ dependencies:
   super_sliver_list:
     git:
       url: https://github.com/bggRGjQaUbCoE/super_sliver_list.git
-      ref: mod
+      ref: 71f34fa179e2d05818004e22e632dd59f2a223be
   synchronized: ^3.3.0
   tray_manager: ^0.5.1
   url_launcher: ^6.3.1
@@ -165,65 +165,65 @@ dependencies:
   webdav_client:
     git:
       url: https://github.com/wgh136/webdav_client.git
-      ref: main
+      ref: 2f669c98fb81cff1c64fee93466a1475c77e4273
   win32: ^6.3.0
   window_manager:
     git:
       url: https://github.com/bggRGjQaUbCoE/window_manager.git
       path: packages/window_manager
-      ref: main
+      ref: 974ab0a71d37cfca9d9bd5b295d7bd1df80b790b
 
 dependency_overrides:
   flutter_inappwebview_android:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_inappwebview.git
       path: flutter_inappwebview_android
-      ref: v6.1.5
+      ref: 0bfa46dfff87f0d9e9d5e13cbd5c4a7c7310f8c9
   flutter_inappwebview_windows:
     git:
       url: https://github.com/bggRGjQaUbCoE/flutter_inappwebview.git
       path: flutter_inappwebview_windows
-      ref: v6.1.5
+      ref: 0bfa46dfff87f0d9e9d5e13cbd5c4a7c7310f8c9
   media_kit:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: media_kit
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_libs_android_video:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: libs/android/media_kit_libs_android_video
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_libs_ios_video:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: libs/ios/media_kit_libs_ios_video
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_libs_video:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: libs/universal/media_kit_libs_video
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_libs_windows_video:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: libs/windows/media_kit_libs_windows_video
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_native_event_loop:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: media_kit_native_event_loop
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   media_kit_video:
     git:
       url: https://github.com/My-Responsitories/media-kit.git
       path: media_kit_video
-      ref: version_1.2.5
+      ref: deac6b62569584b6a5e28e6c60c187a0a7281b3a
   cached_network_image_ce:
     git:
       url: https://github.com/My-Responsitories/flutter_cached_network_image_ce.git
       path: cached_network_image
-      ref: develop
+      ref: 6ad91e9bf71254803e222b7d254751576f2f6d7b
 
 dev_dependencies:
   flutter_test:
@@ -236,6 +236,7 @@ dev_dependencies:
     git:
       url: https://github.com/dart-lang/native.git
       path: pkgs/jnigen
+      ref: c8b26f45853eb518a5191d2fc47e70d7f23e690c
 
 flutter_launcher_icons:
   android: true

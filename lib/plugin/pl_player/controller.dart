@@ -71,6 +71,7 @@ typedef PlayCallback = Future<void>? Function();
 class PlPlayerController with BlockConfigMixin {
   Player? _videoPlayerController;
   VideoController? _videoController;
+  final bool _isDetached;
 
   static PlPlayerController? _instance;
 
@@ -524,8 +525,8 @@ class PlPlayerController with BlockConfigMixin {
   }
 
   // 添加一个私有构造函数
-  PlPlayerController._() {
-    if (PlatformUtils.isMobile) {
+  PlPlayerController._({bool isDetached = false}) : _isDetached = isDetached {
+    if (!_isDetached && PlatformUtils.isMobile) {
       _orientationListener = NativeDeviceOrientationPlatform.instance
           .onOrientationChanged(
             checkIsAutoRotate: checkIsAutoRotate,
@@ -538,7 +539,7 @@ class PlPlayerController with BlockConfigMixin {
       enableHeart = false;
     }
 
-    if (Platform.isAndroid && autoPiP) {
+    if (!_isDetached && Platform.isAndroid && autoPiP) {
       if (DeviceUtils.sdkInt < 31) {
         AndroidHelper$ToDart.onUserLeaveHint = Runnable.implement(
           $Runnable(run: _onUserLeaveHint),
@@ -561,6 +562,12 @@ class PlPlayerController with BlockConfigMixin {
     return (_instance ??= PlPlayerController._())
       ..isLive = isLive
       .._playerCount += 1;
+  }
+
+  static PlPlayerController detached({bool isLive = false}) {
+    return PlPlayerController._(isDetached: true)
+      ..isLive = isLive
+      .._playerCount = 1;
   }
 
   bool _processing = false;
@@ -796,7 +803,7 @@ class PlPlayerController with BlockConfigMixin {
 
     final Map<String, String> extras = {};
 
-    if (dataSource is FileSource) {
+    if (!dataSource.cache) {
       extras['cache'] = 'no';
     } else {
       if (isLive) {
@@ -820,14 +827,10 @@ class PlPlayerController with BlockConfigMixin {
           audioNormalization = _audioNormalizationParam.replaceFirstMapped(
             loudnormRegExp,
             (i) =>
-                'loudnorm=${volume.format(
-                  Map.fromEntries(
-                    i.group(1)!.split(':').map((item) {
-                      final parts = item.split('=');
-                      return MapEntry(parts[0].toLowerCase(), num.parse(parts[1]));
-                    }),
-                  ),
-                )}',
+                'loudnorm=${volume.format(Map.fromEntries(i.group(1)!.split(':').map((item) {
+                  final parts = item.split('=');
+                  return MapEntry(parts[0].toLowerCase(), num.parse(parts[1]));
+                })))}',
           );
         } else {
           audioNormalization = _audioNormalizationParam.replaceFirst(
@@ -842,11 +845,7 @@ class PlPlayerController with BlockConfigMixin {
     }
 
     await player.open(
-      Media(
-        video,
-        start: seekTo,
-        extras: extras.isEmpty ? null : extras,
-      ),
+      Media(video, start: seekTo, extras: extras.isEmpty ? null : extras),
       play: false,
     );
   }
@@ -866,7 +865,7 @@ class PlPlayerController with BlockConfigMixin {
 
   // 开始播放
   Future<void> _initializePlayer() async {
-    if (_instance == null) return;
+    if (_playerCount == 0) return;
     // 设置倍速
     if (isLive) {
       await setPlaybackSpeed(1.0);
@@ -887,8 +886,11 @@ class PlPlayerController with BlockConfigMixin {
 
     // 自动播放
     if (_autoPlay) {
-      playIfExists();
-      // await play(duration: duration);
+      if (_isDetached) {
+        await play();
+      } else {
+        playIfExists();
+      }
     }
   }
 
@@ -1535,7 +1537,9 @@ class PlPlayerController with BlockConfigMixin {
 
   void dispose() {
     // 每次减1，最后销毁
-    resetScreenRotation();
+    if (!_isDetached) {
+      resetScreenRotation();
+    }
     cancelLongPressTimer();
     _cancelSubForSeek();
     if (!_isCloseAll && _playerCount > 1) {
@@ -1545,7 +1549,7 @@ class PlPlayerController with BlockConfigMixin {
     }
 
     _playerCount = 0;
-    if (removeSafeArea) {
+    if (!_isDetached && removeSafeArea) {
       showSystemBar();
     }
     danmakuController = null;
@@ -1556,7 +1560,7 @@ class PlPlayerController with BlockConfigMixin {
     if (showSeekPreview) {
       _clearPreview();
     }
-    if (Platform.isAndroid) {
+    if (!_isDetached && Platform.isAndroid) {
       AndroidHelper$ToDart.onUserLeaveHint?.release();
       AndroidHelper$ToDart.onUserLeaveHint = null;
     }
@@ -1590,8 +1594,10 @@ class PlPlayerController with BlockConfigMixin {
     _videoPlayerController?.dispose();
     _videoPlayerController = null;
     _videoController = null;
-    _instance = null;
-    videoPlayerServiceHandler?.clear();
+    if (!_isDetached) {
+      _instance = null;
+      videoPlayerServiceHandler?.clear();
+    }
   }
 
   static void updatePlayCount() {

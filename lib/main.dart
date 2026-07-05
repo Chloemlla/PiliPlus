@@ -4,6 +4,7 @@ import 'package:PiliPlus/build_config.dart';
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/back_detector.dart';
 import 'package:PiliPlus/common/widgets/custom_toast.dart';
+import 'package:PiliPlus/common/widgets/in_app_mini_player.dart';
 import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
 import 'package:PiliPlus/common/widgets/scale_app.dart';
 import 'package:PiliPlus/common/widgets/scroll_behavior.dart';
@@ -283,10 +284,7 @@ class MyApp extends StatelessWidget {
         ),
         builder: _builder,
       ),
-      navigatorObservers: [
-        routeObserver,
-        FlutterSmartDialog.observer,
-      ],
+      navigatorObservers: [routeObserver, FlutterSmartDialog.observer],
       scrollBehavior: PlatformUtils.isDesktop
           ? const CustomScrollBehavior(desktopDragDevices)
           : null,
@@ -319,11 +317,9 @@ class MyApp extends StatelessWidget {
         child: child!,
       );
     }
+    child = InAppMiniPlayerLayer(child: child);
     if (PlatformUtils.isDesktop) {
-      return BackDetector(
-        onBack: _onBack,
-        child: child,
-      );
+      return BackDetector(onBack: _onBack, child: child);
     }
     return child;
   }

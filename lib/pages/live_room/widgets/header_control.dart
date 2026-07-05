@@ -78,11 +78,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
         liveController.title.value,
         spacing: 30,
         velocity: 30,
-        style: const TextStyle(
-          fontSize: 15,
-          height: 1,
-          color: Colors.white,
-        ),
+        style: const TextStyle(fontSize: 15, height: 1, color: Colors.white),
       ),
     );
     if (isFullScreen) {
@@ -98,10 +94,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
               if (widget.upName case final upName?)
                 Text(
                   upName,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
               liveController.watchedWidget,
               widget.onlineWidget,
@@ -143,11 +136,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 height: 30,
                 tooltip: '${isAlwaysOnTop ? '取消' : ''}置顶',
                 icon: isAlwaysOnTop
-                    ? const Icon(
-                        size: 18,
-                        Icons.push_pin,
-                        color: Colors.white,
-                      )
+                    ? const Icon(size: 18, Icons.push_pin, color: Colors.white)
                     : const Icon(
                         size: 18,
                         Icons.push_pin_outlined,
@@ -166,6 +155,17 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 color: Colors.white,
               ),
               onTap: widget.onSendDanmaku,
+            ),
+          if (!plPlayerController.isDesktopPip)
+            ComBtn(
+              height: 30,
+              tooltip: '应用内小窗',
+              onTap: liveController.openInAppMiniPlayer,
+              icon: const Icon(
+                size: 18,
+                Icons.picture_in_picture_alt_outlined,
+                color: Colors.white,
+              ),
             ),
           if (Platform.isAndroid || (PlatformUtils.isDesktop && !isFullScreen))
             ComBtn(
@@ -186,30 +186,28 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 color: Colors.white,
               ),
             ),
-          Obx(
-            () {
-              final onlyPlayAudio = plPlayerController.onlyPlayAudio.value;
-              return ComBtn(
-                height: 30,
-                tooltip: '仅播放音频',
-                onTap: () {
-                  plPlayerController.onlyPlayAudio.value = !onlyPlayAudio;
-                  widget.onPlayAudio();
-                },
-                icon: onlyPlayAudio
-                    ? const Icon(
-                        size: 18,
-                        MdiIcons.musicCircle,
-                        color: Colors.white,
-                      )
-                    : const Icon(
-                        size: 18,
-                        MdiIcons.musicCircleOutline,
-                        color: Colors.white,
-                      ),
-              );
-            },
-          ),
+          Obx(() {
+            final onlyPlayAudio = plPlayerController.onlyPlayAudio.value;
+            return ComBtn(
+              height: 30,
+              tooltip: '仅播放音频',
+              onTap: () {
+                plPlayerController.onlyPlayAudio.value = !onlyPlayAudio;
+                widget.onPlayAudio();
+              },
+              icon: onlyPlayAudio
+                  ? const Icon(
+                      size: 18,
+                      MdiIcons.musicCircle,
+                      color: Colors.white,
+                    )
+                  : const Icon(
+                      size: 18,
+                      MdiIcons.musicCircleOutline,
+                      color: Colors.white,
+                    ),
+            );
+          }),
           if (PlatformUtils.isMobile)
             Obx(() {
               final continuePlayInBackground =
@@ -239,11 +237,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
               isFullScreen: isFullScreen,
               isLive: true,
             ),
-            icon: const Icon(
-              size: 18,
-              Icons.schedule,
-              color: Colors.white,
-            ),
+            icon: const Icon(size: 18, Icons.schedule, color: Colors.white),
           ),
           if (plPlayerController.videoPlayerController case final player?)
             SizedBox.square(

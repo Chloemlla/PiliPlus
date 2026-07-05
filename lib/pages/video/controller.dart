@@ -3,6 +3,7 @@ import 'dart:math' show min;
 import 'dart:ui';
 
 import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/in_app_mini_player.dart';
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
@@ -549,10 +550,7 @@ class VideoDetailController extends GetxController
       alignment: Alignment.centerLeft,
       child: SlideTransition(
         position: animation.drive(
-          Tween<Offset>(
-            begin: const Offset(-1.0, 0.0),
-            end: Offset.zero,
-          ),
+          Tween<Offset>(begin: const Offset(-1.0, 0.0), end: Offset.zero),
         ),
         child: Padding(
           padding: const EdgeInsets.only(top: 5),
@@ -728,10 +726,7 @@ class VideoDetailController extends GetxController
               isMp4: entry.mediaType == 1,
               hasDashAudio: entry.hasDashAudio,
             )
-          : NetworkSource(
-              videoSource: videoUrl!,
-              audioSource: audioUrl,
-            ),
+          : NetworkSource(videoSource: videoUrl!, audioSource: audioUrl),
       seekTo: seek,
       duration: data.timeLength == null
           ? null
@@ -772,6 +767,73 @@ class VideoDetailController extends GetxController
     }
 
     defaultST = null;
+  }
+
+  Future<void> openInAppMiniPlayer({String? title}) async {
+    final currentCid = cid.value;
+    final routeArgs = Map<dynamic, dynamic>.of(args)
+      ..['aid'] = aid
+      ..['bvid'] = bvid
+      ..['cid'] = currentCid
+      ..['cover'] = cover.value
+      ..['progress'] = plPlayerController.positionInMilliseconds
+      ..['heroTag'] = Utils.makeHeroTag(currentCid);
+
+    if (epId != null) {
+      routeArgs['epId'] = epId;
+    } else {
+      routeArgs.remove('epId');
+    }
+    if (seasonId != null) {
+      routeArgs['seasonId'] = seasonId;
+    } else {
+      routeArgs.remove('seasonId');
+    }
+    if (pgcType != null) {
+      routeArgs['pgcType'] = pgcType;
+    } else {
+      routeArgs.remove('pgcType');
+    }
+
+    if (isFileSource) {
+      routeArgs
+        ..['entry'] = entry
+        ..['dirPath'] = args['dirPath'];
+    }
+
+    final success = await InAppMiniPlayerService.instance.show(
+      sourceController: plPlayerController,
+      title: title ?? (isFileSource ? entry.showTitle : args['title']) ?? bvid,
+      isLive: false,
+      aid: aid,
+      bvid: bvid,
+      cid: currentCid,
+      epid: isUgc ? null : epId,
+      seasonId: isUgc ? null : seasonId,
+      pgcType: isUgc ? null : pgcType,
+      videoType: videoType,
+      onOpenSource: (progress) async {
+        await Get.toNamed(
+          '/videoV',
+          arguments: Map<dynamic, dynamic>.of(routeArgs)
+            ..['progress'] = progress
+            ..['heroTag'] = Utils.makeHeroTag(currentCid),
+          preventDuplicates: false,
+        );
+      },
+    );
+
+    if (!success) {
+      return;
+    }
+
+    if (plPlayerController.controlsLock.value) {
+      plPlayerController.onLockControl(false);
+    }
+    if (plPlayerController.isFullScreen.value) {
+      await plPlayerController.triggerFullScreen(status: false);
+    }
+    SmartDialog.showToast('已转入应用内小窗');
   }
 
   bool isQuerying = false;
@@ -1292,10 +1354,7 @@ class VideoDetailController extends GetxController
     try {
       final res = await Request().get(
         'https://bvc.bilivideo.com/pbp/data',
-        queryParameters: {
-          'bvid': bvid,
-          'cid': cid.value,
-        },
+        queryParameters: {'bvid': bvid, 'cid': cid.value},
       );
       PbpData data = PbpData.fromJson(res.data);
       int stepSec = data.stepSec ?? 0;
@@ -1563,13 +1622,7 @@ class VideoDetailController extends GetxController
       if (kDebugMode) {
         debugPrint(title);
       }
-      Get.toNamed(
-        '/dlna',
-        parameters: {
-          'url': url,
-          'title': ?title,
-        },
-      );
+      Get.toNamed('/dlna', parameters: {'url': url, 'title': ?title});
     } else {
       res.toast();
     }

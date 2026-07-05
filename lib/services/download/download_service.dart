@@ -30,6 +30,8 @@ import 'package:synchronized/synchronized.dart';
 // ref https://github.com/10miaomiao/bilimiao2/blob/master/bilimiao-download/src/main/java/cn/a10miaomiao/bilimiao/download/DownloadService.kt
 
 class DownloadService extends GetxService {
+  static const int _maxDanmakuSegmentConcurrency = 4;
+
   static const _entryFile = 'entry.json';
   static const _indexFile = 'index.json';
 
@@ -182,10 +184,7 @@ class DownloadService extends GetxService {
       return;
     }
     final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final source = SourceInfo(
-      avId: episode.aid!,
-      cid: cid,
-    );
+    final source = SourceInfo(avId: episode.aid!, cid: cid);
     final ep = EpInfo(
       avId: source.avId,
       page: index,
@@ -315,19 +314,22 @@ class DownloadService extends GetxService {
         }
         final seg = (entry.totalTimeMilli / PlDanmakuController.segmentLength)
             .ceil();
+        if (seg <= 0) {
+          return true;
+        }
 
-        final res = await Future.wait([
-          for (var i = 1; i <= seg; i++)
-            DmGrpc.dmSegMobile(cid: cid, segmentIndex: i),
-        ]);
+        final res = await _boundedFutureWait(
+          seg,
+          (index) => DmGrpc.dmSegMobile(cid: cid, segmentIndex: index + 1),
+          concurrency: _maxDanmakuSegmentConcurrency,
+        );
 
-        final danmaku = res.removeAt(0).data;
-        for (final i in res) {
+        final danmaku = res.first.data;
+        for (final i in res.skip(1)) {
           if (i case Success(:final response)) {
             danmaku.elems.addAll(response.elems);
           }
         }
-        res.clear();
         await danmakuFile.writeAsBytes(danmaku.writeToBuffer());
 
         return true;
@@ -342,9 +344,33 @@ class DownloadService extends GetxService {
     return true;
   }
 
-  Future<bool> _downloadCover({
-    required BiliDownloadEntryInfo entry,
+  Future<List<T>> _boundedFutureWait<T>(
+    int count,
+    Future<T> Function(int index) task, {
+    required int concurrency,
   }) async {
+    if (count <= 0) {
+      return [];
+    }
+    final results = List<T?>.filled(count, null);
+    var nextIndex = 0;
+    final workerCount = concurrency < count ? concurrency : count;
+
+    Future<void> worker() async {
+      while (true) {
+        final index = nextIndex++;
+        if (index >= count) {
+          return;
+        }
+        results[index] = await task(index);
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
+    return [for (final result in results) result as T];
+  }
+
+  Future<bool> _downloadCover({required BiliDownloadEntryInfo entry}) async {
     try {
       final filePath = path.join(entry.entryDirPath, PathUtils.coverName);
       if (File(filePath).existsSync()) {
@@ -534,10 +560,7 @@ class DownloadService extends GetxService {
       waitDownloadQueue.remove(entry);
     }
     if (curDownload.value?.cid == entry.cid) {
-      await cancelDownload(
-        isDelete: true,
-        downloadNext: downloadNext,
-      );
+      await cancelDownload(isDelete: true, downloadNext: downloadNext);
     }
     final downloadDir = Directory(entry.pageDirPath);
     if (downloadDir.existsSync()) {

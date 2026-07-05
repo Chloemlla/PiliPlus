@@ -117,11 +117,7 @@ class LoginPageController extends GetxController
   }
 
   // 申请极验验证码
-  void getCaptcha(
-    String geeGt,
-    String geeChallenge,
-    VoidCallback onSuccess,
-  ) {
+  void getCaptcha(String geeGt, String geeChallenge, VoidCallback onSuccess) {
     GeetestWebviewDialog.geetest(geeGt, geeChallenge).then((res) {
       if (res is Map) {
         captchaData
@@ -161,26 +157,29 @@ class LoginPageController extends GetxController
       final result = await Request().get(
         "/x/member/web/account",
         options: Options(
-          headers: {
-            "cookie": validateCookie(cookieTextController.text),
-          },
+          headers: {"cookie": validateCookie(cookieTextController.text)},
           extra: {'account': AnonymousAccount()},
         ),
       );
       if (result.data['code'] == 0) {
         try {
-          await LoginAccount(
+          final account = LoginAccount(
             BiliCookieJar.fromJson(
               Map.fromEntries(
                 cookieTextController.text.split(';').map((item) {
                   final list = item.split('=');
-                  return MapEntry(list.first, list.skip(1).join());
+                  return MapEntry(list.first.trim(), list.skip(1).join());
                 }),
               ),
             ),
             null,
             null,
-          ).onChange();
+          );
+          if (!account.shouldKeep) {
+            SmartDialog.showToast("登录失败: cookie缺少必要字段");
+            return;
+          }
+          await account.onChange();
           if (!Accounts.main.isLogin) await switchAccountDialog(Get.context!);
           SmartDialog.showToast('登录成功');
           Get.back();
@@ -269,10 +268,7 @@ class LoginPageController extends GetxController
               horizontal: 16,
               vertical: 12,
             ),
-            title: const Text(
-              "本次登录需要验证您的手机号",
-              textAlign: TextAlign.center,
-            ),
+            title: const Text("本次登录需要验证您的手机号", textAlign: TextAlign.center),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -324,31 +320,27 @@ class LoginPageController extends GetxController
                     return;
                   }
 
-                  getCaptcha(
-                    geeGt,
-                    geeChallenge,
-                    () async {
-                      final safeCenterSendSmsCodeRes =
-                          await LoginHttp.safeCenterSmsCode(
-                            tmpCode: currentUri.queryParameters['tmp_token']!,
-                            geeChallenge: geeChallenge,
-                            geeSeccode: captchaData.seccode,
-                            geeValidate: captchaData.validate,
-                            recaptchaToken: captchaData.token,
-                            refererUrl: url,
-                          );
-                      if (!safeCenterSendSmsCodeRes['status']) {
-                        SmartDialog.showToast(
-                          "发送短信验证码失败，请尝试其它登录方式\n"
-                          "(${safeCenterSendSmsCodeRes['code']}) ${safeCenterSendSmsCodeRes['msg']}",
+                  getCaptcha(geeGt, geeChallenge, () async {
+                    final safeCenterSendSmsCodeRes =
+                        await LoginHttp.safeCenterSmsCode(
+                          tmpCode: currentUri.queryParameters['tmp_token']!,
+                          geeChallenge: geeChallenge,
+                          geeSeccode: captchaData.seccode,
+                          geeValidate: captchaData.validate,
+                          recaptchaToken: captchaData.token,
+                          refererUrl: url,
                         );
-                        return;
-                      }
-                      SmartDialog.showToast("短信验证码已发送，请查收");
-                      captchaKey =
-                          safeCenterSendSmsCodeRes['data']['captcha_key'];
-                    },
-                  );
+                    if (!safeCenterSendSmsCodeRes['status']) {
+                      SmartDialog.showToast(
+                        "发送短信验证码失败，请尝试其它登录方式\n"
+                        "(${safeCenterSendSmsCodeRes['code']}) ${safeCenterSendSmsCodeRes['msg']}",
+                      );
+                      return;
+                    }
+                    SmartDialog.showToast("短信验证码已发送，请查收");
+                    captchaKey =
+                        safeCenterSendSmsCodeRes['data']['captcha_key'];
+                  });
                 },
               ),
               TextButton(
@@ -624,6 +616,10 @@ class LoginPageController extends GetxController
       tokenInfo['access_token'],
       tokenInfo['refresh_token'],
     );
+    if (!account.shouldKeep) {
+      SmartDialog.showToast("登录失败: cookie缺少必要字段");
+      return;
+    }
     await Future.wait([account.onChange(), AnonymousAccount().delete()]);
     for (int i = 0; i < AccountType.values.length; i++) {
       if (Accounts.accountMode[i].mid == account.mid) {
@@ -647,9 +643,7 @@ class LoginPageController extends GetxController
     final selectAccount = List.of(Accounts.accountMode);
     final options = {
       AnonymousAccount(): '0',
-      ...Accounts.account.toMap().map(
-        (k, v) => MapEntry(v, k as String),
-      ),
+      ...Accounts.account.toMap().map((k, v) => MapEntry(v, k as String)),
     };
     bool quickSelect = selectAccount.every((e) => e == selectAccount.first);
     return showDialog(
