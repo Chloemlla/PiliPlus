@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  push:
   pull_request:
     types:
       - opened
@@ -93,8 +94,6 @@ jobs:
         run: flutter test
 
   android:
-    needs: quality
-    if: ${{ (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_android == 'true' }}
     name: Release Android
     runs-on: ubuntu-latest
     permissions:
