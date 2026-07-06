@@ -79,7 +79,8 @@ jobs:
           cookie_names='(SESSDATA|bili_jct)'
           separator='='
           token_pattern='(access[_-]?key|refresh[_-]?token)[[:space:]]*[:=][[:space:]]*"?[A-Za-z0-9_=-]{20,}'
-          private_key_pattern='BEGIN (RSA|OPENSSH|EC|DSA|PRIVATE) KEY'
+          private_key_prefix='BEGIN '
+          private_key_pattern="${private_key_prefix}(RSA|OPENSSH|EC|DSA|PRIVATE) KEY"
           if git grep -nEI "(${private_key_pattern}|${cookie_names}${separator}|${token_pattern})" -- . ':!pubspec.lock' ':!test/**' ':!*audit-report*.md'; then
             echo "::error::possible committed secret detected"
             exit 1
