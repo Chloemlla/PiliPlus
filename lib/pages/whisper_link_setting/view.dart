@@ -1,11 +1,11 @@
-import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/msg/im_user_infos/datum.dart';
-import 'package:PiliPlus/models_new/msg/msg_dnd/uid_setting.dart';
-import 'package:PiliPlus/models_new/msg/session_ss/data.dart';
-import 'package:PiliPlus/pages/whisper_link_setting/controller.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/widgets/pendant_avatar.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/msg/im_user_infos/datum.dart';
+import 'package:pili_plus/models_new/msg/msg_dnd/uid_setting.dart';
+import 'package:pili_plus/models_new/msg/session_ss/data.dart';
+import 'package:pili_plus/pages/whisper_link_setting/controller.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

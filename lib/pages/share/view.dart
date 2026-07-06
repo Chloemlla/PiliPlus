@@ -1,10 +1,10 @@
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/self_sized_horizontal_list.dart';
-import 'package:PiliPlus/models/common/image_type.dart';
-import 'package:PiliPlus/pages/contact/view.dart';
-import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
+import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/self_sized_horizontal_list.dart';
+import 'package:pili_plus/models/common/image_type.dart';
+import 'package:pili_plus/pages/contact/view.dart';
+import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
+import 'package:pili_plus/utils/request_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';

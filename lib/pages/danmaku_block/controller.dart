@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:PiliPlus/http/danmaku_block.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/dm_block_type.dart';
-import 'package:PiliPlus/models/user/danmaku_block.dart';
+import 'package:pili_plus/http/danmaku_block.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/dm_block_type.dart';
+import 'package:pili_plus/models/user/danmaku_block.dart';
 import 'package:archive/archive.dart' show getCrc32;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';

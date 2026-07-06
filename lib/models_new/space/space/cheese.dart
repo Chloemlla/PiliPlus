@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/space/space/item.dart';
+import 'package:pili_plus/models_new/space/space/item.dart';
 
 class Cheese {
   int? count;

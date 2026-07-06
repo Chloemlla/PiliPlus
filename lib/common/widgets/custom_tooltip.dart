@@ -1,4 +1,4 @@
-import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart'
     show

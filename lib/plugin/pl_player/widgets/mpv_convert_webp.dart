@@ -3,9 +3,9 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:PiliPlus/http/browser_ua.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/http/browser_ua.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:get/get_rx/get_rx.dart';

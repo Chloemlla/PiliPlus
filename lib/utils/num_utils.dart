@@ -1,4 +1,4 @@
-import 'package:PiliPlus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 
 abstract final class NumUtils {

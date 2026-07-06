@@ -1,8 +1,8 @@
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/model_hot_video_item.dart';
-import 'package:PiliPlus/models_new/popular/popular_precious/data.dart';
-import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/model_hot_video_item.dart';
+import 'package:pili_plus/models_new/popular/popular_precious/data.dart';
+import 'package:pili_plus/pages/common/common_list_controller.dart';
 
 class PopularPreciousController
     extends CommonListController<PopularPreciousData, HotVideoItemModel> {

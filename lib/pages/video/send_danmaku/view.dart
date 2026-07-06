@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/http/danmaku.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/publish_panel_type.dart';
-import 'package:PiliPlus/pages/common/publish/common_text_pub_page.dart';
-import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
-import 'package:PiliPlus/pages/setting/slide_color_picker.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/view_safe_area.dart';
+import 'package:pili_plus/http/danmaku.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/publish_panel_type.dart';
+import 'package:pili_plus/pages/common/publish/common_text_pub_page.dart';
+import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
+import 'package:pili_plus/pages/setting/slide_color_picker.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:canvas_danmaku/models/danmaku_content_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;

@@ -1,4 +1,4 @@
-import 'package:PiliPlus/common/style.dart';
+import 'package:pili_plus/common/style.dart';
 import 'package:flutter/material.dart' show BoxFit;
 
 enum VideoFitType {

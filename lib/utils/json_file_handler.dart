@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:PiliPlus/services/logger.dart';
-import 'package:PiliPlus/utils/log_redactor.dart';
+import 'package:pili_plus/services/logger.dart';
+import 'package:pili_plus/utils/log_redactor.dart';
 import 'package:catcher_2/catcher_2.dart';
 
 class JsonFileHandler extends ReportHandler {

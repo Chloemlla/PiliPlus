@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/grpc/bilibili/metadata.pb.dart';
-import 'package:PiliPlus/grpc/bilibili/metadata/device.pb.dart';
-import 'package:PiliPlus/grpc/bilibili/metadata/fawkes.pb.dart';
-import 'package:PiliPlus/grpc/bilibili/metadata/locale.pb.dart';
-import 'package:PiliPlus/grpc/bilibili/metadata/network.pb.dart' as network;
-import 'package:PiliPlus/utils/login_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/grpc/bilibili/metadata.pb.dart';
+import 'package:pili_plus/grpc/bilibili/metadata/device.pb.dart';
+import 'package:pili_plus/grpc/bilibili/metadata/fawkes.pb.dart';
+import 'package:pili_plus/grpc/bilibili/metadata/locale.pb.dart';
+import 'package:pili_plus/grpc/bilibili/metadata/network.pb.dart' as network;
+import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 
 abstract final class GrpcHeaders {
   static const _build = 2001100;

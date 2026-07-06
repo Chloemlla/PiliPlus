@@ -1,5 +1,5 @@
-import 'package:PiliPlus/pages/common/publish/common_publish_page.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
+import 'package:pili_plus/pages/common/publish/common_publish_page.dart';
+import 'package:pili_plus/utils/feed_back.dart';
 import 'package:flutter/material.dart';
 
 abstract class CommonTextPubPage extends CommonPublishPage<String> {

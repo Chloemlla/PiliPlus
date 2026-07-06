@@ -4,8 +4,8 @@
 
 // ignore_for_file: prefer_initializing_formals
 
-import 'package:PiliPlus/common/widgets/flutter/text_field/adaptive_text_selection_toolbar.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/editable_text.dart';
+import 'package:pili_plus/common/widgets/flutter/text_field/adaptive_text_selection_toolbar.dart';
+import 'package:pili_plus/common/widgets/flutter/text_field/editable_text.dart';
 import 'package:flutter/cupertino.dart' hide EditableText, EditableTextState;
 import 'package:flutter/material.dart'
     hide

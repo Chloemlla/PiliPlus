@@ -1,8 +1,8 @@
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/pages/mine/controller.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/login_utils.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/login_utils.dart';
 import 'package:hive_ce/hive.dart';
 
 abstract final class Accounts {

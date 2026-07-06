@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/space/space_fav/media_list_response.dart';
+import 'package:pili_plus/models_new/space/space_fav/media_list_response.dart';
 
 class SpaceFavData {
   int? id;

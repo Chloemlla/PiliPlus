@@ -1,5 +1,5 @@
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/parse_int.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/parse_int.dart';
 
 class SimpleVoteInfo {
   int? choiceCnt;

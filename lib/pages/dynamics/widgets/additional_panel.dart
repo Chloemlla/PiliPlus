@@ -1,12 +1,12 @@
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/http/dynamics.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/dynamics/result.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/vote.dart';
-import 'package:PiliPlus/utils/app_scheme.dart';
-import 'package:PiliPlus/utils/num_utils.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/http/dynamics.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/dynamics/result.dart';
+import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/num_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

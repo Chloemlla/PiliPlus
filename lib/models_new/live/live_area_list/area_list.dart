@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/live/live_area_list/area_item.dart';
+import 'package:pili_plus/models_new/live/live_area_list/area_item.dart';
 
 class AreaList {
   String? name;

@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/space/space_shop/item.dart';
+import 'package:pili_plus/models_new/space/space_shop/item.dart';
 
 class SpaceShopData {
   List<SpaceShopItem>? data;

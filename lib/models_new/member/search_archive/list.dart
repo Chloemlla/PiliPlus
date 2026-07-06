@@ -1,5 +1,5 @@
-import 'package:PiliPlus/models_new/member/search_archive/slist.dart';
-import 'package:PiliPlus/models_new/member/search_archive/vlist.dart';
+import 'package:pili_plus/models_new/member/search_archive/slist.dart';
+import 'package:pili_plus/models_new/member/search_archive/vlist.dart';
 
 class SearchArchiveList {
   List<ListTag>? tags;

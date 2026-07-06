@@ -7,13 +7,16 @@ abstract final class LogRedactor {
   );
 
   static final RegExp _queryParam = RegExp(
-    r'(?i)\b(SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd)=([^&\s;,]+)',
+    r'\b(SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd)=([^&\s;,]+)',
+    caseSensitive: false,
   );
   static final RegExp _header = RegExp(
-    r'(?i)\b(authorization|cookie|set-cookie)\s*[:=]\s*([^\r\n]+)',
+    r'\b(authorization|cookie|set-cookie)\s*[:=]\s*([^\r\n]+)',
+    caseSensitive: false,
   );
   static final RegExp _jsonString = RegExp(
-    r'(?i)("?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd|authorization|cookie)"?\s*:\s*)"[^"]*"',
+    r'("?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd|authorization|cookie)"?\s*:\s*)"[^"]*"',
+    caseSensitive: false,
   );
 
   static Object? redact(Object? value, {Object? key}) {

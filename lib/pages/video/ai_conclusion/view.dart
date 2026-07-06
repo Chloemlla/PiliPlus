@@ -1,9 +1,9 @@
-import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/selectable_text.dart';
-import 'package:PiliPlus/models_new/video/video_ai_conclusion/model_result.dart';
-import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
-import 'package:PiliPlus/pages/video/controller.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
+import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/selectable_text.dart';
+import 'package:pili_plus/models_new/video/video_ai_conclusion/model_result.dart';
+import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
+import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

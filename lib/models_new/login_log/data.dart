@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/login_log/list.dart';
+import 'package:pili_plus/models_new/login_log/list.dart';
 
 class LoginLogData {
   List<LoginLogItem>? list;

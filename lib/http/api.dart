@@ -1,4 +1,4 @@
-import 'package:PiliPlus/http/constants.dart';
+import 'package:pili_plus/http/constants.dart';
 
 abstract final class Api {
   // 推荐视频

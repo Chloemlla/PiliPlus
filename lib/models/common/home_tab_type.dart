@@ -1,15 +1,15 @@
-import 'package:PiliPlus/models/common/enum_with_label.dart';
-import 'package:PiliPlus/pages/common/common_controller.dart';
-import 'package:PiliPlus/pages/hot/controller.dart';
-import 'package:PiliPlus/pages/hot/view.dart';
-import 'package:PiliPlus/pages/live/controller.dart';
-import 'package:PiliPlus/pages/live/view.dart';
-import 'package:PiliPlus/pages/pgc/controller.dart';
-import 'package:PiliPlus/pages/pgc/view.dart';
-import 'package:PiliPlus/pages/rank/controller.dart';
-import 'package:PiliPlus/pages/rank/view.dart';
-import 'package:PiliPlus/pages/rcmd/controller.dart';
-import 'package:PiliPlus/pages/rcmd/view.dart';
+import 'package:pili_plus/models/common/enum_with_label.dart';
+import 'package:pili_plus/pages/common/common_controller.dart';
+import 'package:pili_plus/pages/hot/controller.dart';
+import 'package:pili_plus/pages/hot/view.dart';
+import 'package:pili_plus/pages/live/controller.dart';
+import 'package:pili_plus/pages/live/view.dart';
+import 'package:pili_plus/pages/pgc/controller.dart';
+import 'package:pili_plus/pages/pgc/view.dart';
+import 'package:pili_plus/pages/rank/controller.dart';
+import 'package:pili_plus/pages/rank/view.dart';
+import 'package:pili_plus/pages/rcmd/controller.dart';
+import 'package:pili_plus/pages/rcmd/view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

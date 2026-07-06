@@ -1,7 +1,7 @@
-import 'package:PiliPlus/models_new/space/space_shop/below_label.dart';
-import 'package:PiliPlus/models_new/space/space_shop/benefit_info.dart';
-import 'package:PiliPlus/models_new/space/space_shop/cover.dart';
-import 'package:PiliPlus/models_new/space/space_shop/net_price.dart';
+import 'package:pili_plus/models_new/space/space_shop/below_label.dart';
+import 'package:pili_plus/models_new/space/space_shop/benefit_info.dart';
+import 'package:pili_plus/models_new/space/space_shop/cover.dart';
+import 'package:pili_plus/models_new/space/space_shop/net_price.dart';
 
 class SpaceShopItem {
   Cover? cover;

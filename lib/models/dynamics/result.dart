@@ -1,15 +1,15 @@
 import 'dart:convert';
 
-import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
-import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
-import 'package:PiliPlus/models/dynamics/article_content_model.dart';
-import 'package:PiliPlus/models/model_avatar.dart';
-import 'package:PiliPlus/models/model_owner.dart';
-import 'package:PiliPlus/models_new/live/live_feed_index/watched_show.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/parse_int.dart';
-import 'package:PiliPlus/utils/parse_string.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/widgets/pendant_avatar.dart';
+import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
+import 'package:pili_plus/models/dynamics/article_content_model.dart';
+import 'package:pili_plus/models/model_avatar.dart';
+import 'package:pili_plus/models/model_owner.dart';
+import 'package:pili_plus/models_new/live/live_feed_index/watched_show.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/parse_int.dart';
+import 'package:pili_plus/utils/parse_string.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 
 class DynamicsDataModel {
   bool? hasMore;

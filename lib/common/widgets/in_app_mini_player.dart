@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:PiliPlus/models/common/video/video_type.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/data_source.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
