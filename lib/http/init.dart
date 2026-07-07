@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:pili_plus/http/api.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/network_security_policy.dart';
 import 'package:pili_plus/http/retry_interceptor.dart';
 import 'package:pili_plus/http/user.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -152,7 +153,9 @@ class Request {
       if (enableSystemProxy) {
         client.findProxy = (_) => 'PROXY $systemProxyHost:$systemProxyPort';
       }
-      if (Pref.badCertificateCallback) {
+      if (NetworkSecurityPolicy.shouldBypassCertificateValidation(
+        explicitBadCertificateBypass: Pref.badCertificateCallback,
+      )) {
         client.badCertificateCallback = (cert, host, port) => true;
       }
       return client;
@@ -174,7 +177,9 @@ class Request {
                         port: systemProxyPort,
                       );
                     }
-                    if (Pref.badCertificateCallback) {
+                    if (NetworkSecurityPolicy.shouldBypassCertificateValidation(
+                      explicitBadCertificateBypass: Pref.badCertificateCallback,
+                    )) {
                       config.onBadCertificate = (_) => true;
                     }
                   }

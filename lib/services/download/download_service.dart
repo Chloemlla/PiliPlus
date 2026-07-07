@@ -6,7 +6,6 @@ import 'package:pili_plus/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:pili_plus/grpc/dm.dart';
 import 'package:pili_plus/http/download.dart';
 import 'package:pili_plus/http/init.dart';
-import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/video/video_quality.dart';
 import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
 import 'package:pili_plus/models_new/download/bili_download_media_file_info.dart';

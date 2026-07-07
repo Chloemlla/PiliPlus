@@ -525,7 +525,7 @@ class PlPlayerController with BlockConfigMixin {
   }
 
   // 添加一个私有构造函数
-  PlPlayerController._({bool isDetached = false}) : _isDetached = isDetached {
+  PlPlayerController._({this._isDetached = false}) {
     if (!_isDetached && PlatformUtils.isMobile) {
       _orientationListener = NativeDeviceOrientationPlatform.instance
           .onOrientationChanged(

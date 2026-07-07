@@ -1,6 +1,7 @@
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/accounts/grpc_headers.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:cookie_jar/cookie_jar.dart';
@@ -79,18 +80,33 @@ class LoginAccount extends Account {
   bool get hasRequiredCookies =>
       _midStr.isNotEmpty && csrf.isNotEmpty && mid != 0;
 
+  String get secretKey => _midStr;
+
   bool _hasDelete = false;
 
   @override
-  Future<void> delete() {
+  Future<void> delete() async {
     assert(_hasDelete = true);
-    return Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
+    await Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
+    AccountSecretStore.delete(secretKey);
   }
 
   @override
-  Future<void> onChange() {
+  Future<void> onChange() async {
     assert(!_hasDelete);
-    return _box.put(_midStr, this);
+    persistSecret();
+    await _box.put(secretKey, this);
+  }
+
+  void persistSecret() {
+    AccountSecretStore.write(
+      secretKey,
+      AccountSecret(
+        cookies: cookieJar.toJson(),
+        accessKey: accessKey,
+        refresh: refresh,
+      ),
+    );
   }
 
   @override

@@ -6,10 +6,12 @@ import 'package:pili_plus/models/user/danmaku_rule_adapter.dart';
 import 'package:pili_plus/models/user/info.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account_adapter.dart';
+import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/accounts/account_type_adapter.dart';
 import 'package:pili_plus/utils/accounts/cookie_jar_adapter.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/set_int_adapter.dart';
+import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -27,6 +29,8 @@ abstract final class GStorage {
 
   static Future<void> init() async {
     Hive.init(path.join(appSupportDirPath, 'hive'));
+    AccountSecretStore.init(path.join(appSupportDirPath, 'secrets'));
+    SettingSecretStore.init(path.join(appSupportDirPath, 'secrets'));
     regAdapter();
 
     await Future.wait([
@@ -64,6 +68,7 @@ abstract final class GStorage {
         },
       ).then((res) => watchProgress = res),
     ]);
+    await migrateSettingSecrets();
 
     if (Pref.saveReply) {
       reply = await Hive.openBox<Uint8List>(
@@ -91,25 +96,39 @@ abstract final class GStorage {
   static Future<void> importAllJsonSettings(Map<String, dynamic> map) async {
     final settingData = validateSettingsSection(map, setting.name);
     final videoData = validateSettingsSection(map, video.name);
-    if (!settingData.containsKey(SettingBoxKey.webdavPassword)) {
-      final currentPassword = setting.get(SettingBoxKey.webdavPassword);
-      if (currentPassword != null) {
-        settingData[SettingBoxKey.webdavPassword] = currentPassword;
-      }
-    }
+    final importedWebDavPassword = settingData.remove(
+      SettingBoxKey.webdavPassword,
+    );
     final settingSnapshot = setting.toMap();
     final videoSnapshot = video.toMap();
+    final webDavPasswordSnapshot = SettingSecretStore.read(
+      SettingBoxKey.webdavPassword,
+    );
 
     try {
       await setting.clear();
       await setting.putAll(settingData);
       await video.clear();
       await video.putAll(videoData);
+      if (importedWebDavPassword != null) {
+        SettingSecretStore.write(
+          SettingBoxKey.webdavPassword,
+          importedWebDavPassword.toString(),
+        );
+      }
     } catch (_) {
       await setting.clear();
       await setting.putAll(settingSnapshot);
       await video.clear();
       await video.putAll(videoSnapshot);
+      if (webDavPasswordSnapshot == null) {
+        SettingSecretStore.delete(SettingBoxKey.webdavPassword);
+      } else {
+        SettingSecretStore.write(
+          SettingBoxKey.webdavPassword,
+          webDavPasswordSnapshot,
+        );
+      }
       rethrow;
     }
   }
@@ -128,6 +147,17 @@ abstract final class GStorage {
   static Map<dynamic, dynamic> sanitizeSettingsForExport(
     Map<dynamic, dynamic> settings,
   ) => Map<dynamic, dynamic>.of(settings)..remove(SettingBoxKey.webdavPassword);
+
+  static Future<void> migrateSettingSecrets() async {
+    final webDavPassword = setting.get(SettingBoxKey.webdavPassword);
+    if (webDavPassword != null) {
+      SettingSecretStore.write(
+        SettingBoxKey.webdavPassword,
+        webDavPassword.toString(),
+      );
+      await setting.delete(SettingBoxKey.webdavPassword);
+    }
+  }
 
   static void regAdapter() {
     Hive
@@ -175,6 +205,7 @@ abstract final class GStorage {
       setting.clear(),
       video.clear(),
       Accounts.clear(),
+      Future<void>.sync(SettingSecretStore.clear),
       watchProgress.clear(),
       ?reply?.clear(),
     ]);

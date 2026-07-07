@@ -2,6 +2,7 @@ import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -38,18 +39,24 @@ abstract final class Accounts {
       accountMode[i] = AnonymousAccount();
     }
     final invalidKeys = <dynamic>[];
+    final validAccounts = <String, LoginAccount>{};
     for (final entry in account.toMap().entries) {
       final a = entry.value;
       if (!a.shouldKeep) {
         invalidKeys.add(entry.key);
         continue;
       }
+      validAccounts[a.secretKey] = a;
       for (final t in a.type) {
         accountMode[t.index] = a;
       }
     }
     if (invalidKeys.isNotEmpty) {
       await account.deleteAll(invalidKeys);
+      AccountSecretStore.deleteAll(invalidKeys);
+    }
+    if (validAccounts.isNotEmpty) {
+      await account.putAll(validAccounts);
     }
     await Future.wait(
       (accountMode.toSet()..removeWhere((i) => i.activated)).map(
@@ -60,6 +67,7 @@ abstract final class Accounts {
 
   static Future<void> clear() async {
     await account.clear();
+    AccountSecretStore.clear();
     for (int i = 0; i < AccountType.values.length; i++) {
       accountMode[i] = AnonymousAccount();
     }
