@@ -32,6 +32,7 @@ import 'package:pili_plus/plugin/pl_player/models/audio_output_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/bottom_progress_behavior.dart';
 import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:pili_plus/plugin/pl_player/models/hwdec_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
@@ -654,6 +655,11 @@ abstract final class Pref {
     defaultValue: true,
   );
 
+  static bool get autoOpenClipboardVideoLink => _setting.get(
+    SettingBoxKey.autoOpenClipboardVideoLink,
+    defaultValue: false,
+  );
+
   static bool get enableBackgroundPlay =>
       _setting.get(SettingBoxKey.enableBackgroundPlay, defaultValue: true);
 
@@ -859,6 +865,24 @@ abstract final class Pref {
 
   static double get longPressSpeedDefault =>
       _video.get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0);
+
+  static double get longPressSpeedGain => _video.get(
+        VideoBoxKey.longPressSpeedGain,
+        defaultValue: LongPressSpeedFormulaDefaults.gain,
+      );
+
+  static LongPressSpeedFormula get longPressSpeedFormula =>
+      LongPressSpeedFormula.fromIndex(
+        _video.get(
+          VideoBoxKey.longPressSpeedFormula,
+          defaultValue: LongPressSpeedFormula.multiply.index,
+        ),
+      );
+
+  static String get longPressSpeedCustomFormula => _video.get(
+        VideoBoxKey.longPressSpeedCustomFormula,
+        defaultValue: LongPressSpeedFormulaDefaults.customFormula,
+      );
 
   static bool get defaultShowComment =>
       _setting.get(SettingBoxKey.defaultShowComment, defaultValue: false);

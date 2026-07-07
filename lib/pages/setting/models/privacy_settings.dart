@@ -2,11 +2,19 @@ import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/pages/setting/models/model.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/api_type.dart';
+import 'package:pili_plus/utils/storage_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 List<SettingsModel> get privacySettings => [
+  const SwitchModel(
+    title: '自动打开剪贴板视频',
+    subtitle: '进入应用或返回前台时，自动读取剪贴板中的B站视频链接',
+    leading: Icon(Icons.content_paste_outlined),
+    setKey: SettingBoxKey.autoOpenClipboardVideoLink,
+    defaultVal: false,
+  ),
   NormalModel(
     onTap: (context, setState) {
       if (!Accounts.main.isLogin) {

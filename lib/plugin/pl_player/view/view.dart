@@ -1233,6 +1233,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     return true;
   }
 
+  bool _isLongPressSpeedArea(Offset offset) => offset.dx >= maxWidth / 2;
+
   void _onPointerDown(PointerDownEvent event) {
     if (PlatformUtils.isDesktop) {
       final buttons = event.buttons;
@@ -1252,13 +1254,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       }
     }
 
+    final isLongPressSpeedArea = _isLongPressSpeedArea(event.localPosition);
     final controlsUnlock = !plPlayerController.controlsLock.value;
     if (PlatformUtils.isMobile) {
       _tapGestureRecognizer.addPointer(event);
       if (controlsUnlock) {
         if (!plPlayerController.isLive) {
           _doubleTapGestureRecognizer.addPointer(event);
-          longPressRecognizer.addPointer(event);
+          if (isLongPressSpeedArea) {
+            longPressRecognizer.addPointer(event);
+          }
         }
         _scaleGestureRecognizer
           ..isPosAllowed = _isPositionAllowed(event.localPosition)
@@ -1270,7 +1275,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       } else {
         _tapGestureRecognizer.addPointer(event);
         _doubleTapGestureRecognizer.addPointer(event);
-        longPressRecognizer.addPointer(event);
+        if (isLongPressSpeedArea) {
+          longPressRecognizer.addPointer(event);
+        }
       }
       _scaleGestureRecognizer.addPointer(event);
     }
@@ -1415,7 +1422,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                       ),
                       child: Obx(
                         () => Text(
-                          '${plPlayerController.enableAutoLongPressSpeed ? (plPlayerController.longPressStatus.value ? plPlayerController.lastPlaybackSpeed : plPlayerController.playbackSpeed) * 2 : plPlayerController.longPressSpeed}倍速中',
+                          '${plPlayerController.longPressTargetSpeedText}倍速中',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,

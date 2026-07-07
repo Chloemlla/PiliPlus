@@ -102,7 +102,7 @@ class NativeMediaService : Service() {
                         )
                     }
 
-                    override fun onCustomAction(action: String?, extras: Bundle?) {
+                    override fun onCustomAction(action: String, extras: Bundle?) {
                         when (action) {
                             ACTION_BACKGROUND_AUDIO -> dispatchFlutterAction(FLUTTER_BACKGROUND_AUDIO)
                             ACTION_MINI_PLAYER -> dispatchFlutterAction(FLUTTER_MINI_PLAYER)

@@ -54,6 +54,7 @@ abstract final class SettingBoxKey {
       exemptFilterForFollowed = 'exemptFilterForFollowed',
       banWordForRecommend = 'banWordForRecommend',
       applyFilterToRelatedVideos = 'applyFilterToRelatedVideos',
+      autoOpenClipboardVideoLink = 'autoOpenClipboardVideoLink',
       autoUpdate = 'autoUpdate',
       maxCacheSize = 'maxCacheSize',
       defaultShowComment = 'defaultShowComment',
@@ -251,6 +252,9 @@ abstract final class VideoBoxKey {
   static const String playRepeat = 'playRepeat',
       playSpeedDefault = 'playSpeedDefault',
       longPressSpeedDefault = 'longPressSpeedDefault',
+      longPressSpeedGain = 'longPressSpeedGain',
+      longPressSpeedFormula = 'longPressSpeedFormula',
+      longPressSpeedCustomFormula = 'longPressSpeedCustomFormula',
       speedsList = 'speedsList',
       cacheVideoFit = 'cacheVideoFit';
 }

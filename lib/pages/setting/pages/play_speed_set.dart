@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/pages/setting/widgets/switch_item.dart';
+import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/filtering_text.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -23,6 +24,10 @@ class PlaySpeedPage extends StatefulWidget {
 class _PlaySpeedPageState extends State<PlaySpeedPage> {
   late double playSpeedDefault = Pref.playSpeedDefault;
   late double longPressSpeedDefault = Pref.longPressSpeedDefault;
+  late double longPressSpeedGain = Pref.longPressSpeedGain;
+  late LongPressSpeedFormula longPressSpeedFormula =
+      Pref.longPressSpeedFormula;
+  late String longPressSpeedCustomFormula = Pref.longPressSpeedCustomFormula;
   late List<double> speedList = Pref.speedList;
   late bool enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
   List<({int id, String title, Icon icon})> sheetMenu = [
@@ -43,6 +48,14 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
       ),
     ),
     (
+      id: 3,
+      title: '设置为长按增益',
+      icon: const Icon(
+        Icons.trending_up,
+        size: 21,
+      ),
+    ),
+    (
       id: -1,
       title: '删除该项',
       icon: const Icon(
@@ -53,6 +66,26 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
   ];
 
   Box video = GStorage.video;
+
+  bool isSheetMenuEnabled(int id) => switch (id) {
+    2 => !enableAutoLongPressSpeed,
+    3 => enableAutoLongPressSpeed,
+    _ => true,
+  };
+
+  IconData formulaIcon(LongPressSpeedFormula formula) => switch (formula) {
+    LongPressSpeedFormula.multiply => Icons.close,
+    LongPressSpeedFormula.add => Icons.add,
+    LongPressSpeedFormula.custom => Icons.functions,
+  };
+
+  String get formulaSubtitle => switch (longPressSpeedFormula) {
+    LongPressSpeedFormula.multiply =>
+      '${longPressSpeedFormula.description}（当前倍速 × $longPressSpeedGain）',
+    LongPressSpeedFormula.add =>
+      '${longPressSpeedFormula.description}（当前倍速 + $longPressSpeedGain）',
+    LongPressSpeedFormula.custom => longPressSpeedCustomFormula,
+  };
 
   // 添加自定义倍速
   void onAddSpeed() {
@@ -128,9 +161,7 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
             const SizedBox(height: 10),
             ...sheetMenu.map(
               (item) => ListTile(
-                enabled: enableAutoLongPressSpeed && item.id == 2
-                    ? false
-                    : true,
+                enabled: isSheetMenuEnabled(item.id),
                 onTap: () {
                   Get.back();
                   menuAction(index, item.id);
@@ -163,11 +194,16 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
       // 设置默认长按倍速
       longPressSpeedDefault = speed;
       video.put(VideoBoxKey.longPressSpeedDefault, longPressSpeedDefault);
+    } else if (id == 3) {
+      // 设置长按增益
+      longPressSpeedGain = speed;
+      video.put(VideoBoxKey.longPressSpeedGain, longPressSpeedGain);
     } else if (id == -1) {
       if ([
         1.0,
         playSpeedDefault,
         longPressSpeedDefault,
+        longPressSpeedGain,
       ].contains(speed)) {
         SmartDialog.showToast('不支持删除默认倍速');
         return;
@@ -176,6 +212,108 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
       video.put(VideoBoxKey.speedsList, speedList);
     }
     setState(() {});
+  }
+
+  void showFormulaSheet(ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      clipBehavior: Clip.hardEdge,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            ...LongPressSpeedFormula.values.map(
+              (formula) => ListTile(
+                onTap: () {
+                  Get.back();
+                  longPressSpeedFormula = formula;
+                  video.put(VideoBoxKey.longPressSpeedFormula, formula.index);
+                  setState(() {});
+                },
+                minLeadingWidth: 0,
+                iconColor: theme.colorScheme.onSurface,
+                leading: Icon(
+                  formulaIcon(formula),
+                  size: 21,
+                ),
+                title: Text(
+                  formula.label,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                subtitle: Text(formula.description),
+                trailing: formula == longPressSpeedFormula
+                    ? const Icon(Icons.check)
+                    : null,
+              ),
+            ),
+            SizedBox(height: 25 + MediaQuery.viewPaddingOf(context).bottom),
+          ],
+        );
+      },
+    );
+  }
+
+  void onEditCustomFormula() {
+    String formula = longPressSpeedCustomFormula;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('自定义长按倍速公式'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            TextFormField(
+              autofocus: true,
+              initialValue: formula,
+              decoration: const InputDecoration(
+                labelText: '公式',
+                helperText: 'x 为当前倍速，g 为长按增益',
+                border: OutlineInputBorder(borderRadius: .all(.circular(6))),
+              ),
+              onChanged: (value) => formula = value.trim(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: Text(
+              '取消',
+              style: TextStyle(color: Theme.of(context).colorScheme.outline),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (!LongPressSpeedFormula.isValidCustomFormula(formula)) {
+                SmartDialog.showToast('公式无效');
+                return;
+              }
+              Get.back();
+              longPressSpeedFormula = LongPressSpeedFormula.custom;
+              longPressSpeedCustomFormula = formula;
+              video
+                ..put(
+                  VideoBoxKey.longPressSpeedFormula,
+                  LongPressSpeedFormula.custom.index,
+                )
+                ..put(
+                  VideoBoxKey.longPressSpeedCustomFormula,
+                  longPressSpeedCustomFormula,
+                );
+              setState(() {});
+            },
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -208,7 +346,7 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
                 bottom: 0,
               ),
               child: Text(
-                '点击下方按钮设置默认（长按）倍速',
+                '点击下方按钮设置默认倍速、长按倍速或增益',
                 style: TextStyle(color: theme.colorScheme.outline),
               ),
             ),
@@ -218,13 +356,29 @@ class _PlaySpeedPageState extends State<PlaySpeedPage> {
             ),
             SetSwitchItem(
               title: '动态长按倍速',
-              subtitle: '根据默认倍速长按时自动双倍',
+              subtitle: '根据当前倍速和增益计算长按倍速',
               setKey: SettingBoxKey.enableAutoLongPressSpeed,
               defaultVal: enableAutoLongPressSpeed,
               onChanged: (val) =>
                   setState(() => enableAutoLongPressSpeed = val),
             ),
-            if (!enableAutoLongPressSpeed)
+            if (enableAutoLongPressSpeed) ...[
+              ListTile(
+                title: const Text('长按倍速公式'),
+                subtitle: Text(formulaSubtitle),
+                onTap: () => showFormulaSheet(theme),
+              ),
+              ListTile(
+                title: const Text('长按倍速增益'),
+                subtitle: Text(longPressSpeedGain.toString()),
+              ),
+              if (longPressSpeedFormula == LongPressSpeedFormula.custom)
+                ListTile(
+                  title: const Text('自定义公式'),
+                  subtitle: Text(longPressSpeedCustomFormula),
+                  onTap: onEditCustomFormula,
+                ),
+            ] else
               ListTile(
                 title: const Text('默认长按倍速'),
                 subtitle: Text(longPressSpeedDefault.toString()),

@@ -15,6 +15,7 @@ import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/clipboard_video_link_handler.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
@@ -68,6 +69,9 @@ class _MainAppState extends PopScopeState<MainApp>
       // FlutterSmartDialog throws
       PiliScheme.init();
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ClipboardVideoLinkHandler.checkAndOpen();
+    });
   }
 
   @override
@@ -112,6 +116,7 @@ class _MainAppState extends PopScopeState<MainApp>
         ..checkUnreadDynamic()
         ..checkDefaultSearch(true)
         ..checkUnread(_mainController.useBottomNav);
+      ClipboardVideoLinkHandler.checkAndOpen();
     }
   }
 

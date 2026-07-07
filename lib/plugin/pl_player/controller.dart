@@ -26,6 +26,7 @@ import 'package:pili_plus/plugin/pl_player/models/double_tap_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/duration.dart';
 import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:pili_plus/plugin/pl_player/models/heart_beat_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
@@ -102,6 +103,7 @@ class PlPlayerController with BlockConfigMixin {
   int _playerCount = 0;
 
   late double lastPlaybackSpeed = 1.0;
+  late double _activeLongPressSpeed = Pref.longPressSpeedDefault;
   final RxDouble _playbackSpeed = Pref.playSpeedDefault.obs;
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
@@ -162,6 +164,13 @@ class PlPlayerController with BlockConfigMixin {
 
   // 长按倍速
   double get longPressSpeed => _longPressSpeed.value;
+
+  double get longPressTargetSpeed => longPressStatus.value
+      ? _activeLongPressSpeed
+      : _resolveLongPressSpeed(playbackSpeed);
+
+  String get longPressTargetSpeedText =>
+      longPressTargetSpeed.toPrecision(3).toString();
 
   /// [videoPlayerController] instance of Player
   Player? get videoPlayerController => _videoPlayerController;
@@ -308,6 +317,9 @@ class PlPlayerController with BlockConfigMixin {
 
   late List<double> speedList = Pref.speedList;
   late bool enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
+  late double longPressSpeedGain = Pref.longPressSpeedGain;
+  late LongPressSpeedFormula longPressSpeedFormula = Pref.longPressSpeedFormula;
+  late String longPressSpeedCustomFormula = Pref.longPressSpeedCustomFormula;
   late final showControlDuration = Pref.enableLongShowControl
       ? const Duration(seconds: 30)
       : const Duration(seconds: 3);
@@ -1249,6 +1261,25 @@ class PlPlayerController with BlockConfigMixin {
     longPressTimer = null;
   }
 
+  void refreshLongPressSpeedSettings() {
+    enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
+    _longPressSpeed.value = Pref.longPressSpeedDefault;
+    longPressSpeedGain = Pref.longPressSpeedGain;
+    longPressSpeedFormula = Pref.longPressSpeedFormula;
+    longPressSpeedCustomFormula = Pref.longPressSpeedCustomFormula;
+  }
+
+  double _resolveLongPressSpeed(double baseSpeed) {
+    if (!enableAutoLongPressSpeed) {
+      return longPressSpeed;
+    }
+    return longPressSpeedFormula.resolve(
+      playbackSpeed: baseSpeed,
+      gain: longPressSpeedGain,
+      customFormula: longPressSpeedCustomFormula,
+    );
+  }
+
   /// 设置长按倍速状态 live模式下禁用
   Future<void> setLongPressStatus(bool val) async {
     if (isLive) {
@@ -1262,11 +1293,11 @@ class PlPlayerController with BlockConfigMixin {
     }
     if (val) {
       if (playerStatus.isPlaying) {
+        refreshLongPressSpeedSettings();
+        _activeLongPressSpeed = _resolveLongPressSpeed(playbackSpeed);
         longPressStatus.value = val;
         HapticFeedback.lightImpact();
-        await setPlaybackSpeed(
-          enableAutoLongPressSpeed ? playbackSpeed * 2 : longPressSpeed,
-        );
+        await setPlaybackSpeed(_activeLongPressSpeed);
       }
     } else {
       // if (kDebugMode) debugPrint('$playbackSpeed');
