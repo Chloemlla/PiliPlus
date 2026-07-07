@@ -1,17 +1,36 @@
 package com.chloemlla.piliplus
 
+import android.app.Activity
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager.LayoutParams
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 import com.ryanheise.audioservice.AudioServiceActivity
 
 class MainActivity : AudioServiceActivity() {
+    private var credentialResult: MethodChannel.Result? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         NativeMediaService.attachFlutterEngine(this, flutterEngine)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "pili_plus/android_credential_auth"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "confirmDeviceCredential" -> confirmDeviceCredential(
+                    call.argument<String>("title") ?: "验证身份",
+                    call.argument<String>("description") ?: "",
+                    result
+                )
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -45,8 +64,56 @@ class MainActivity : AudioServiceActivity() {
         AndroidHelper.ToDart.onUserLeaveHint?.run()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == CREDENTIAL_REQUEST_CODE) {
+            credentialResult?.success(resultCode == Activity.RESULT_OK)
+            credentialResult = null
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration?) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         AndroidHelper.isPipMode = isInPictureInPictureMode
+    }
+
+    private fun confirmDeviceCredential(
+        title: String,
+        description: String,
+        result: MethodChannel.Result
+    ) {
+        if (credentialResult != null) {
+            result.error("in_progress", "已有系统验证正在进行", null)
+            return
+        }
+
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguardManager == null) {
+            result.error("unavailable", "系统验证不可用", null)
+            return
+        }
+        if (!keyguardManager.isDeviceSecure) {
+            result.error("not_configured", "请先设置系统锁屏密码或PIN", null)
+            return
+        }
+
+        val intent = keyguardManager.createConfirmDeviceCredentialIntent(title, description)
+        if (intent == null) {
+            result.error("unavailable", "系统验证不可用", null)
+            return
+        }
+
+        credentialResult = result
+        try {
+            startActivityForResult(intent, CREDENTIAL_REQUEST_CODE)
+        } catch (e: Exception) {
+            credentialResult = null
+            result.error("unavailable", e.message, null)
+        }
+    }
+
+    companion object {
+        private const val CREDENTIAL_REQUEST_CODE = 0x7001
     }
 }
