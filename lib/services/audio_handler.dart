@@ -142,7 +142,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         }
       case 'repeat':
         if (PlPlayerController.instance case final player?) {
-          final values = PlayRepeat.values;
+          const values = PlayRepeat.values;
           final index = values.indexOf(player.playRepeat);
           player.setPlayRepeat(values[(index + 1) % values.length]);
           _syncNativePlaybackFlags();

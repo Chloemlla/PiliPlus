@@ -167,15 +167,11 @@ class AudioController extends GetxController
       ?..onPlay = onPlay
       ..onPause = onPause
       ..onSeek = onSeek
-      ..onPrevious = () {
-        playPrev();
-      }
+      ..onPrevious = playPrev
       ..onNext = () {
         playNext(nextPart: true);
       }
-      ..onSetSpeed = (speed) {
-        setSpeed(speed);
-      }
+      ..onSetSpeed = setSpeed
       ..onClearSession = onPause;
 
     animController = AnimationController(
