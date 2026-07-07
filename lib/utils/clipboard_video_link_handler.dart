@@ -24,7 +24,7 @@ abstract final class ClipboardVideoLinkHandler {
       final text = data?.text?.trim();
       if (text == null || text.isEmpty) return;
 
-      final link = _extractVideoLink(text);
+      final link = extractVideoLink(text);
       if (link == null) return;
 
       final now = DateTime.now();
@@ -49,7 +49,7 @@ abstract final class ClipboardVideoLinkHandler {
     }
   }
 
-  static String? _extractVideoLink(String text) {
+  static String? extractVideoLink(String text) {
     final link = _supportedUrlRegExp.firstMatch(text)?.group(1);
     return link == null ? null : _trimLink(link);
   }

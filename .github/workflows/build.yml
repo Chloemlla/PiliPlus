@@ -196,14 +196,6 @@ jobs:
           done
         shell: bash
 
-      - name: Release
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}
-        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
-        with:
-          tag_name: ${{ github.event.inputs.tag }}
-          name: ${{ github.event.inputs.tag }}
-          files: PiliPlus_android_*.apk
-
       - name: Automatic release
         if: success() && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
