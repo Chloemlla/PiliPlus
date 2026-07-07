@@ -56,10 +56,10 @@ jobs:
       contents: read
 
     steps:
-      - name: 代码迁出
+      - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
-      - name: 安装Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           channel: stable
@@ -101,12 +101,12 @@ jobs:
       contents: write
 
     steps:
-      - name: 代码迁出
+      - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
 
-      - name: 构建Java环境
+      - name: Set up Java
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520
         with:
           distribution: "zulu"
@@ -116,7 +116,7 @@ jobs:
             android/*.gradle*
             android/**/gradle-wrapper.properties
 
-      - name: 安装Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         id: flutter-action
         with:
@@ -217,21 +217,21 @@ jobs:
           name: "PiliPlus-android ${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
           files: PiliPlus_android_*.apk
 
-      - name: 上传
+      - name: Upload Android arm64-v8a
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Android_arm64-v8a
           path: PiliPlus_android_*_arm64-v8a.apk
 
-      - name: 上传
+      - name: Upload Android armeabi-v7a
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
           name: Android_armeabi-v7a
           path: PiliPlus_android_*_armeabi-v7a.apk
 
-      - name: 上传
+      - name: Upload Android x86_64
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           archive: false
