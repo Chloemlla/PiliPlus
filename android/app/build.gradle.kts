@@ -16,10 +16,11 @@ val isBuiltInKotlinEnabled = agpMajorVersion >= 9 &&
 if (!isBuiltInKotlinEnabled) {
     apply(plugin = "org.jetbrains.kotlin.android")
 }
+val targetAndroidSdk = rootProject.extra["targetAndroidSdk"] as Int
 
 android {
     namespace = "com.chloemlla.piliplus"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = targetAndroidSdk
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -30,7 +31,7 @@ android {
     defaultConfig {
         applicationId = "com.chloemlla.piliplus"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = targetAndroidSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

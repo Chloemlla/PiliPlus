@@ -67,7 +67,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Secret scan
         shell: bash
@@ -124,6 +124,9 @@ jobs:
           flutter-version-file: pubspec.yaml
           cache: true
 
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Apply Patch
         shell: pwsh
         run: lib/scripts/patch.ps1 android
@@ -179,7 +182,7 @@ jobs:
         run: lib/scripts/build.ps1 android
 
       - name: Flutter Build Release Apk
-        run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --pub
+        run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --no-pub
 
       - name: Rename
         run: |
