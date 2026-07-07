@@ -95,6 +95,7 @@ jobs:
 
   android:
     name: Release Android
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_android == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -161,13 +162,20 @@ jobs:
         run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --pub
 
       - name: Flutter Build Dev Apk
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
         run: |
           flutter build apk --release --split-per-abi --android-project-arg dev=1 --pub
 
       - name: Rename
         run: |
-          for file in build/app/outputs/flutter-apk/app-*-release.apk; do
+          shopt -s nullglob
+          apk_files=(build/app/outputs/flutter-apk/app-*-release.apk)
+          if [ ${#apk_files[@]} -eq 0 ]; then
+            echo "::error::No release APKs found in build/app/outputs/flutter-apk"
+            exit 1
+          fi
+
+          for file in "${apk_files[@]}"; do
             abi=$(echo "$file" | sed -E 's|.*app-(.*)-release\.apk|\1|')
             mv "$file" "PiliPlus_android_${{ env.version }}_${abi}.apk"
           done

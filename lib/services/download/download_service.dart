@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert' show jsonDecode, jsonEncode;
 import 'dart:io' show Directory, File;
 
+import 'package:pili_plus/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:pili_plus/grpc/dm.dart';
 import 'package:pili_plus/http/download.dart';
 import 'package:pili_plus/http/init.dart';
@@ -15,6 +16,7 @@ import 'package:pili_plus/models_new/video/video_detail/data.dart';
 import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/pages/danmaku/controller.dart';
+import 'package:pili_plus/services/download/bounded_task_queue.dart';
 import 'package:pili_plus/services/download/download_manager.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/extension/file_ext.dart';
@@ -31,6 +33,7 @@ import 'package:synchronized/synchronized.dart';
 
 class DownloadService extends GetxService {
   static const int _maxDanmakuSegmentConcurrency = 4;
+  static const String _danmakuSegmentDir = 'danmaku_segments';
 
   static const _entryFile = 'entry.json';
   static const _indexFile = 'index.json';
@@ -307,10 +310,16 @@ class DownloadService extends GetxService {
     final danmakuFile = File(
       path.join(entry.entryDirPath, PathUtils.danmakuName),
     );
+    final danmakuSegmentDir = Directory(
+      path.join(entry.entryDirPath, _danmakuSegmentDir),
+    );
     if (isUpdate || !danmakuFile.existsSync()) {
       try {
         if (!isUpdate) {
           _updateCurStatus(DownloadStatus.getDanmaku);
+        }
+        if (isUpdate && danmakuSegmentDir.existsSync()) {
+          await danmakuSegmentDir.delete(recursive: true);
         }
         final seg = (entry.totalTimeMilli / PlDanmakuController.segmentLength)
             .ceil();
@@ -318,19 +327,18 @@ class DownloadService extends GetxService {
           return true;
         }
 
-        final res = await _boundedFutureWait(
-          seg,
-          (index) => DmGrpc.dmSegMobile(cid: cid, segmentIndex: index + 1),
-          concurrency: _maxDanmakuSegmentConcurrency,
+        final segments = await _downloadDanmakuSegments(
+          cid: cid,
+          count: seg,
+          segmentDir: danmakuSegmentDir,
         );
 
-        final danmaku = res.first.data;
-        for (final i in res.skip(1)) {
-          if (i case Success(:final response)) {
-            danmaku.elems.addAll(response.elems);
-          }
+        final danmaku = DmSegMobileReply();
+        for (final segment in segments) {
+          danmaku.elems.addAll(segment.elems);
         }
         await danmakuFile.writeAsBytes(danmaku.writeToBuffer());
+        await danmakuSegmentDir.delete(recursive: true);
 
         return true;
       } catch (e) {
@@ -344,30 +352,46 @@ class DownloadService extends GetxService {
     return true;
   }
 
-  Future<List<T>> _boundedFutureWait<T>(
-    int count,
-    Future<T> Function(int index) task, {
-    required int concurrency,
+  Future<List<DmSegMobileReply>> _downloadDanmakuSegments({
+    required int cid,
+    required int count,
+    required Directory segmentDir,
   }) async {
-    if (count <= 0) {
-      return [];
+    if (!segmentDir.existsSync()) {
+      await segmentDir.create(recursive: true);
     }
-    final results = List<T?>.filled(count, null);
-    var nextIndex = 0;
-    final workerCount = concurrency < count ? concurrency : count;
+    return runBoundedTasks<DmSegMobileReply>(
+      count,
+      (index) => _readOrDownloadDanmakuSegment(
+        cid: cid,
+        segmentIndex: index + 1,
+        segmentDir: segmentDir,
+      ),
+      concurrency: _maxDanmakuSegmentConcurrency,
+    );
+  }
 
-    Future<void> worker() async {
-      while (true) {
-        final index = nextIndex++;
-        if (index >= count) {
-          return;
-        }
-        results[index] = await task(index);
+  Future<DmSegMobileReply> _readOrDownloadDanmakuSegment({
+    required int cid,
+    required int segmentIndex,
+    required Directory segmentDir,
+  }) async {
+    final segmentFile = File(path.join(segmentDir.path, '$segmentIndex.pb'));
+    if (segmentFile.existsSync()) {
+      try {
+        return DmSegMobileReply.fromBuffer(await segmentFile.readAsBytes());
+      } catch (_) {
+        await segmentFile.delete();
       }
     }
 
-    await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
-    return [for (final result in results) result as T];
+    final response = (await DmGrpc.dmSegMobile(
+      cid: cid,
+      segmentIndex: segmentIndex,
+    ))
+        .data;
+    await segmentFile.writeAsBytes(response.writeToBuffer());
+    return response;
   }
 
   Future<bool> _downloadCover({required BiliDownloadEntryInfo entry}) async {
