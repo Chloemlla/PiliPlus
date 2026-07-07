@@ -387,8 +387,7 @@ class DownloadService extends GetxService {
     final response = (await DmGrpc.dmSegMobile(
       cid: cid,
       segmentIndex: segmentIndex,
-    ))
-        .data;
+    )).data;
     await segmentFile.writeAsBytes(response.writeToBuffer());
     return response;
   }

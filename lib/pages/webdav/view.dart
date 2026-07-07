@@ -1,5 +1,6 @@
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/pages/webdav/webdav.dart';
+import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
@@ -7,10 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 class WebDavSettingPage extends StatefulWidget {
-  const WebDavSettingPage({
-    super.key,
-    this.showAppBar = true,
-  });
+  const WebDavSettingPage({super.key, this.showAppBar = true});
 
   final bool showAppBar;
 
@@ -131,9 +129,13 @@ class _WebDavSettingPageState extends State<WebDavSettingPage> {
                 await GStorage.setting.putAll({
                   SettingBoxKey.webdavUri: _uriCtr.text,
                   SettingBoxKey.webdavUsername: _usernameCtr.text,
-                  SettingBoxKey.webdavPassword: _passwordCtr.text,
                   SettingBoxKey.webdavDirectory: _directoryCtr.text,
                 });
+                SettingSecretStore.write(
+                  SettingBoxKey.webdavPassword,
+                  _passwordCtr.text,
+                );
+                await GStorage.setting.delete(SettingBoxKey.webdavPassword);
                 if (_uriCtr.text.isEmpty) {
                   return;
                 }

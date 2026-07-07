@@ -38,6 +38,7 @@ import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -126,10 +127,8 @@ abstract final class Pref {
     }
     return SegmentType.values
         .map(
-          (item) => Pair(
-            first: item,
-            second: SkipType.values[list[item.index]],
-          ),
+          (item) =>
+              Pair(first: item, second: SkipType.values[list[item.index]]),
         )
         .toList();
   }
@@ -139,13 +138,11 @@ abstract final class Pref {
     if (list == null || list.length != SegmentType.values.length) {
       return SegmentType.values.map((i) => i.color).toList();
     }
-    return SegmentType.values.map(
-      (item) {
-        final String e = list[item.index];
-        final color = e.isNotEmpty ? int.tryParse('FF$e', radix: 16) : null;
-        return color != null ? Color(color) : item.color;
-      },
-    ).toList();
+    return SegmentType.values.map((item) {
+      final String e = list[item.index];
+      final color = e.isNotEmpty ? int.tryParse('FF$e', radix: 16) : null;
+      return color != null ? Color(color) : item.color;
+    }).toList();
   }
 
   static bool get feedBackEnable =>
@@ -606,6 +603,7 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.webdavUsername, defaultValue: '');
 
   static String get webdavPassword =>
+      SettingSecretStore.read(SettingBoxKey.webdavPassword) ??
       _setting.get(SettingBoxKey.webdavPassword, defaultValue: '');
 
   static String get webdavDirectory =>

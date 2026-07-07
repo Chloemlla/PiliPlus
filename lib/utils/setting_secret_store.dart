@@ -28,7 +28,9 @@ abstract final class SettingSecretStore {
   }
 
   static String? read(String key) {
-    _ensureInitialized();
+    if (!isInitialized) {
+      return null;
+    }
     return _secrets[key];
   }
 
@@ -80,9 +82,11 @@ abstract final class SettingSecretStore {
       if (payload is! String || iv is! String) {
         throw const FormatException('Invalid setting secret payload');
       }
-      final plainText = crypt.Encrypter(
-        crypt.AES(_key!, mode: crypt.AESMode.gcm),
-      ).decrypt(crypt.Encrypted.fromBase64(payload), iv: crypt.IV.fromBase64(iv));
+      final plainText =
+          crypt.Encrypter(crypt.AES(_key!, mode: crypt.AESMode.gcm)).decrypt(
+            crypt.Encrypted.fromBase64(payload),
+            iv: crypt.IV.fromBase64(iv),
+          );
       final decoded = jsonDecode(plainText);
       if (decoded is! Map) {
         throw const FormatException('Invalid setting secret map');
@@ -105,11 +109,7 @@ abstract final class SettingSecretStore {
       crypt.AES(_key!, mode: crypt.AESMode.gcm),
     ).encrypt(jsonEncode(_secrets), iv: iv);
     _dataFile!.writeAsStringSync(
-      jsonEncode({
-        'version': 1,
-        'iv': iv.base64,
-        'payload': payload.base64,
-      }),
+      jsonEncode({'version': 1, 'iv': iv.base64, 'payload': payload.base64}),
       flush: true,
     );
   }
