@@ -70,6 +70,7 @@ class _MainAppState extends PopScopeState<MainApp>
       PiliScheme.init();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ClipboardVideoLinkHandler.init();
       ClipboardVideoLinkHandler.checkAndOpen();
     });
   }
@@ -116,7 +117,6 @@ class _MainAppState extends PopScopeState<MainApp>
         ..checkUnreadDynamic()
         ..checkDefaultSearch(true)
         ..checkUnread(_mainController.useBottomNav);
-      ClipboardVideoLinkHandler.checkAndOpen();
     }
   }
 
@@ -127,6 +127,7 @@ class _MainAppState extends PopScopeState<MainApp>
       windowManager.removeListener(this);
     }
     removeObserverMobile(this);
+    ClipboardVideoLinkHandler.dispose();
     PiliScheme.listener?.cancel();
     GStorage.close();
     super.dispose();
