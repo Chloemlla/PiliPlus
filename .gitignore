@@ -152,3 +152,6 @@ dist
 test*
 !test/
 !test/**
+
+# Local-only audit skill directory
+/fuck-my-shit-mountain/
