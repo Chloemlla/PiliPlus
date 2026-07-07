@@ -206,7 +206,7 @@ jobs:
 
       - name: Automatic release
         if: success() && github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
