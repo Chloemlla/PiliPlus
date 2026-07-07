@@ -128,6 +128,29 @@ jobs:
         shell: pwsh
         run: lib/scripts/patch.ps1 android
 
+      - name: Set release metadata
+        shell: pwsh
+        run: |
+          $versionLine = Get-Content -Path pubspec.yaml -Encoding UTF8 |
+            Where-Object { $_ -match '^\s*version:' } |
+            Select-Object -First 1
+
+          if (-not $versionLine) {
+            Write-Error 'pubspec.yaml version not found'
+            exit 1
+          }
+
+          if ($versionLine -notmatch '^\s*version:\s*([^\+\s]+)') {
+            Write-Error "pubspec.yaml version is invalid: $versionLine"
+            exit 1
+          }
+
+          $versionName = $Matches[1]
+          $shortHash = (git rev-parse --short=9 HEAD).Trim()
+
+          Add-Content -Path $env:GITHUB_ENV -Value "pilipili_VERSION_NAME=$versionName"
+          Add-Content -Path $env:GITHUB_ENV -Value "pilipili_SHORT_HASH=$shortHash"
+
       - name: Write key
         shell: bash
         env:
@@ -152,18 +175,11 @@ jobs:
           } > android/key.properties
 
       - name: Set and Extract version
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: pwsh
         run: lib/scripts/build.ps1 android
 
       - name: Flutter Build Release Apk
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --pub
-
-      - name: Flutter Build Dev Apk
-        if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-        run: |
-          flutter build apk --release --split-per-abi --android-project-arg dev=1 --pub
 
       - name: Rename
         run: |
@@ -186,6 +202,19 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag }}
           name: ${{ github.event.inputs.tag }}
+          files: PiliPlus_android_*.apk
+
+      - name: Automatic release
+        if: success() && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: "v${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
+          prerelease: false
+          name: "PiliPlus-android ${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
           files: PiliPlus_android_*.apk
 
       - name: 上传
