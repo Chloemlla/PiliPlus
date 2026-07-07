@@ -166,7 +166,17 @@ class AudioController extends GetxController
     videoPlayerServiceHandler
       ?..onPlay = onPlay
       ..onPause = onPause
-      ..onSeek = onSeek;
+      ..onSeek = onSeek
+      ..onPrevious = () {
+        playPrev();
+      }
+      ..onNext = () {
+        playNext(nextPart: true);
+      }
+      ..onSetSpeed = (speed) {
+        setSpeed(speed);
+      }
+      ..onClearSession = onPause;
 
     animController = AnimationController(
       vsync: this,
@@ -769,6 +779,7 @@ class AudioController extends GetxController
       ?..onPlay = null
       ..onPause = null
       ..onSeek = null
+      ..clearControlCallbacks()
       ..onVideoDetailDispose(hashCode.toString());
     _subscriptions?.forEach((e) => e.cancel());
     _subscriptions?.clear();

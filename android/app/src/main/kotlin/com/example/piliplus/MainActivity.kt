@@ -5,9 +5,20 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager.LayoutParams
+import io.flutter.embedding.engine.FlutterEngine
 import com.ryanheise.audioservice.AudioServiceActivity
 
 class MainActivity : AudioServiceActivity() {
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        NativeMediaService.attachFlutterEngine(this, flutterEngine)
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        NativeMediaService.detachFlutterEngine()
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (AndroidHelper.isFoldable) {
@@ -25,6 +36,7 @@ class MainActivity : AudioServiceActivity() {
 
     override fun onDestroy() {
         stopService(Intent(this, com.ryanheise.audioservice.AudioService::class.java))
+        stopService(Intent(this, NativeMediaService::class.java))
         super.onDestroy()
     }
 
