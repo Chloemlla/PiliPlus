@@ -18,12 +18,8 @@ abstract final class LogRedactor {
     r'("?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd|authorization|cookie)"?\s*:\s*)"[^"]*"',
     caseSensitive: false,
   );
-  static final RegExp _windowsUserHome = RegExp(
-    r'[A-Za-z]:\\Users\\[^\\\s]+',
-  );
-  static final RegExp _unixUserHome = RegExp(
-    r'/(?:home|Users)/[^/\s]+',
-  );
+  static final RegExp _windowsUserHome = RegExp(r'[A-Za-z]:\\Users\\[^\\\s]+');
+  static final RegExp _unixUserHome = RegExp(r'/(?:home|Users)/[^/\s]+');
   static final RegExp _contentUri = RegExp(
     r'\bcontent://[^\s]+',
     caseSensitive: false,

@@ -40,9 +40,9 @@ class CrashReport {
     final now = DateTime.now();
     final crashedAtMillis = now.millisecondsSinceEpoch;
     final exceptionType = error.runtimeType.toString();
-    final rootCause = _sanitize(error.toString().trim().isEmpty
-        ? exceptionType
-        : error.toString());
+    final rootCause = _sanitize(
+      error.toString().trim().isEmpty ? exceptionType : error.toString(),
+    );
     final stackTraceText = _sanitize(stackTrace?.toString() ?? '');
     return CrashReport(
       reportId: _reportId(
@@ -84,17 +84,17 @@ class CrashReport {
   }
 
   Map<String, dynamic> toJson() => {
-        'reportId': reportId,
-        'crashedAtMillis': crashedAtMillis,
-        'crashedAtText': crashedAtText,
-        'exceptionType': exceptionType,
-        'rootCause': rootCause,
-        'threadName': threadName,
-        'processName': processName,
-        'systemInfo': systemInfo,
-        'stackTrace': stackTrace,
-        'recentEvents': recentEvents,
-      };
+    'reportId': reportId,
+    'crashedAtMillis': crashedAtMillis,
+    'crashedAtText': crashedAtText,
+    'exceptionType': exceptionType,
+    'rootCause': rootCause,
+    'threadName': threadName,
+    'processName': processName,
+    'systemInfo': systemInfo,
+    'stackTrace': stackTrace,
+    'recentEvents': recentEvents,
+  };
 
   String toClipboardText() {
     final buffer = StringBuffer()

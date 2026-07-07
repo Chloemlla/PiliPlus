@@ -57,7 +57,11 @@ abstract final class AndroidFirstLaunchPermissionService {
         if (!context.mounted) {
           return;
         }
-        if (!await item.isMissing()) {
+        final isMissing = await item.isMissing();
+        if (!context.mounted) {
+          return;
+        }
+        if (!isMissing) {
           continue;
         }
 
@@ -69,9 +73,19 @@ abstract final class AndroidFirstLaunchPermissionService {
           continue;
         }
 
-        final status = await item.request(context);
+        final status = await item.request();
         if (!context.mounted) {
           return;
+        }
+        if (item.continueContent != null) {
+          await _showContinueDialog(
+            context,
+            title: item.title,
+            content: item.continueContent!,
+          );
+          if (!context.mounted) {
+            return;
+          }
         }
         if (status == PermissionStatus.permanentlyDenied) {
           await _showOpenAppSettingsDialog(context, item.title);
@@ -130,6 +144,7 @@ abstract final class AndroidFirstLaunchPermissionService {
           requestLabel: '去授权',
           isMissing: () async => !await _canChangeSystemBrightness(),
           request: _requestSystemBrightnessPermission,
+          continueContent: '请在系统设置中允许修改系统设置。完成后返回 PiliPlus，并点击继续处理后续权限。',
         ),
     ];
   }
@@ -142,9 +157,7 @@ abstract final class AndroidFirstLaunchPermissionService {
     }
   }
 
-  static Future<PermissionStatus?> _requestSystemBrightnessPermission(
-    BuildContext context,
-  ) async {
+  static Future<PermissionStatus?> _requestSystemBrightnessPermission() async {
     var brightness = 0.5;
     try {
       brightness = await ScreenBrightnessPlatform.instance.system;
@@ -156,13 +169,6 @@ abstract final class AndroidFirstLaunchPermissionService {
       );
     } catch (_) {}
 
-    if (context.mounted) {
-      await _showContinueDialog(
-        context,
-        title: '系统亮度权限',
-        content: '请在系统设置中允许修改系统设置。完成后返回 PiliPlus，并点击继续处理后续权限。',
-      );
-    }
     return null;
   }
 
@@ -256,6 +262,7 @@ class _PermissionItem {
     required this.isMissing,
     required this.request,
     this.requestLabel = '继续授权',
+    this.continueContent,
   });
 
   factory _PermissionItem.runtime({
@@ -267,15 +274,16 @@ class _PermissionItem {
       title: title,
       reason: reason,
       isMissing: () => _isRuntimePermissionMissing(permission),
-      request: (_) => permission.request(),
+      request: permission.request,
     );
   }
 
   final String title;
   final String reason;
   final String requestLabel;
+  final String? continueContent;
   final Future<bool> Function() isMissing;
-  final Future<PermissionStatus?> Function(BuildContext context) request;
+  final Future<PermissionStatus?> Function() request;
 
   static Future<bool> _isRuntimePermissionMissing(
     Permission permission,

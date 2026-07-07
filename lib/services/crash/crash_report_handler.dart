@@ -4,7 +4,11 @@ import 'package:catcher_2/catcher_2.dart';
 class CrashReportHandler extends ReportHandler {
   @override
   Future<bool> handle(Report report) async {
-    CrashReporter.recordErrorSync(report.error, report.stackTrace);
+    final stackTrace = report.stackTrace;
+    CrashReporter.recordErrorSync(
+      report.error,
+      stackTrace is StackTrace ? stackTrace : null,
+    );
     return true;
   }
 }

@@ -160,7 +160,8 @@ class _LogsPageState extends State<LogsPage> {
           const SizedBox(width: 6),
         ],
       ),
-      body: logsContent.isNotEmpty ||
+      body:
+          logsContent.isNotEmpty ||
               _deviceInfo != null ||
               _storedCrashReport != null
           ? Padding(
@@ -217,10 +218,7 @@ class _CrashReportCard extends StatelessWidget {
   final CrashReport report;
   final VoidCallback onChanged;
 
-  const _CrashReportCard({
-    required this.report,
-    required this.onChanged,
-  });
+  const _CrashReportCard({required this.report, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +228,11 @@ class _CrashReportCard extends StatelessWidget {
         leading: Icon(Icons.warning_amber_rounded, color: colorScheme.error),
         title: const Text('已保存崩溃报告'),
         subtitle: Text('${report.crashedAtText} · ${report.exceptionType}'),
-        trailing: Icon(Icons.arrow_forward, size: 16, color: colorScheme.outline),
+        trailing: Icon(
+          Icons.arrow_forward,
+          size: 16,
+          color: colorScheme.outline,
+        ),
         onTap: () async {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(

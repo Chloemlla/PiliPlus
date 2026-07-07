@@ -428,7 +428,10 @@ class _ActionPanel extends StatelessWidget {
     try {
       final dir = await getTemporaryDirectory();
       final file = File(
-        p.join(dir.path, 'pili_plus_crash_report_${report.crashedAtMillis}.txt'),
+        p.join(
+          dir.path,
+          'pili_plus_crash_report_${report.crashedAtMillis}.txt',
+        ),
       );
       await file.writeAsString(report.toClipboardText(), flush: true);
       await SharePlus.instance.share(
@@ -448,7 +451,10 @@ Widget _card(List<Widget> contents) {
   return Card(
     child: Padding(
       padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: contents),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: contents,
+      ),
     ),
   );
 }

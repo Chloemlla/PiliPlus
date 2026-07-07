@@ -295,11 +295,8 @@ class MyApp extends StatelessWidget {
         notifyStyle: const FlutterSmartNotifyStyle(
           warningBuilder: NotifyWarning.new,
         ),
-        builder: (context, child) => _builder(
-          context,
-          child,
-          startupCrashReport,
-        ),
+        builder: (context, child) =>
+            _builder(context, child, startupCrashReport),
       ),
       navigatorObservers: [
         routeObserver,

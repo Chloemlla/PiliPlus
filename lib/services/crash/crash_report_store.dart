@@ -16,9 +16,7 @@ abstract final class CrashReportStore {
       getApplicationDocumentsDirectory(),
       getTemporaryDirectory(),
     ]);
-    _files = [
-      for (final dir in dirs) File(p.join(dir.path, _fileName)),
-    ];
+    _files = [for (final dir in dirs) File(p.join(dir.path, _fileName))];
   }
 
   static void saveSync(CrashReport report) {
@@ -47,7 +45,8 @@ abstract final class CrashReportStore {
     for (final file in _requireFiles()) {
       if (!file.existsSync()) continue;
       try {
-        final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final json =
+            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
         return CrashReport.fromJson(json);
       } catch (_) {
         continue;
@@ -74,8 +73,8 @@ abstract final class CrashReportStore {
 
   static void _writeAtomically(File file, String payload) {
     file.parent.createSync(recursive: true);
-    final tempFile = File('${file.path}.tmp');
-    tempFile.writeAsStringSync(payload, flush: true);
+    final tempFile = File('${file.path}.tmp')
+      ..writeAsStringSync(payload, flush: true);
     if (file.existsSync()) {
       file.deleteSync();
     }
