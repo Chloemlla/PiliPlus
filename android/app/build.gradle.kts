@@ -103,6 +103,10 @@ flutter {
     source = "../.."
 }
 
+dependencies {
+    implementation("com.tencent:mmkv-static:1.3.14")
+}
+
 baselineProfile {
     mergeIntoMain = true
     saveInSrc = true

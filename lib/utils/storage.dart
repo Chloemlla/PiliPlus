@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models/user/danmaku_rule_adapter.dart';
 import 'package:pili_plus/models/user/info.dart';
+import 'package:pili_plus/utils/android/android_mmkv_box.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account_adapter.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
@@ -49,7 +50,10 @@ abstract final class GStorage {
         },
       ).then((res) => localCache = res),
       // 设置
-      Hive.openBox('setting').then((res) => setting = res),
+      openAndroidMmkvBackedBox<dynamic>(
+        name: 'setting',
+        openHive: () => Hive.openBox('setting'),
+      ).then((res) => setting = res),
       // 搜索历史
       Hive.openBox(
         'historyWord',
@@ -58,14 +62,21 @@ abstract final class GStorage {
         },
       ).then((res) => historyWord = res),
       // 视频设置
-      Hive.openBox('video').then((res) => video = res),
+      openAndroidMmkvBackedBox<dynamic>(
+        name: 'video',
+        openHive: () => Hive.openBox('video'),
+      ).then((res) => video = res),
       Accounts.init(),
-      Hive.openBox<int>(
-        'watchProgress',
+      openAndroidMmkvBackedBox<int>(
+        name: 'watchProgress',
         keyComparator: _intStrDescKeyComparator,
-        compactionStrategy: (entries, deletedEntries) {
-          return deletedEntries > 4;
-        },
+        openHive: () => Hive.openBox<int>(
+          'watchProgress',
+          keyComparator: _intStrDescKeyComparator,
+          compactionStrategy: (entries, deletedEntries) {
+            return deletedEntries > 4;
+          },
+        ),
       ).then((res) => watchProgress = res),
     ]);
     await migrateSettingSecrets();

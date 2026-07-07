@@ -46,6 +46,7 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AndroidMmkv.initialize(applicationContext)
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode =
