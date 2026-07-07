@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.konan.properties.Properties
 
 plugins {
     id("com.android.application")
+    id("androidx.baselineprofile")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -100,4 +101,15 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+baselineProfile {
+    mergeIntoMain = true
+    saveInSrc = true
+    automaticGenerationDuringBuild = false
+}
+
+dependencies {
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baselineprofile"))
 }

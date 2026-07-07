@@ -114,7 +114,13 @@ jobs:
           cache: "gradle"
           cache-dependency-path: |
             android/*.gradle*
+            android/**/*.gradle*
             android/**/gradle-wrapper.properties
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+        with:
+          gradle-version: "9.5.0"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
@@ -130,6 +136,13 @@ jobs:
       - name: Apply Patch
         shell: pwsh
         run: lib/scripts/patch.ps1 android
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+        shell: bash
 
       - name: Set release metadata
         shell: pwsh
@@ -180,6 +193,18 @@ jobs:
       - name: Set and Extract version
         shell: pwsh
         run: lib/scripts/build.ps1 android
+
+      - name: Generate Baseline Profile
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            DART_DEFINES=$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)
+            gradle -p android -Pdart-defines="$DART_DEFINES" :app:generateBaselineProfile --no-daemon --stacktrace
 
       - name: Flutter Build Release Apk
         run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --no-pub
