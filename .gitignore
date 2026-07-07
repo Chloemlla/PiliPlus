@@ -155,3 +155,7 @@ test*
 
 # Local-only audit skill directory
 /fuck-my-shit-mountain/
+.agents/skills/
+.codex/
+.trellis/
+Install-CodexTrellis.ps1

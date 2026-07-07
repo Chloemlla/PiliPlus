@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:pili_plus/pages/setting/pages/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_store.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/log_redactor.dart';
@@ -30,11 +33,13 @@ class LogsPage extends StatefulWidget {
 class _LogsPageState extends State<LogsPage> {
   List<_ExpandedItem<Report>> logsContent = [];
   _ExpandedItem<_DeviceInfo>? _deviceInfo;
+  CrashReport? _storedCrashReport;
   late bool enableLog = Pref.enableLog;
 
   @override
   void initState() {
     _initDeviceInfo();
+    _initCrashReport();
     getLog();
     super.initState();
   }
@@ -47,6 +52,10 @@ class _LogsPageState extends State<LogsPage> {
         c.customParameters,
       ));
     }
+  }
+
+  void _initCrashReport() {
+    _storedCrashReport = CrashReportStore.load();
   }
 
   Future<void> getLog() async {
@@ -122,7 +131,10 @@ class _LogsPageState extends State<LogsPage> {
                       Utils.reportError('Manual', StackTrace.current);
                       if (timer.tick > 3) {
                         timer.cancel();
-                        if (mounted) getLog();
+                        if (mounted) {
+                          _initCrashReport();
+                          getLog();
+                        }
                       }
                     },
                   ),
@@ -148,7 +160,9 @@ class _LogsPageState extends State<LogsPage> {
           const SizedBox(width: 6),
         ],
       ),
-      body: logsContent.isNotEmpty || _deviceInfo != null
+      body: logsContent.isNotEmpty ||
+              _deviceInfo != null ||
+              _storedCrashReport != null
           ? Padding(
               padding: EdgeInsets.only(
                 left: padding.left + 12,
@@ -156,6 +170,19 @@ class _LogsPageState extends State<LogsPage> {
               ),
               child: CustomScrollView(
                 slivers: [
+                  if (_storedCrashReport != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const .only(bottom: 12),
+                        child: _CrashReportCard(
+                          report: _storedCrashReport!,
+                          onChanged: () {
+                            _initCrashReport();
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ),
                   if (_deviceInfo != null)
                     SliverToBoxAdapter(
                       child: Padding(
@@ -185,6 +212,52 @@ typedef _DeviceInfo = (
   Map<String, dynamic>,
   Map<String, dynamic>,
 );
+
+class _CrashReportCard extends StatelessWidget {
+  final CrashReport report;
+  final VoidCallback onChanged;
+
+  const _CrashReportCard({
+    required this.report,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.of(context);
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.warning_amber_rounded, color: colorScheme.error),
+        title: const Text('已保存崩溃报告'),
+        subtitle: Text('${report.crashedAtText} · ${report.exceptionType}'),
+        trailing: Icon(Icons.arrow_forward, size: 16, color: colorScheme.outline),
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => CrashReportPage(
+                report: report,
+                clearStoredReportOnContinue: true,
+              ),
+            ),
+          );
+          onChanged();
+        },
+        onLongPress: () async {
+          await CrashReportStore.clear();
+          onChanged();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('崩溃报告已清除'),
+                duration: _snackBarDisplayDuration,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
 
 class _InfoCard extends StatelessWidget {
   final _ExpandedItem<_DeviceInfo> info;

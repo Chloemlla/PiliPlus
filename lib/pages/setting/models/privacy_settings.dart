@@ -22,11 +22,11 @@ List<SettingsModel> get privacySettings => [
     defaultVal: false,
   ),
   if (Platform.isAndroid)
-    NormalModel(
+    const NormalModel(
       onTap: _copyLoginCookie,
       title: '复制登录 Cookie',
       subtitle: '需通过系统锁屏或PIN验证',
-      leading: const Icon(Icons.cookie_outlined),
+      leading: Icon(Icons.cookie_outlined),
     ),
   NormalModel(
     onTap: (context, setState) {
@@ -62,7 +62,7 @@ List<SettingsModel> get privacySettings => [
   ),
 ];
 
-Future<void> _copyLoginCookie(BuildContext _, VoidCallback __) async {
+Future<void> _copyLoginCookie(BuildContext _, VoidCallback _) async {
   if (!Accounts.main.isLogin) {
     SmartDialog.showToast('登录后复制');
     return;

@@ -1,3 +1,7 @@
+// ignore_for_file: cascade_invocations, invalid_use_of_internal_member
+// ignore_for_file: library_prefixes, non_constant_identifier_names
+// ignore_for_file: prefer_initializing_formals, unused_element
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -9,10 +13,15 @@ import 'package:jni/jni.dart' as jni$_;
 
 const _$jniVersionCheck = jni$_.JniVersionCheck(1, 0);
 
+typedef AndroidMmkvValueEncoder<E> = Object? Function(E value);
+typedef AndroidMmkvValueDecoder<E> = E Function(Object? value);
+
 Future<Box<E>> openAndroidMmkvBackedBox<E>({
   required String name,
   required Future<Box<E>> Function() openHive,
   KeyComparator? keyComparator,
+  AndroidMmkvValueEncoder<E>? valueEncoder,
+  AndroidMmkvValueDecoder<E>? valueDecoder,
 }) async {
   if (!Platform.isAndroid || !AndroidMmkvStore.isAvailable) {
     return openHive();
@@ -20,14 +29,24 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
 
   final migrationKey = AndroidMmkvStore.migrationKey(name);
   if (AndroidMmkvStore.getRaw(AndroidMmkvStore.metaBox, migrationKey) == '1') {
-    final box = AndroidMmkvBackedBox<E>(name, keyComparator: keyComparator);
+    final box = AndroidMmkvBackedBox<E>(
+      name,
+      keyComparator: keyComparator,
+      valueEncoder: valueEncoder,
+      valueDecoder: valueDecoder,
+    );
     if (box.tryLoadFromMmkv()) {
       return box;
     }
   }
 
   final hive = await openHive();
-  final box = AndroidMmkvBackedBox<E>(hive.name, keyComparator: keyComparator);
+  final box = AndroidMmkvBackedBox<E>(
+    hive.name,
+    keyComparator: keyComparator,
+    valueEncoder: valueEncoder,
+    valueDecoder: valueDecoder,
+  );
   if (!box.replaceAllFrom(hive.toMap())) {
     return hive;
   }
@@ -38,13 +57,21 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
 }
 
 final class AndroidMmkvBackedBox<E> implements Box<E> {
-  AndroidMmkvBackedBox(this.name, {KeyComparator? keyComparator})
-    : _keyComparator = keyComparator;
+  AndroidMmkvBackedBox(
+    this.name, {
+    KeyComparator? keyComparator,
+    AndroidMmkvValueEncoder<E>? valueEncoder,
+    AndroidMmkvValueDecoder<E>? valueDecoder,
+  }) : _keyComparator = keyComparator,
+       _valueEncoder = valueEncoder,
+       _valueDecoder = valueDecoder;
 
   @override
   final String name;
 
   final KeyComparator? _keyComparator;
+  final AndroidMmkvValueEncoder<E>? _valueEncoder;
+  final AndroidMmkvValueDecoder<E>? _valueDecoder;
   final Map<dynamic, E> _cache = <dynamic, E>{};
   final StreamController<BoxEvent> _events =
       StreamController<BoxEvent>.broadcast(sync: true);
@@ -64,7 +91,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       final next = <dynamic, E>{};
       for (final MapEntry(:key, :value) in decoded.entries) {
         if (key is! String || value is! String) return false;
-        next[_decodeKey(key)] = _decodeEntry(value) as E;
+        next[_decodeKey(key)] = _decodeEntry(value, _valueDecoder);
       }
 
       _cache
@@ -79,7 +106,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
 
   bool replaceAllFrom(Map<dynamic, E> entries) {
     _checkOpen();
-    final encoded = _encodeMap(entries);
+    final encoded = _encodeMap(entries, _valueEncoder);
     if (encoded == null) return false;
     if (!AndroidMmkvStore.replaceBox(name, jsonEncode(encoded))) {
       return false;
@@ -173,7 +200,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> put(dynamic key, E value) {
     _checkOpen();
-    final encodedValue = _encodeEntry(value);
+    final encodedValue = _encodeEntry(value, _valueEncoder);
     if (encodedValue == null) {
       return Future.error(
         UnsupportedError('Unsupported MMKV value for $name.$key: $value'),
@@ -195,7 +222,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> putAll(Map<dynamic, E> entries) {
     _checkOpen();
-    final encoded = _encodeMap(entries);
+    final encoded = _encodeMap(entries, _valueEncoder);
     if (encoded == null) {
       return Future.error(
         UnsupportedError('Unsupported MMKV value in $name.putAll'),
@@ -380,10 +407,13 @@ abstract final class AndroidMmkvStore {
   static bool sync(String name) => _AndroidMmkvBindings.sync(name);
 }
 
-Map<String, String>? _encodeMap(Map<dynamic, dynamic> entries) {
+Map<String, String>? _encodeMap<E>(
+  Map<dynamic, E> entries,
+  AndroidMmkvValueEncoder<E>? valueEncoder,
+) {
   final encoded = <String, String>{};
   for (final MapEntry(:key, :value) in entries.entries) {
-    final encodedValue = _encodeEntry(value);
+    final encodedValue = _encodeEntry(value, valueEncoder);
     if (encodedValue == null) return null;
     encoded[_encodeKey(key)] = encodedValue;
   }
@@ -394,21 +424,35 @@ String _encodeKey(dynamic key) => jsonEncode(_encodeJsonValue(key));
 
 dynamic _decodeKey(String key) => _decodeJsonValue(jsonDecode(key));
 
-String? _encodeEntry(dynamic value) {
+String? _encodeEntry<E>(
+  E value,
+  AndroidMmkvValueEncoder<E>? valueEncoder,
+) {
   try {
-    return jsonEncode({'value': _encodeJsonValue(value)});
+    return jsonEncode({
+      'value': _encodeJsonValue(_encodeValue(value, valueEncoder)),
+    });
   } catch (_) {
     return null;
   }
 }
 
-dynamic _decodeEntry(String value) {
+E _decodeEntry<E>(
+  String value,
+  AndroidMmkvValueDecoder<E>? valueDecoder,
+) {
   final decoded = jsonDecode(value);
   if (decoded is! Map || !decoded.containsKey('value')) {
     throw const FormatException('Invalid MMKV entry');
   }
-  return _decodeJsonValue(decoded['value']);
+  final decodedValue = _decodeJsonValue(decoded['value']);
+  return valueDecoder == null ? decodedValue as E : valueDecoder(decodedValue);
 }
+
+Object? _encodeValue<E>(
+  E value,
+  AndroidMmkvValueEncoder<E>? valueEncoder,
+) => valueEncoder == null ? value : valueEncoder(value);
 
 dynamic _encodeJsonValue(dynamic value) {
   if (value == null || value is bool || value is num || value is String) {
@@ -418,7 +462,11 @@ dynamic _encodeJsonValue(dynamic value) {
     return {'@type': 'uint8List', 'value': base64Encode(value)};
   }
   if (value is Set) {
-    return {'@type': 'set', 'value': value.map(_encodeJsonValue).toList()};
+    return {
+      '@type': 'set',
+      'elementType': _setElementType(value),
+      'value': value.map(_encodeJsonValue).toList(),
+    };
   }
   if (value is List) {
     return value.map(_encodeJsonValue).toList();
@@ -446,7 +494,7 @@ dynamic _decodeJsonValue(dynamic value) {
   if (value is Map) {
     return switch (value['@type']) {
       'uint8List' => base64Decode(value['value'] as String),
-      'set' => (value['value'] as List).map(_decodeJsonValue).toSet(),
+      'set' => _decodeSet(value),
       'map' => Map<dynamic, dynamic>.fromEntries(
         (value['value'] as List).map((entry) {
           final pair = entry as List;
@@ -457,6 +505,63 @@ dynamic _decodeJsonValue(dynamic value) {
     };
   }
   return value;
+}
+
+String _setElementType(Set<dynamic> value) {
+  if (value is Set<int>) {
+    return 'int';
+  }
+  if (value is Set<double>) {
+    return 'double';
+  }
+  if (value is Set<num>) {
+    return 'num';
+  }
+  if (value is Set<String>) {
+    return 'string';
+  }
+  if (value is Set<bool>) {
+    return 'bool';
+  }
+  if (value.isEmpty) return 'dynamic';
+  if (value.every((item) => item is int)) return 'int';
+  if (value.every((item) => item is double)) return 'double';
+  if (value.every((item) => item is num)) return 'num';
+  if (value.every((item) => item is String)) return 'string';
+  if (value.every((item) => item is bool)) return 'bool';
+  return 'dynamic';
+}
+
+Set<dynamic> _decodeSet(Map<dynamic, dynamic> value) {
+  final decoded = (value['value'] as List).map(_decodeJsonValue).toList();
+  switch (value['elementType']) {
+    case 'int':
+      return decoded.cast<int>().toSet();
+    case 'double':
+      return decoded.cast<double>().toSet();
+    case 'num':
+      return decoded.cast<num>().toSet();
+    case 'string':
+      return decoded.cast<String>().toSet();
+    case 'bool':
+      return decoded.cast<bool>().toSet();
+  }
+  if (decoded.every((item) => item is int)) {
+    return decoded.cast<int>().toSet();
+  }
+  if (decoded.every((item) => item is double)) {
+    return decoded.cast<double>().toSet();
+  }
+  if (decoded.every((item) => item is num)) {
+    return decoded.cast<num>().toSet();
+  }
+  if (decoded.every((item) => item is String)) {
+    return decoded.cast<String>().toSet();
+  }
+  if (decoded.every((item) => item is bool)) {
+    return decoded.cast<bool>().toSet();
+  }
+  return decoded.toSet();
 }
 
 abstract final class _AndroidMmkvBindings {

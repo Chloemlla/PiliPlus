@@ -62,7 +62,10 @@ abstract final class AndroidFirstLaunchPermissionService {
         }
 
         final shouldRequest = await _showReasonDialog(context, item);
-        if (!shouldRequest || !context.mounted) {
+        if (!context.mounted) {
+          return;
+        }
+        if (!shouldRequest) {
           continue;
         }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:pili_plus/models/model_owner.dart';
+import 'package:pili_plus/models/user/danmaku_rule.dart';
 import 'package:pili_plus/models/user/danmaku_rule_adapter.dart';
 import 'package:pili_plus/models/user/info.dart';
 import 'package:pili_plus/utils/android/android_mmkv_box.dart';
@@ -36,18 +37,28 @@ abstract final class GStorage {
 
     await Future.wait([
       // 登录用户信息
-      Hive.openBox<UserInfoData>(
-        'userInfo',
-        compactionStrategy: (int entries, int deletedEntries) {
-          return deletedEntries > 2;
-        },
+      openAndroidMmkvBackedBox<UserInfoData>(
+        name: 'userInfo',
+        valueEncoder: _encodeUserInfoData,
+        valueDecoder: _decodeUserInfoData,
+        openHive: () => Hive.openBox<UserInfoData>(
+          'userInfo',
+          compactionStrategy: (int entries, int deletedEntries) {
+            return deletedEntries > 2;
+          },
+        ),
       ).then((res) => userInfo = res),
       // 本地缓存
-      Hive.openBox(
-        'localCache',
-        compactionStrategy: (int entries, int deletedEntries) {
-          return deletedEntries > 4;
-        },
+      openAndroidMmkvBackedBox<dynamic>(
+        name: 'localCache',
+        valueEncoder: _encodeLocalCacheValue,
+        valueDecoder: _decodeLocalCacheValue,
+        openHive: () => Hive.openBox(
+          'localCache',
+          compactionStrategy: (int entries, int deletedEntries) {
+            return deletedEntries > 4;
+          },
+        ),
       ).then((res) => localCache = res),
       // 设置
       openAndroidMmkvBackedBox<dynamic>(
@@ -55,11 +66,14 @@ abstract final class GStorage {
         openHive: () => Hive.openBox('setting'),
       ).then((res) => setting = res),
       // 搜索历史
-      Hive.openBox(
-        'historyWord',
-        compactionStrategy: (int entries, int deletedEntries) {
-          return deletedEntries > 10;
-        },
+      openAndroidMmkvBackedBox<dynamic>(
+        name: 'historyWord',
+        openHive: () => Hive.openBox(
+          'historyWord',
+          compactionStrategy: (int entries, int deletedEntries) {
+            return deletedEntries > 10;
+          },
+        ),
       ).then((res) => historyWord = res),
       // 视频设置
       openAndroidMmkvBackedBox<dynamic>(
@@ -82,12 +96,16 @@ abstract final class GStorage {
     await migrateSettingSecrets();
 
     if (Pref.saveReply) {
-      reply = await Hive.openBox<Uint8List>(
-        'reply',
+      reply = await openAndroidMmkvBackedBox<Uint8List>(
+        name: 'reply',
         keyComparator: _intStrDescKeyComparator,
-        compactionStrategy: (entries, deletedEntries) {
-          return deletedEntries > 10;
-        },
+        openHive: () => Hive.openBox<Uint8List>(
+          'reply',
+          keyComparator: _intStrDescKeyComparator,
+          compactionStrategy: (entries, deletedEntries) {
+            return deletedEntries > 10;
+          },
+        ),
       );
     } else {
       reply = null;
@@ -239,5 +257,77 @@ abstract final class GStorage {
     } else {
       return 1;
     }
+  }
+
+  static Object? _encodeUserInfoData(UserInfoData value) => {
+    'isLogin': value.isLogin,
+    'email_verified': value.emailVerified,
+    'face': value.face,
+    'level_info': _encodeLevelInfo(value.levelInfo),
+    'mid': value.mid,
+    'mobile_verified': value.mobileVerified,
+    'money': value.money,
+    'moral': value.moral,
+    'official': value.official,
+    'officialVerify': value.officialVerify,
+    'pendant': value.pendant,
+    'scores': value.scores,
+    'uname': value.uname,
+    'vipDueDate': value.vipDueDate,
+    'vipStatus': value.vipStatus,
+    'vipType': value.vipType,
+    'vip_pay_type': value.vipPayType,
+    'vip_theme_type': value.vipThemeType,
+    'vip_label': value.vipLabel,
+    'vip_avatar_subscript': value.vipAvatarSub,
+    'vip_nickname_color': value.vipNicknameColor,
+    'wallet': value.wallet,
+    'has_shop': value.hasShop,
+    'shop_url': value.shopUrl,
+    'is_senior_member': value.isSeniorMember,
+  };
+
+  static Map<String, dynamic>? _encodeLevelInfo(LevelInfo? value) =>
+      value == null
+      ? null
+      : {
+          'current_level': value.currentLevel,
+          'current_min': value.currentMin,
+          'current_exp': value.currentExp,
+          'next_exp': value.nextExp,
+        };
+
+  static UserInfoData _decodeUserInfoData(Object? value) {
+    final map = Map<String, dynamic>.from(value as Map);
+    if (map['level_info'] case final Map levelInfo) {
+      map['level_info'] = Map<String, dynamic>.from(levelInfo);
+    }
+    return UserInfoData.fromJson(map);
+  }
+
+  static Object? _encodeLocalCacheValue(dynamic value) {
+    if (value is RuleFilter) {
+      return {
+        '@appType': 'RuleFilter',
+        'dmFilterString': value.dmFilterString,
+        'dmRegExp': value.dmRegExp.map((item) => item.pattern).toList(),
+        'dmUid': value.dmUid.toList(),
+      };
+    }
+    return value;
+  }
+
+  static dynamic _decodeLocalCacheValue(Object? value) {
+    if (value case {'@appType': 'RuleFilter'}) {
+      final map = Map<String, dynamic>.from(value as Map);
+      return RuleFilter(
+        List<String>.from(map['dmFilterString'] as List? ?? const []),
+        List<String>.from(map['dmRegExp'] as List? ?? const [])
+            .map((item) => RegExp(item, caseSensitive: false))
+            .toList(),
+        List<String>.from(map['dmUid'] as List? ?? const []).toSet(),
+      );
+    }
+    return value;
   }
 }

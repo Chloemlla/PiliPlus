@@ -10,10 +10,15 @@ import 'package:pili_plus/common/widgets/scale_app.dart';
 import 'package:pili_plus/common/widgets/scroll_behavior.dart';
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/theme/theme_color_type.dart';
+import 'package:pili_plus/pages/setting/pages/crash_report.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/router/app_pages.dart';
 import 'package:pili_plus/services/account_service.dart';
 import 'package:pili_plus/services/android_first_launch_permission_service.dart';
+import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
+import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_handler.dart';
+import 'package:pili_plus/services/crash/crash_reporter.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/services/service_locator.dart';
@@ -94,9 +99,14 @@ void main() async {
   ScaledWidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   await _initAppPath();
+  CrashBreadcrumbs.record('main.start');
+  final startupCrashReport = await CrashReporter.ensureInitialized();
+  CrashReporter.install();
   try {
     await GStorage.init();
+    CrashBreadcrumbs.record('GStorage initialized');
   } catch (e) {
+    CrashReporter.recordErrorSync(e, StackTrace.current);
     await Utils.copyText(e.toString());
     if (kDebugMode) debugPrint('GStorage init error: $e');
     exit(0);
@@ -202,18 +212,20 @@ void main() async {
     final fileHandler = await JsonFileHandler.init();
 
     Catcher2(
-      [?fileHandler, const ConsoleHandler()],
-      const MyApp(),
+      [?fileHandler, CrashReportHandler(), const ConsoleHandler()],
+      MyApp(startupCrashReport: startupCrashReport),
       logger: logger,
       customParameters: customParameters,
     );
   } else {
-    runApp(const MyApp());
+    runApp(MyApp(startupCrashReport: startupCrashReport));
   }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final CrashReport? startupCrashReport;
+
+  const MyApp({this.startupCrashReport, super.key});
 
   static ColorScheme? _light, _dark;
 
@@ -283,16 +295,28 @@ class MyApp extends StatelessWidget {
         notifyStyle: const FlutterSmartNotifyStyle(
           warningBuilder: NotifyWarning.new,
         ),
-        builder: _builder,
+        builder: (context, child) => _builder(
+          context,
+          child,
+          startupCrashReport,
+        ),
       ),
-      navigatorObservers: [routeObserver, FlutterSmartDialog.observer],
+      navigatorObservers: [
+        routeObserver,
+        CrashBreadcrumbNavigatorObserver(),
+        FlutterSmartDialog.observer,
+      ],
       scrollBehavior: PlatformUtils.isDesktop
           ? const CustomScrollBehavior(desktopDragDevices)
           : null,
     );
   }
 
-  static Widget _builder(BuildContext context, Widget? child) {
+  static Widget _builder(
+    BuildContext context,
+    Widget? child,
+    CrashReport? startupCrashReport,
+  ) {
     final uiScale = Pref.uiScale;
     final mediaQuery = MediaQuery.of(context);
     final textScaler = TextScaler.linear(Pref.defaultTextScale);
@@ -323,9 +347,12 @@ class MyApp extends StatelessWidget {
       child = AndroidFirstLaunchPermissionGate(child: child);
     }
     if (PlatformUtils.isDesktop) {
-      return BackDetector(onBack: _onBack, child: child);
+      child = BackDetector(onBack: _onBack, child: child);
     }
-    return child;
+    return CrashReportStartupGate(
+      initialReport: startupCrashReport,
+      child: child,
+    );
   }
 
   /// from [DynamicColorBuilderState.initPlatformState]
