@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 abstract final class ClipboardVideoLinkHandler {
-  static final _videoUrlRegExp = RegExp(
-    r'((?:https?://)?(?:(?:www|m)\.)?bilibili\.com/video/(?:av\d+|BV1[0-9A-Za-z]{9})(?:[/?#][^\s]*)?)',
+  static final _supportedUrlRegExp = RegExp(
+    r'((?:https?://)?(?:(?:(?:www|m)\.)?bilibili\.com/video/(?:av\d+|BV1[0-9A-Za-z]{9})|(?:share\.)?b23\.tv/[^\s/]+)(?:[/?#][^\s]*)?)',
     caseSensitive: false,
   );
   static const _trailingPunctuation = '.,，。;；!！?？)）]】>》\'"';
@@ -50,7 +50,7 @@ abstract final class ClipboardVideoLinkHandler {
   }
 
   static String? _extractVideoLink(String text) {
-    final link = _videoUrlRegExp.firstMatch(text)?.group(1);
+    final link = _supportedUrlRegExp.firstMatch(text)?.group(1);
     return link == null ? null : _trimLink(link);
   }
 
