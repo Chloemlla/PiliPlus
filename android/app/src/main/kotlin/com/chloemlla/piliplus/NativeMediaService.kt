@@ -1,4 +1,4 @@
-package com.example.piliplus
+package com.chloemlla.piliplus
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -398,22 +398,22 @@ class NativeMediaService : Service() {
         private const val CHANNEL_ID = "pili_plus_native_media"
         private const val NOTIFICATION_ID = 20240707
 
-        private const val ACTION_REFRESH = "com.example.piliplus.native_media.REFRESH"
-        private const val ACTION_PLAY = "com.example.piliplus.native_media.PLAY"
-        private const val ACTION_PAUSE = "com.example.piliplus.native_media.PAUSE"
-        private const val ACTION_TOGGLE = "com.example.piliplus.native_media.TOGGLE"
-        private const val ACTION_REWIND = "com.example.piliplus.native_media.REWIND"
-        private const val ACTION_FAST_FORWARD = "com.example.piliplus.native_media.FAST_FORWARD"
-        private const val ACTION_PREVIOUS = "com.example.piliplus.native_media.PREVIOUS"
-        private const val ACTION_NEXT = "com.example.piliplus.native_media.NEXT"
-        private const val ACTION_STOP = "com.example.piliplus.native_media.STOP"
-        private const val ACTION_HIDE = "com.example.piliplus.native_media.HIDE"
-        private const val ACTION_BACKGROUND_AUDIO = "com.example.piliplus.native_media.BACKGROUND_AUDIO"
-        private const val ACTION_MINI_PLAYER = "com.example.piliplus.native_media.MINI_PLAYER"
-        private const val ACTION_SLEEP_TIMER = "com.example.piliplus.native_media.SLEEP_TIMER"
-        private const val ACTION_SPEED = "com.example.piliplus.native_media.SPEED"
-        private const val ACTION_DANMAKU = "com.example.piliplus.native_media.DANMAKU"
-        private const val ACTION_REPEAT = "com.example.piliplus.native_media.REPEAT"
+        private const val ACTION_REFRESH = "com.chloemlla.piliplus.native_media.REFRESH"
+        private const val ACTION_PLAY = "com.chloemlla.piliplus.native_media.PLAY"
+        private const val ACTION_PAUSE = "com.chloemlla.piliplus.native_media.PAUSE"
+        private const val ACTION_TOGGLE = "com.chloemlla.piliplus.native_media.TOGGLE"
+        private const val ACTION_REWIND = "com.chloemlla.piliplus.native_media.REWIND"
+        private const val ACTION_FAST_FORWARD = "com.chloemlla.piliplus.native_media.FAST_FORWARD"
+        private const val ACTION_PREVIOUS = "com.chloemlla.piliplus.native_media.PREVIOUS"
+        private const val ACTION_NEXT = "com.chloemlla.piliplus.native_media.NEXT"
+        private const val ACTION_STOP = "com.chloemlla.piliplus.native_media.STOP"
+        private const val ACTION_HIDE = "com.chloemlla.piliplus.native_media.HIDE"
+        private const val ACTION_BACKGROUND_AUDIO = "com.chloemlla.piliplus.native_media.BACKGROUND_AUDIO"
+        private const val ACTION_MINI_PLAYER = "com.chloemlla.piliplus.native_media.MINI_PLAYER"
+        private const val ACTION_SLEEP_TIMER = "com.chloemlla.piliplus.native_media.SLEEP_TIMER"
+        private const val ACTION_SPEED = "com.chloemlla.piliplus.native_media.SPEED"
+        private const val ACTION_DANMAKU = "com.chloemlla.piliplus.native_media.DANMAKU"
+        private const val ACTION_REPEAT = "com.chloemlla.piliplus.native_media.REPEAT"
 
         private const val FLUTTER_PLAY = "play"
         private const val FLUTTER_PAUSE = "pause"

@@ -18,7 +18,7 @@ if (!isBuiltInKotlinEnabled) {
 }
 
 android {
-    namespace = "com.example.piliplus"
+    namespace = "com.chloemlla.piliplus"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.piliplus"
+        applicationId = "com.chloemlla.piliplus"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
