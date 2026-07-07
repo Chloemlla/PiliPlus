@@ -78,6 +78,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
         liveController.title.value,
         spacing: 30,
         velocity: 30,
+strutStyle: const StrutStyle(fontSize: 15, leading: 0),
         style: const TextStyle(fontSize: 15, height: 1, color: Colors.white),
       ),
     );

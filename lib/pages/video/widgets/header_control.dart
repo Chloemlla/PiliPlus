@@ -1601,7 +1601,7 @@ class HeaderControlState extends State<HeaderControl>
         padding: isPortrait
             ? EdgeInsets.zero
             : const EdgeInsets.only(right: 10),
-        child: Obx(() {
+child: Obx(() {
           final videoDetail = introController.videoDetail.value;
           final String title;
           if (isFileSource || videoDetail.videos == 1) {
@@ -1617,6 +1617,7 @@ class HeaderControlState extends State<HeaderControl>
             title,
             spacing: 30,
             velocity: 30,
+            strutStyle: const StrutStyle(fontSize: 16, leading: 0),
             style: const TextStyle(color: Colors.white, fontSize: 16),
             provider: effectiveProvider,
           );
