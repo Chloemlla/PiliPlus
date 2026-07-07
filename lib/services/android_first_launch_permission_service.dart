@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/permission_handler.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -26,7 +27,10 @@ class _AndroidFirstLaunchPermissionGateState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      AndroidFirstLaunchPermissionService.requestMissingPermissions(context);
+      if (!mounted) {
+        return;
+      }
+      AndroidFirstLaunchPermissionService.requestMissingPermissions();
     });
   }
 
@@ -36,8 +40,9 @@ class _AndroidFirstLaunchPermissionGateState
 
 abstract final class AndroidFirstLaunchPermissionService {
   static bool _isRunning = false;
+  static bool _isRetryScheduled = false;
 
-  static Future<void> requestMissingPermissions(BuildContext context) async {
+  static Future<void> requestMissingPermissions() async {
     if (!Platform.isAndroid || _isRunning) {
       return;
     }
@@ -50,23 +55,25 @@ abstract final class AndroidFirstLaunchPermissionService {
       return;
     }
 
+    if (_currentNavigator() == null) {
+      _scheduleRetry();
+      return;
+    }
+
     _isRunning = true;
     var completed = false;
     try {
       for (final item in _permissionItems()) {
-        if (!context.mounted) {
-          return;
-        }
         final isMissing = await item.isMissing();
-        if (!context.mounted) {
+        if (_currentNavigator() == null) {
           return;
         }
         if (!isMissing) {
           continue;
         }
 
-        final shouldRequest = await _showReasonDialog(context, item);
-        if (!context.mounted) {
+        final shouldRequest = await _showReasonDialog(item);
+        if (shouldRequest == null) {
           return;
         }
         if (!shouldRequest) {
@@ -74,21 +81,25 @@ abstract final class AndroidFirstLaunchPermissionService {
         }
 
         final status = await item.request();
-        if (!context.mounted) {
+        if (_currentNavigator() == null) {
           return;
         }
         if (item.continueContent != null) {
-          await _showContinueDialog(
-            context,
+          final didContinue = await _showContinueDialog(
             title: item.title,
             content: item.continueContent!,
           );
-          if (!context.mounted) {
+          if (!didContinue) {
             return;
           }
         }
         if (status == PermissionStatus.permanentlyDenied) {
-          await _showOpenAppSettingsDialog(context, item.title);
+          final didHandleSettings = await _showOpenAppSettingsDialog(
+            item.title,
+          );
+          if (!didHandleSettings) {
+            return;
+          }
         }
       }
 
@@ -102,6 +113,25 @@ abstract final class AndroidFirstLaunchPermissionService {
         );
       }
     }
+  }
+
+  static NavigatorState? _currentNavigator() {
+    final navigator = Get.key.currentState;
+    if (navigator == null || !navigator.mounted) {
+      return null;
+    }
+    return navigator;
+  }
+
+  static void _scheduleRetry() {
+    if (_isRetryScheduled) {
+      return;
+    }
+    _isRetryScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isRetryScheduled = false;
+      requestMissingPermissions();
+    });
   }
 
   static List<_PermissionItem> _permissionItems() {
@@ -172,12 +202,16 @@ abstract final class AndroidFirstLaunchPermissionService {
     return null;
   }
 
-  static Future<bool> _showReasonDialog(
-    BuildContext context,
+  static Future<bool?> _showReasonDialog(
     _PermissionItem item,
   ) async {
+    final navigator = _currentNavigator();
+    if (navigator == null) {
+      return null;
+    }
+
     return await showDialog<bool>(
-          context: context,
+          context: navigator.context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: Text(item.title),
@@ -197,12 +231,16 @@ abstract final class AndroidFirstLaunchPermissionService {
         false;
   }
 
-  static Future<void> _showOpenAppSettingsDialog(
-    BuildContext context,
+  static Future<bool> _showOpenAppSettingsDialog(
     String title,
   ) async {
+    final navigator = _currentNavigator();
+    if (navigator == null) {
+      return false;
+    }
+
     final openSettings = await showDialog<bool>(
-          context: context,
+          context: navigator.context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: Text(title),
@@ -223,23 +261,25 @@ abstract final class AndroidFirstLaunchPermissionService {
 
     if (openSettings) {
       await openAppSettings();
-      if (context.mounted) {
-        await _showContinueDialog(
-          context,
-          title: title,
-          content: '完成授权后返回 PiliPlus，并点击继续处理后续权限。',
-        );
-      }
+      return _showContinueDialog(
+        title: title,
+        content: '完成授权后返回 PiliPlus，并点击继续处理后续权限。',
+      );
     }
+    return true;
   }
 
-  static Future<void> _showContinueDialog(
-    BuildContext context, {
+  static Future<bool> _showContinueDialog({
     required String title,
     required String content,
   }) async {
+    final navigator = _currentNavigator();
+    if (navigator == null) {
+      return false;
+    }
+
     await showDialog<void>(
-      context: context,
+      context: navigator.context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text(title),
@@ -252,6 +292,7 @@ abstract final class AndroidFirstLaunchPermissionService {
         ],
       ),
     );
+    return true;
   }
 }
 
