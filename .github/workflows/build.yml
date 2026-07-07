@@ -129,7 +129,6 @@ jobs:
         run: lib/scripts/patch.ps1 android
 
       - name: Write key
-        if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
