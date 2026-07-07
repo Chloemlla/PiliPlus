@@ -11,6 +11,8 @@ abstract final class SettingBoxKey {
       preferCodecs = 'preferCodecs',
       defaultToastOp = 'defaultToastOp',
       defaultPicQa = 'defaultPicQa',
+      androidFirstLaunchPermissionsRequested =
+          'androidFirstLaunchPermissionsRequested',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',

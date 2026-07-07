@@ -13,6 +13,7 @@ import 'package:pili_plus/models/common/theme/theme_color_type.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/router/app_pages.dart';
 import 'package:pili_plus/services/account_service.dart';
+import 'package:pili_plus/services/android_first_launch_permission_service.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/services/service_locator.dart';
@@ -318,6 +319,9 @@ class MyApp extends StatelessWidget {
       );
     }
     child = InAppMiniPlayerLayer(child: child);
+    if (Platform.isAndroid) {
+      child = AndroidFirstLaunchPermissionGate(child: child);
+    }
     if (PlatformUtils.isDesktop) {
       return BackDetector(onBack: _onBack, child: child);
     }
