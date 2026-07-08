@@ -203,7 +203,7 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            set -euo pipefail
+            set -eu
             DART_DEFINES=$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)
             gradle -p android -Pdart-defines="$DART_DEFINES" :app:generateBaselineProfile --no-daemon --stacktrace
 
