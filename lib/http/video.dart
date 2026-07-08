@@ -209,6 +209,7 @@ abstract final class VideoHttp {
     required VideoType videoType,
     String? language,
     bool voiceBalance = false,
+    int fnval = 4048,
   }) async {
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
@@ -219,8 +220,8 @@ abstract final class VideoHttp {
       'season_id': ?seasonId,
       'cid': cid,
       'qn': qn ?? 80,
-      // 获取所有格式的视频
-      'fnval': 4048,
+      // 默认4048 获取所有格式的视频；1 获取MP4直链
+      'fnval': fnval,
       'fourk': 1,
       'fnver': 0,
       'voice_balance': voiceBalance ? 1 : 0,
@@ -268,6 +269,7 @@ abstract final class VideoHttp {
           seasonId: seasonId,
           tryLook: tryLook,
           videoType: .pgc,
+          fnval: fnval,
         );
       }
       return Error(_parseVideoErr(res.data['code'], res.data['message']));

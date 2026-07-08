@@ -47,6 +47,7 @@ import 'package:pili_plus/utils/connectivity_utils.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/media_export_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -378,7 +379,7 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(Icons.note_alt_outlined, size: 20),
                   title: const Text('查看笔记', style: titleStyle),
                 ),
-              if (!isFileSource)
+              if (!isFileSource) ...[
                 ListTile(
                   dense: true,
                   onTap: () {
@@ -388,6 +389,25 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(MdiIcons.folderDownloadOutline, size: 20),
                   title: const Text('离线缓存', style: titleStyle),
                 ),
+                ListTile(
+                  dense: true,
+                  onTap: () {
+                    Get.back();
+                    MediaExportUtils.exportVideo(videoDetailCtr);
+                  },
+                  leading: const Icon(Icons.download_outlined, size: 20),
+                  title: const Text('下载视频', style: titleStyle),
+                ),
+                ListTile(
+                  dense: true,
+                  onTap: () {
+                    Get.back();
+                    MediaExportUtils.exportAudio(videoDetailCtr);
+                  },
+                  leading: const Icon(Icons.music_note_outlined, size: 20),
+                  title: const Text('下载音频', style: titleStyle),
+                ),
+              ],
               if (widget.videoDetailCtr.cover.value.isNotEmpty)
                 ListTile(
                   dense: true,

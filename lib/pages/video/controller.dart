@@ -94,6 +94,7 @@ class VideoDetailController extends GetxController
   @override
   late final isUgc = videoType == VideoType.ugc;
   VideoType? _actualVideoType;
+  VideoType get actualVideoType => _actualVideoType ?? videoType;
 
   // 页面来源 稍后再看 收藏夹
   late bool isPlayAll;
@@ -885,7 +886,7 @@ class VideoDetailController extends GetxController
       epid: epId,
       seasonId: seasonId,
       tryLook: plPlayerController.tryLook,
-      videoType: _actualVideoType ?? videoType,
+      videoType: actualVideoType,
       language: currLang.value,
       voiceBalance: plPlayerController.enableAudioNormalization,
     );
