@@ -106,16 +106,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Free hosted runner disk
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h
+
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          if [ -n "${AGENT_TOOLSDIRECTORY:-}" ]; then
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY/CodeQL"
+          fi
+
+          echo "Disk after cleanup:"
+          df -h
+
       - name: Set up Java
         uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520
         with:
           distribution: "zulu"
           java-version: "17"
-          cache: "gradle"
-          cache-dependency-path: |
-            android/*.gradle*
-            android/**/*.gradle*
-            android/**/gradle-wrapper.properties
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
@@ -232,6 +242,23 @@ jobs:
           path: |
             android/app/src/main/generated/baselineProfiles/baseline-prof.txt
             android/app/src/main/generated/baselineProfiles/startup-prof.txt
+
+      - name: Free Android release build disk
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --stop || true
+
+          rm -rf build android/.gradle "$HOME/.android/avd"
+
+          for sdk_root in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}"; do
+            if [ -n "$sdk_root" ] && [ -d "$sdk_root" ]; then
+              sudo rm -rf "$sdk_root/system-images" "$sdk_root/emulator"
+            fi
+          done
+
+          echo "Disk before release APK build:"
+          df -h
 
       - name: Flutter Build Release Apk
         run: flutter build apk --release --split-per-abi --dart-define-from-file=pili_release.json --no-pub
