@@ -1047,7 +1047,7 @@ class PlPlayerController with BlockConfigMixin {
               PlPlayerStreamError.isInterruptedNetworkStream(event)) {
             Future.delayed(
               const Duration(milliseconds: 3000),
-              () => refreshPlayer(),
+              refreshPlayer,
             );
           }
           return;
