@@ -74,14 +74,14 @@ class FloatingNavigationBar extends StatelessWidget {
 
     final padding = MediaQuery.viewPaddingOf(context);
 
-    return UnconstrainedBox(
-      child: Padding(
-        padding: .fromLTRB(
-          padding.left,
-          0,
-          padding.right,
-          bottomPadding + padding.bottom,
-        ),
+    return Padding(
+      padding: .fromLTRB(
+        padding.left,
+        0,
+        padding.right,
+        bottomPadding + padding.bottom,
+      ),
+      child: Center(
         child: SizedBox(
           height: _kNavigationHeight,
           width: destinations.length * _kIndicatorWidth,

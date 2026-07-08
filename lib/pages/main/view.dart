@@ -483,8 +483,8 @@ class _MainAppState extends PopScopeState<MainApp>
       appBar: AppBar(toolbarHeight: 0),
       body: Padding(
         padding: EdgeInsets.only(
-          left: _mainController.useBottomNav ? _padding.left : 0.0,
-          right: _padding.right,
+          left: 0.0,
+          right: _mainController.useBottomNav ? 0.0 : _padding.right,
         ),
         child: child,
       ),

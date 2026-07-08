@@ -31,6 +31,7 @@ import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:pili_plus/plugin/pl_player/utils/stream_error.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
@@ -910,19 +911,6 @@ class PlPlayerController with BlockConfigMixin {
   final Set<ValueChanged<Duration>> _positionListeners = {};
   final Set<ValueChanged<PlayerStatus>> _statusListeners = {};
 
-  bool _isNetworkOpenError(String event) {
-    return event.startsWith("Failed to open https://") ||
-        event.startsWith("Can not open external file https://") ||
-        // tcp: ffurl_read returned 0xdfb9b0bb
-        // tcp: ffurl_read returned 0xffffff99
-        event.startsWith('tcp: ffurl_read returned ');
-  }
-
-  bool _isInterruptedNetworkStream(String event) {
-    return event.startsWith('https: Stream ends prematurely') ||
-        event.startsWith('http: Stream ends prematurely');
-  }
-
   void _retryInitialNetworkOpen() {
     EasyThrottle.throttle(
       'controllerStream.error.listen',
@@ -1055,8 +1043,8 @@ class PlPlayerController with BlockConfigMixin {
           return;
         }
         if (isLive) {
-          if (_isNetworkOpenError(event) ||
-              _isInterruptedNetworkStream(event)) {
+          if (PlPlayerStreamError.isNetworkOpenError(event) ||
+              PlPlayerStreamError.isInterruptedNetworkStream(event)) {
             Future.delayed(
               const Duration(milliseconds: 3000),
               () => refreshPlayer(),
@@ -1064,9 +1052,9 @@ class PlPlayerController with BlockConfigMixin {
           }
           return;
         }
-        if (_isNetworkOpenError(event)) {
+        if (PlPlayerStreamError.isNetworkOpenError(event)) {
           _retryInitialNetworkOpen();
-        } else if (_isInterruptedNetworkStream(event)) {
+        } else if (PlPlayerStreamError.isInterruptedNetworkStream(event)) {
           _retryInterruptedNetworkStream(
             playAfterRefresh: playerStatus.isPlaying,
           );

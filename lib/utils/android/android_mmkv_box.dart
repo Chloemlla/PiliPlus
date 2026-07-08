@@ -51,8 +51,12 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
     return hive;
   }
 
+  if (!AndroidMmkvStore.putRaw(AndroidMmkvStore.metaBox, migrationKey, '1') ||
+      !AndroidMmkvStore.sync(AndroidMmkvStore.metaBox)) {
+    return hive;
+  }
+
   await hive.close();
-  AndroidMmkvStore.putRaw(AndroidMmkvStore.metaBox, migrationKey, '1');
   return box;
 }
 
