@@ -12,7 +12,10 @@ class BaselineProfileGenerator {
     val baselineProfileRule = BaselineProfileRule()
 
     @Test
-    fun startup() = baselineProfileRule.collect(packageName = TARGET_PACKAGE) {
+    fun startup() = baselineProfileRule.collect(
+        packageName = TARGET_PACKAGE,
+        includeInStartupProfile = true,
+    ) {
         pressHome()
         startActivityAndWait()
         device.waitForIdle()
