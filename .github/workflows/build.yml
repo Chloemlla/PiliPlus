@@ -131,6 +131,8 @@ jobs:
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
         with:
           gradle-version: "9.5.0"
+          add-job-summary: never
+          develocity-injection-enabled: false
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
@@ -212,27 +214,28 @@ jobs:
           arch: x86_64
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            set -eu
-            DART_DEFINES=$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)
-            gradle -p android -Pdart-defines="$DART_DEFINES" :app:generateBaselineProfile --no-daemon --stacktrace
+          script: gradle -p android -Pdart-defines="$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)" :app:generateBaselineProfile --no-daemon --stacktrace
 
-            baseline_profile_dir=android/app/src/main/generated/baselineProfiles
-            baseline_profile="$baseline_profile_dir/baseline-prof.txt"
-            startup_profile="$baseline_profile_dir/startup-prof.txt"
+      - name: Validate Baseline Profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline_profile_dir=android/app/src/main/generated/baselineProfiles
+          baseline_profile="$baseline_profile_dir/baseline-prof.txt"
+          startup_profile="$baseline_profile_dir/startup-prof.txt"
 
-            for generated_profile in "$baseline_profile" "$startup_profile"; do
-              if [ ! -s "$generated_profile" ]; then
-                echo "::error::Missing generated profile: $generated_profile"
-                find "$baseline_profile_dir" -maxdepth 1 -type f -print || true
-                exit 1
-              fi
-            done
+          for generated_profile in "$baseline_profile" "$startup_profile"; do
+            if [ ! -s "$generated_profile" ]; then
+              echo "::error::Missing generated profile: $generated_profile"
+              find "$baseline_profile_dir" -maxdepth 1 -type f -print || true
+              exit 1
+            fi
+          done
 
-            {
-              echo "### Baseline profile"
-              wc -l "$baseline_profile" "$startup_profile"
-            } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Baseline profile"
+            wc -l "$baseline_profile" "$startup_profile"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Baseline Profile
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
