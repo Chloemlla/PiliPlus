@@ -862,14 +862,14 @@ class PlPlayerController with BlockConfigMixin {
     );
   }
 
-  Future<void>? refreshPlayer() {
+  Future<void>? refreshPlayer({bool play = true}) {
     if (dataSource is FileSource) {
       return null;
     }
     if (_videoPlayerController case final ctr? when (ctr.current.isNotEmpty)) {
       return ctr.open(
         ctr.current.last.copyWith(start: ctr.state.position),
-        play: true,
+        play: play,
       );
     }
     return null;
@@ -909,6 +909,56 @@ class PlPlayerController with BlockConfigMixin {
   List<StreamSubscription>? _subscriptions;
   final Set<ValueChanged<Duration>> _positionListeners = {};
   final Set<ValueChanged<PlayerStatus>> _statusListeners = {};
+
+  bool _isNetworkOpenError(String event) {
+    return event.startsWith("Failed to open https://") ||
+        event.startsWith("Can not open external file https://") ||
+        // tcp: ffurl_read returned 0xdfb9b0bb
+        // tcp: ffurl_read returned 0xffffff99
+        event.startsWith('tcp: ffurl_read returned ');
+  }
+
+  bool _isInterruptedNetworkStream(String event) {
+    return event.startsWith('https: Stream ends prematurely') ||
+        event.startsWith('http: Stream ends prematurely');
+  }
+
+  void _retryInitialNetworkOpen() {
+    EasyThrottle.throttle(
+      'controllerStream.error.listen',
+      const Duration(milliseconds: 10000),
+      () {
+        Future.delayed(const Duration(milliseconds: 3000), () {
+          if (isBuffering.value && buffered.value == 0) {
+            SmartDialog.showToast(
+              '视频链接打开失败，重试中',
+              displayTime: const Duration(milliseconds: 500),
+            );
+            refreshPlayer();
+          }
+        });
+      },
+    );
+  }
+
+  void _retryInterruptedNetworkStream({required bool playAfterRefresh}) {
+    EasyThrottle.throttle(
+      'controllerStream.error.listen.interrupted',
+      const Duration(milliseconds: 10000),
+      () {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (_playerCount == 0 || dataSource is FileSource) {
+            return;
+          }
+          SmartDialog.showToast(
+            '视频流中断，重试中',
+            displayTime: const Duration(milliseconds: 500),
+          );
+          refreshPlayer(play: playAfterRefresh);
+        });
+      },
+    );
+  }
 
   /// 播放事件监听
   void _startListeners(NativePlayer player) {
@@ -1005,38 +1055,20 @@ class PlPlayerController with BlockConfigMixin {
           return;
         }
         if (isLive) {
-          if (event.startsWith('tcp: ffurl_read returned ') ||
-              event.startsWith("Failed to open https://") ||
-              event.startsWith("Can not open external file https://")) {
-            Future.delayed(const Duration(milliseconds: 3000), refreshPlayer);
+          if (_isNetworkOpenError(event) ||
+              _isInterruptedNetworkStream(event)) {
+            Future.delayed(
+              const Duration(milliseconds: 3000),
+              () => refreshPlayer(),
+            );
           }
           return;
         }
-        if (event.startsWith("Failed to open https://") ||
-            event.startsWith("Can not open external file https://") ||
-            //tcp: ffurl_read returned 0xdfb9b0bb
-            //tcp: ffurl_read returned 0xffffff99
-            event.startsWith('tcp: ffurl_read returned ')) {
-          EasyThrottle.throttle(
-            'controllerStream.error.listen',
-            const Duration(milliseconds: 10000),
-            () {
-              Future.delayed(const Duration(milliseconds: 3000), () {
-                // if (kDebugMode) {
-                //   debugPrint("isBuffering.value: ${isBuffering.value}");
-                // }
-                // if (kDebugMode) {
-                //   debugPrint("_buffered.value: ${_buffered.value}");
-                // }
-                if (isBuffering.value && buffered.value == 0) {
-                  SmartDialog.showToast(
-                    '视频链接打开失败，重试中',
-                    displayTime: const Duration(milliseconds: 500),
-                  );
-                  refreshPlayer();
-                }
-              });
-            },
+        if (_isNetworkOpenError(event)) {
+          _retryInitialNetworkOpen();
+        } else if (_isInterruptedNetworkStream(event)) {
+          _retryInterruptedNetworkStream(
+            playAfterRefresh: playerStatus.isPlaying,
           );
         } else if (event.startsWith('Could not open codec')) {
           SmartDialog.showToast('无法加载解码器, $event，可能会切换至软解');
