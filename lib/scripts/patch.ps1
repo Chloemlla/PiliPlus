@@ -49,6 +49,55 @@ $MouseCursorPatch = "lib/scripts/mouse_cursor.patch"
 
 $GeetestIOSPatch = "lib/scripts/geetest_ios.patch"
 
+function Remove-AndroidManifestPackageAttribute {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$ManifestPath
+    )
+
+    $doc = [System.Xml.XmlDocument]::new()
+    $doc.PreserveWhitespace = $true
+    $doc.Load($ManifestPath)
+
+    if ($null -eq $doc.DocumentElement -or -not $doc.DocumentElement.HasAttribute("package")) {
+        return $false
+    }
+
+    $packageName = $doc.DocumentElement.GetAttribute("package")
+    $doc.DocumentElement.RemoveAttribute("package")
+    $doc.Save($ManifestPath)
+    Write-Host "Removed AndroidManifest package attribute ($packageName): $ManifestPath"
+    return $true
+}
+
+function Remove-PubCacheAndroidManifestPackageAttributes {
+    if (-not [string]::IsNullOrWhiteSpace($env:PUB_CACHE)) {
+        $pubCachePath = $env:PUB_CACHE
+    }
+    else {
+        $pubCachePath = Join-Path $HOME ".pub-cache"
+    }
+
+    $hostedPath = Join-Path $pubCachePath "hosted"
+    if (-not (Test-Path -LiteralPath $hostedPath)) {
+        Write-Host "Pub cache hosted directory not found: $hostedPath"
+        return
+    }
+
+    $patchedCount = 0
+    foreach ($hostedSource in Get-ChildItem -LiteralPath $hostedPath -Directory) {
+        foreach ($packageDir in Get-ChildItem -LiteralPath $hostedSource.FullName -Directory) {
+            $manifestPath = Join-Path $packageDir.FullName "android/src/main/AndroidManifest.xml"
+            if ((Test-Path -LiteralPath $manifestPath) -and
+                (Remove-AndroidManifestPackageAttribute -ManifestPath $manifestPath)) {
+                $patchedCount++
+            }
+        }
+    }
+
+    Write-Host "Removed AndroidManifest package attributes from $patchedCount pub-cache package(s)."
+}
+
 if ($platform.ToLower() -eq "ios") {
     git apply $BottomSheetIOSPiliPlusPatch
     if ($LASTEXITCODE -eq 0) {
@@ -58,6 +107,10 @@ if ($platform.ToLower() -eq "ios") {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "$GeetestIOSPatch applied"
     }
+}
+
+if ($platform.ToLower() -eq "android") {
+    Remove-PubCacheAndroidManifestPackageAttributes
 }
 
 if ([string]::IsNullOrWhiteSpace($env:FLUTTER_ROOT)) {
