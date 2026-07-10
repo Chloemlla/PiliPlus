@@ -22,18 +22,21 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
   KeyComparator? keyComparator,
   AndroidMmkvValueEncoder<E>? valueEncoder,
   AndroidMmkvValueDecoder<E>? valueDecoder,
+  AndroidMmkvStoreBackend store = const AndroidMmkvStore(),
+  bool? isAndroid,
 }) async {
-  if (!Platform.isAndroid || !AndroidMmkvStore.isAvailable) {
+  if (!(isAndroid ?? Platform.isAndroid) || !store.isAvailable) {
     return openHive();
   }
 
   final migrationKey = AndroidMmkvStore.migrationKey(name);
-  if (AndroidMmkvStore.getRaw(AndroidMmkvStore.metaBox, migrationKey) == '1') {
+  if (store.getRaw(AndroidMmkvStore.metaBox, migrationKey) == '1') {
     final box = AndroidMmkvBackedBox<E>(
       name,
       keyComparator: keyComparator,
       valueEncoder: valueEncoder,
       valueDecoder: valueDecoder,
+      store: store,
     );
     if (box.tryLoadFromMmkv()) {
       return box;
@@ -46,13 +49,14 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
     keyComparator: keyComparator,
     valueEncoder: valueEncoder,
     valueDecoder: valueDecoder,
+    store: store,
   );
   if (!box.replaceAllFrom(hive.toMap())) {
     return hive;
   }
 
-  if (!AndroidMmkvStore.putRaw(AndroidMmkvStore.metaBox, migrationKey, '1') ||
-      !AndroidMmkvStore.sync(AndroidMmkvStore.metaBox)) {
+  if (!store.putRaw(AndroidMmkvStore.metaBox, migrationKey, '1') ||
+      !store.sync(AndroidMmkvStore.metaBox)) {
     return hive;
   }
 
@@ -66,9 +70,11 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     KeyComparator? keyComparator,
     AndroidMmkvValueEncoder<E>? valueEncoder,
     AndroidMmkvValueDecoder<E>? valueDecoder,
+    AndroidMmkvStoreBackend store = const AndroidMmkvStore(),
   }) : _keyComparator = keyComparator,
        _valueEncoder = valueEncoder,
-       _valueDecoder = valueDecoder;
+       _valueDecoder = valueDecoder,
+       _store = store;
 
   @override
   final String name;
@@ -76,6 +82,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   final KeyComparator? _keyComparator;
   final AndroidMmkvValueEncoder<E>? _valueEncoder;
   final AndroidMmkvValueDecoder<E>? _valueDecoder;
+  final AndroidMmkvStoreBackend _store;
   final Map<dynamic, E> _cache = <dynamic, E>{};
   final StreamController<BoxEvent> _events =
       StreamController<BoxEvent>.broadcast(sync: true);
@@ -86,7 +93,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   bool tryLoadFromMmkv() {
     try {
       _checkOpen();
-      final json = AndroidMmkvStore.exportBox(name);
+      final json = _store.exportBox(name);
       if (json == null) return false;
 
       final decoded = jsonDecode(json);
@@ -112,7 +119,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     _checkOpen();
     final encoded = _encodeMap(entries, _valueEncoder);
     if (encoded == null) return false;
-    if (!AndroidMmkvStore.replaceBox(name, jsonEncode(encoded))) {
+    if (!_store.replaceBox(name, jsonEncode(encoded))) {
       return false;
     }
 
@@ -210,7 +217,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
         UnsupportedError('Unsupported MMKV value for $name.$key: $value'),
       );
     }
-    if (!AndroidMmkvStore.putRaw(name, _encodeKey(key), encodedValue)) {
+    if (!_store.putRaw(name, _encodeKey(key), encodedValue)) {
       return Future.error(StateError('MMKV put failed for $name.$key'));
     }
 
@@ -234,7 +241,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     }
 
     for (final MapEntry(:key, :value) in encoded.entries) {
-      if (!AndroidMmkvStore.putRaw(name, key, value)) {
+      if (!_store.putRaw(name, key, value)) {
         return Future.error(StateError('MMKV putAll failed for $name.$key'));
       }
     }
@@ -266,7 +273,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> delete(dynamic key) {
     _checkOpen();
-    if (!AndroidMmkvStore.removeRaw(name, _encodeKey(key))) {
+    if (!_store.removeRaw(name, _encodeKey(key))) {
       return Future.error(StateError('MMKV delete failed for $name.$key'));
     }
     final hadValue = _cache.containsKey(key);
@@ -285,7 +292,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     _checkOpen();
     final deleted = <MapEntry<dynamic, E?>>[];
     for (final key in keys) {
-      if (!AndroidMmkvStore.removeRaw(name, _encodeKey(key))) {
+      if (!_store.removeRaw(name, _encodeKey(key))) {
         return Future.error(StateError('MMKV deleteAll failed for $name.$key'));
       }
       if (_cache.containsKey(key)) {
@@ -304,7 +311,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<int> clear() {
     _checkOpen();
-    if (!AndroidMmkvStore.clearBox(name)) {
+    if (!_store.clearBox(name)) {
       return Future.error(StateError('MMKV clear failed for $name'));
     }
 
@@ -330,14 +337,16 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       await clear();
       await close();
     } else {
-      AndroidMmkvStore.clearBox(name);
+      if (!_store.clearBox(name)) {
+        throw StateError('MMKV clear failed for $name');
+      }
     }
   }
 
   @override
   Future<void> flush() {
     _checkOpen();
-    if (!AndroidMmkvStore.sync(name)) {
+    if (!_store.sync(name)) {
       return Future.error(StateError('MMKV sync failed for $name'));
     }
     return Future.value();
@@ -371,10 +380,31 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   }
 }
 
-abstract final class AndroidMmkvStore {
+abstract interface class AndroidMmkvStoreBackend {
+  bool get isAvailable;
+
+  String? exportBox(String name);
+
+  bool replaceBox(String name, String json);
+
+  String? getRaw(String name, String key);
+
+  bool putRaw(String name, String key, String value);
+
+  bool removeRaw(String name, String key);
+
+  bool clearBox(String name);
+
+  bool sync(String name);
+}
+
+final class AndroidMmkvStore implements AndroidMmkvStoreBackend {
+  const AndroidMmkvStore();
+
   static const String metaBox = '__meta__';
 
-  static bool get isAvailable {
+  @override
+  bool get isAvailable {
     try {
       return _AndroidMmkvBindings.isAvailable();
     } catch (_) {
@@ -384,12 +414,15 @@ abstract final class AndroidMmkvStore {
 
   static String migrationKey(String name) => 'migrated:$name:v1';
 
-  static String? exportBox(String name) => _AndroidMmkvBindings.exportBox(name);
+  @override
+  String? exportBox(String name) => _AndroidMmkvBindings.exportBox(name);
 
-  static bool replaceBox(String name, String json) =>
+  @override
+  bool replaceBox(String name, String json) =>
       _AndroidMmkvBindings.replaceBox(name, json);
 
-  static String? getRaw(String name, String key) {
+  @override
+  String? getRaw(String name, String key) {
     try {
       final json = exportBox(name);
       if (json == null) return null;
@@ -400,15 +433,19 @@ abstract final class AndroidMmkvStore {
     }
   }
 
-  static bool putRaw(String name, String key, String value) =>
+  @override
+  bool putRaw(String name, String key, String value) =>
       _AndroidMmkvBindings.putString(name, key, value);
 
-  static bool removeRaw(String name, String key) =>
+  @override
+  bool removeRaw(String name, String key) =>
       _AndroidMmkvBindings.removeValue(name, key);
 
-  static bool clearBox(String name) => _AndroidMmkvBindings.clearBox(name);
+  @override
+  bool clearBox(String name) => _AndroidMmkvBindings.clearBox(name);
 
-  static bool sync(String name) => _AndroidMmkvBindings.sync(name);
+  @override
+  bool sync(String name) => _AndroidMmkvBindings.sync(name);
 }
 
 Map<String, String>? _encodeMap<E>(
