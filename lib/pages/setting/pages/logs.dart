@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:pili_plus/pages/setting/pages/crash_report.dart';
+import 'package:pili_plus/pages/setting/pages/crash_report_history.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_store.dart';
 import 'package:pili_plus/services/logger.dart';
@@ -33,13 +33,13 @@ class LogsPage extends StatefulWidget {
 class _LogsPageState extends State<LogsPage> {
   List<_ExpandedItem<Report>> logsContent = [];
   _ExpandedItem<_DeviceInfo>? _deviceInfo;
-  CrashReport? _storedCrashReport;
+  List<CrashReport> _storedCrashReports = const [];
   late bool enableLog = Pref.enableLog;
 
   @override
   void initState() {
     _initDeviceInfo();
-    _initCrashReport();
+    _initCrashReports();
     getLog();
     super.initState();
   }
@@ -54,8 +54,8 @@ class _LogsPageState extends State<LogsPage> {
     }
   }
 
-  void _initCrashReport() {
-    _storedCrashReport = CrashReportStore.load();
+  void _initCrashReports() {
+    _storedCrashReports = CrashReportStore.loadAll();
   }
 
   Future<void> getLog() async {
@@ -132,7 +132,7 @@ class _LogsPageState extends State<LogsPage> {
                       if (timer.tick > 3) {
                         timer.cancel();
                         if (mounted) {
-                          _initCrashReport();
+                          _initCrashReports();
                           getLog();
                         }
                       }
@@ -163,7 +163,7 @@ class _LogsPageState extends State<LogsPage> {
       body:
           logsContent.isNotEmpty ||
               _deviceInfo != null ||
-              _storedCrashReport != null
+              _storedCrashReports.isNotEmpty
           ? Padding(
               padding: EdgeInsets.only(
                 left: padding.left + 12,
@@ -171,14 +171,14 @@ class _LogsPageState extends State<LogsPage> {
               ),
               child: CustomScrollView(
                 slivers: [
-                  if (_storedCrashReport != null)
+                  if (_storedCrashReports.isNotEmpty)
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const .only(bottom: 12),
                         child: _CrashReportCard(
-                          report: _storedCrashReport!,
+                          reports: _storedCrashReports,
                           onChanged: () {
-                            _initCrashReport();
+                            _initCrashReports();
                             setState(() {});
                           },
                         ),
@@ -215,10 +215,10 @@ typedef _DeviceInfo = (
 );
 
 class _CrashReportCard extends StatelessWidget {
-  final CrashReport report;
+  final List<CrashReport> reports;
   final VoidCallback onChanged;
 
-  const _CrashReportCard({required this.report, required this.onChanged});
+  const _CrashReportCard({required this.reports, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +226,10 @@ class _CrashReportCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(Icons.warning_amber_rounded, color: colorScheme.error),
-        title: const Text('已保存崩溃报告'),
-        subtitle: Text('${report.crashedAtText} · ${report.exceptionType}'),
+        title: const Text('崩溃历史'),
+        subtitle: Text(
+          '共 ${reports.length} 条 · 最近 ${reports.first.crashedAtText}',
+        ),
         trailing: Icon(
           Icons.arrow_forward,
           size: 16,
@@ -236,10 +238,7 @@ class _CrashReportCard extends StatelessWidget {
         onTap: () async {
           await Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => CrashReportPage(
-                report: report,
-                clearStoredReportOnContinue: true,
-              ),
+              builder: (_) => const CrashReportHistoryPage(),
             ),
           );
           onChanged();
