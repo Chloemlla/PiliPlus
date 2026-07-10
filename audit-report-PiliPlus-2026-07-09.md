@@ -2,7 +2,7 @@
 
 **Project:** PiliPlus  
 **Audit mode:** architecture + data-integrity（关键功能链路静态复核）  
-**Date:** 2026-07-10  
+**Date:** 2026-07-09  
 **Reviewer:** Codex（GPT-5）
 
 ---

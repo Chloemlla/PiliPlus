@@ -16,7 +16,9 @@ import 'package:pili_plus/utils/set_int_adapter.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/settings_backup_validator.dart';
 import 'package:pili_plus/utils/storage_key.dart';
-import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/storage/reply_cache_store.dart';
+import 'package:pili_plus/utils/storage/settings_store.dart';
+import 'package:pili_plus/utils/storage/watch_progress_store.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:path/path.dart' as path;
@@ -29,6 +31,9 @@ abstract final class GStorage {
   static late final Box<dynamic> video;
   static late final Box<int> watchProgress;
   static late final Box<Uint8List>? reply;
+  static late final SettingsStore settingsStore;
+  static late final WatchProgressStore watchProgressStore;
+  static late final ReplyCacheStore replyCacheStore;
 
   static Future<void> init() async {
     Hive.init(path.join(appSupportDirPath, 'hive'));
@@ -94,9 +99,11 @@ abstract final class GStorage {
         ),
       ).then((res) => watchProgress = res),
     ]);
+    settingsStore = SettingsStore(setting, video);
+    watchProgressStore = WatchProgressStore(watchProgress);
     await migrateSettingSecrets();
 
-    if (Pref.saveReply) {
+    if (setting.get(SettingBoxKey.saveReply, defaultValue: false) as bool) {
       reply = await openAndroidMmkvBackedBox<Uint8List>(
         name: 'reply',
         keyComparator: _intStrDescKeyComparator,
@@ -111,6 +118,7 @@ abstract final class GStorage {
     } else {
       reply = null;
     }
+    replyCacheStore = ReplyCacheStore(reply);
   }
 
   static String exportAllSettings() {

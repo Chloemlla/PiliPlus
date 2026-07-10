@@ -1,4 +1,3 @@
-import 'dart:async' show FutureOr;
 import 'dart:io' show Platform;
 
 import 'package:pili_plus/http/loading_state.dart';
@@ -18,28 +17,31 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract final class LoginUtils {
-  static FutureOr setWebCookie([Account? account]) {
+  static Future<void> setWebCookie([Account? account]) async {
     if (Platform.isLinux) {
-      return null;
+      return;
     }
     final cookies = (account ?? Accounts.main).cookieJar.toList();
     final webManager = web.CookieManager.instance(
       webViewEnvironment: webViewEnvironment,
     );
-    final isWindows = Platform.isWindows;
-    return Future.wait(
+    await Future.wait(
       cookies.map(
-        (cookie) => webManager.setCookie(
-          url: web.WebUri(
-            '${isWindows ? 'https://' : ''} ${cookie.domain}',
-          ),
-          name: cookie.name,
-          value: cookie.value,
-          path: cookie.path ?? '/',
-          domain: cookie.domain,
-          isSecure: cookie.secure,
-          isHttpOnly: cookie.httpOnly,
-        ),
+        (cookie) async {
+          try {
+            await webManager.setCookie(
+              url: web.WebUri('https://www.bilibili.com/'),
+              name: cookie.name,
+              value: cookie.value,
+              path: cookie.path ?? '/',
+              domain: cookie.domain,
+              isSecure: cookie.secure,
+              isHttpOnly: cookie.httpOnly,
+            );
+          } catch (error) {
+            throw StateError('Failed to sync WebView cookie ${cookie.name}: $error');
+          }
+        },
       ),
     );
   }
@@ -48,7 +50,7 @@ abstract final class LoginUtils {
     final account = Accounts.main;
     final res = await UserHttp.userInfo();
     if (res case Success(:final response)) {
-      setWebCookie(account);
+      await setWebCookie(account);
       RequestUtils.syncHistoryStatus();
       if (response.isLogin == true) {
         final accountService = Get.find<AccountService>()

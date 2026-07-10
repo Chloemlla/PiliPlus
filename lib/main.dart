@@ -141,7 +141,7 @@ void main() async {
   }
 
   Request();
-  Request.setCookie();
+  await Request.setCookie();
   RequestUtils.syncHistoryStatus();
 
   SmartDialog.config.toast = SmartConfigToast(displayType: .onlyRefresh);

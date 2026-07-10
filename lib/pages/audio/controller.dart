@@ -199,11 +199,12 @@ class AudioController extends GetxController
   Future<void>? makeHeartBeat(
     int progress, {
     HeartBeatType type = .playing,
+    bool force = false,
   }) {
     if (!Accounts.heartbeat.isLogin || Pref.historyPause || progress == 0) {
       return null;
     }
-    if (type != .completed && !(player?.state.playing ?? false)) {
+    if (!force && type != .completed && !(player?.state.playing ?? false)) {
       return null;
     }
     if (itemType != 1 || subId.isEmpty) {
@@ -222,12 +223,12 @@ class AudioController extends GetxController
 
     switch (type) {
       case .playing:
-        if (progress - _heartDuration >= 5) {
+        if (force || progress - _heartDuration >= 5) {
           _heartDuration = progress;
           return send();
         }
       case .status:
-        if (progress - _heartDuration >= 2) {
+        if (force || progress - _heartDuration >= 2) {
           _heartDuration = progress;
           return send();
         }
@@ -245,8 +246,13 @@ class AudioController extends GetxController
     return player?.pause();
   }
 
-  Future<void>? onSeek(Duration duration) {
-    return player?.seek(duration);
+  Future<void> onSeek(Duration duration) async {
+    final target = duration.inSeconds;
+    await player?.seek(duration);
+    if (target < _heartDuration) {
+      _heartDuration = target;
+      await makeHeartBeat(target, type: .status, force: true);
+    }
   }
 
   void _updateCurrItem(DetailItem item) {
