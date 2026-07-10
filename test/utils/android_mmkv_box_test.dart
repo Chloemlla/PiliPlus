@@ -116,9 +116,10 @@ void main() {
           name: name,
           isAndroid: true,
           store: store,
-          openHive: () async {
+          openHive: () {
+            // <-- 删掉了 async
             hiveOpenCount++;
-            return Hive.openBox<dynamic>(name);
+            return Hive.openBox<dynamic>(name); // 直接返回 Future，Dart 会自动处理
           },
         ),
         throwsA(isA<StateError>()),

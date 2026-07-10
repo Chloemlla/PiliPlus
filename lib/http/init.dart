@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:pili_plus/http/api.dart';
 import 'package:pili_plus/http/constants.dart';
-import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/network_security_policy.dart';
 import 'package:pili_plus/http/retry_interceptor.dart';
 import 'package:pili_plus/utils/accounts.dart';
