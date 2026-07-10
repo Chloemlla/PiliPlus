@@ -36,5 +36,17 @@ void main() {
 
       expect(SettingSecretStore.read('webdavPassword'), 'webdav-secret');
     });
+
+    test('recovers the last known good encrypted generation', () {
+      SettingSecretStore.write('webdavPassword', 'first-secret');
+      SettingSecretStore.write('webdavPassword', 'second-secret');
+      File(
+        path.join(tempDir.path, SettingSecretStore.dataFileName),
+      ).writeAsStringSync('truncated', flush: true);
+
+      SettingSecretStore.init(tempDir.path);
+
+      expect(SettingSecretStore.read('webdavPassword'), 'first-secret');
+    });
   });
 }

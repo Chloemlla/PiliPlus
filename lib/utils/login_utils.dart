@@ -6,6 +6,7 @@ import 'package:pili_plus/main.dart';
 import 'package:pili_plus/services/account_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
@@ -17,6 +18,13 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract final class LoginUtils {
+  static Future<void> syncCoin() async {
+    final res = await UserHttp.getCoin();
+    if (res case Success(:final response)) {
+      GlobalData().coins = response;
+    }
+  }
+
   static Future<void> setWebCookie([Account? account]) async {
     if (Platform.isLinux) {
       return;
@@ -39,7 +47,9 @@ abstract final class LoginUtils {
               isHttpOnly: cookie.httpOnly,
             );
           } catch (error) {
-            throw StateError('Failed to sync WebView cookie ${cookie.name}: $error');
+            throw StateError(
+              'Failed to sync WebView cookie ${cookie.name}: $error',
+            );
           }
         },
       ),

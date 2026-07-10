@@ -49,12 +49,14 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
           }
         }
         page++;
-      } else if (isRefresh &&
-          !handleError(res is Error ? res.errMsg : null)) {
+      } else if (isRefresh && !handleError(res is Error ? res.errMsg : null)) {
         loadingState.value = res as Error;
       }
     } catch (error, stackTrace) {
-      debugPrintStack(label: 'CommonListController query failed: $error', stackTrace: stackTrace);
+      debugPrintStack(
+        label: 'CommonListController query failed: $error',
+        stackTrace: stackTrace,
+      );
       if (isRefresh && !handleError(error.toString())) {
         loadingState.value = Error(error.toString());
       }

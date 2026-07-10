@@ -93,6 +93,59 @@ void main() {
     await reopened.close();
   });
 
+  test(
+    'completed migration never restores stale Hive after corruption',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final name = _newHiveBoxName(hiveBoxNames, 'corrupt_after_migration');
+      final hive = await Hive.openBox<dynamic>(name);
+      await hive.put('value', 'legacy');
+      final migrated = await openAndroidMmkvBackedBox<dynamic>(
+        name: name,
+        isAndroid: true,
+        store: store,
+        openHive: () => Future.value(hive),
+      );
+      await migrated.put('value', 'current');
+      await migrated.close();
+      store.putRaw(name, jsonEncode('broken'), 'not-json');
+      var hiveOpenCount = 0;
+
+      await expectLater(
+        openAndroidMmkvBackedBox<dynamic>(
+          name: name,
+          isAndroid: true,
+          store: store,
+          openHive: () async {
+            hiveOpenCount++;
+            return Hive.openBox<dynamic>(name);
+          },
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(hiveOpenCount, 0);
+      expect(store.getRaw(name, jsonEncode('value')), isNotNull);
+    },
+  );
+
+  test('failed batch replacement leaves cache and backend unchanged', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('atomic_batch', store: store);
+    await box.putAll(const {'first': 1, 'second': 2});
+    final before = store.exportBox('atomic_batch');
+    store.failNextReplace = true;
+
+    await expectLater(
+      box.putAll(const {'first': 10, 'third': 3}),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(box.toMap(), const {'first': 1, 'second': 2});
+    expect(store.exportBox('atomic_batch'), before);
+    await box.close();
+  });
+
   test('model and typed values survive MMKV round trips', () async {
     final store = _MemoryAndroidMmkvStore();
     final userInfo = UserInfoData(
@@ -223,6 +276,7 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   _MemoryAndroidMmkvStore({this.clearSucceeds = true});
 
   final bool clearSucceeds;
+  bool failNextReplace = false;
   final Map<String, Map<String, String>> _boxes = {};
 
   @override
@@ -255,6 +309,10 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   @override
   bool replaceBox(String name, String json) {
+    if (failNextReplace) {
+      failNextReplace = false;
+      return false;
+    }
     final decoded = jsonDecode(json) as Map<String, dynamic>;
     _boxes[name] = decoded.map(
       (key, value) => MapEntry(key, value as String),

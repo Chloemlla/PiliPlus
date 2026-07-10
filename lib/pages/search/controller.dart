@@ -11,6 +11,7 @@ import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -176,7 +177,10 @@ class SSearchController extends GetxController
       historyList
         ..remove(controller.text)
         ..insert(0, controller.text);
-      GStorage.historyWord.put('cacheList', historyList);
+      Persistence.background(
+        GStorage.historyWord.put('cacheList', historyList),
+        label: 'search history add',
+      );
     }
 
     searchFocusNode.unfocus();
@@ -225,7 +229,10 @@ class SSearchController extends GetxController
 
   void onLongSelect(String word) {
     historyList.remove(word);
-    GStorage.historyWord.put('cacheList', historyList);
+    Persistence.background(
+      GStorage.historyWord.put('cacheList', historyList),
+      label: 'search history remove',
+    );
   }
 
   void onClearHistory() {
@@ -234,7 +241,10 @@ class SSearchController extends GetxController
       title: const Text('确定清空搜索历史？'),
       onConfirm: () {
         historyList.clear();
-        GStorage.historyWord.delete('cacheList');
+        Persistence.background(
+          GStorage.historyWord.delete('cacheList'),
+          label: 'search history clear',
+        );
       },
     );
   }

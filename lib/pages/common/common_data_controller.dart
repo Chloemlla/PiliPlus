@@ -23,7 +23,10 @@ abstract class CommonDataController<R, T> extends CommonController<R, T> {
         }
       }
     } catch (error, stackTrace) {
-      debugPrintStack(label: 'CommonDataController query failed: $error', stackTrace: stackTrace);
+      debugPrintStack(
+        label: 'CommonDataController query failed: $error',
+        stackTrace: stackTrace,
+      );
       if (isRefresh && !handleError(error.toString())) {
         loadingState.value = Error(error.toString());
       }

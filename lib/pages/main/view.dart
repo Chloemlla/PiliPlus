@@ -21,6 +21,7 @@ import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +46,7 @@ class _MainAppState extends PopScopeState<MainApp>
         WindowListener,
         TrayListener {
   final _mainController = Get.put(MainController());
-  late final _setting = GStorage.setting;
+  late final _settings = GStorage.settingsStore;
   late EdgeInsets _padding;
   late ThemeData theme;
   Brightness? _brightness;
@@ -135,12 +136,18 @@ class _MainAppState extends PopScopeState<MainApp>
 
   @override
   void onWindowMaximize() {
-    _setting.put(SettingBoxKey.isWindowMaximized, true);
+    Persistence.background(
+      _settings.putSetting(SettingBoxKey.isWindowMaximized, true),
+      label: 'window maximized state',
+    );
   }
 
   @override
   void onWindowUnmaximize() {
-    _setting.put(SettingBoxKey.isWindowMaximized, false);
+    Persistence.background(
+      _settings.putSetting(SettingBoxKey.isWindowMaximized, false),
+      label: 'window restored state',
+    );
   }
 
   @override
@@ -149,7 +156,10 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Offset offset = await windowManager.getPosition();
-    _setting.put(SettingBoxKey.windowPosition, [offset.dx, offset.dy]);
+    await _settings.putSetting(SettingBoxKey.windowPosition, [
+      offset.dx,
+      offset.dy,
+    ]);
   }
 
   @override
@@ -158,7 +168,7 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Rect bounds = await windowManager.getBounds();
-    _setting.putAll({
+    await _settings.putSettings({
       SettingBoxKey.windowSize: [bounds.width, bounds.height],
       SettingBoxKey.windowPosition: [bounds.left, bounds.top],
     });

@@ -61,7 +61,7 @@ abstract final class SettingSecretStore {
     final keyFile = _keyFile!;
     final existing = AtomicFile.readPrimaryOrBackup(
       keyFile,
-      (contents) => _decodeKey(contents),
+      _decodeKey,
     );
     if (existing != null) {
       return _decodeKey(existing);
@@ -88,28 +88,28 @@ abstract final class SettingSecretStore {
   }
 
   static Map<String, String> _decodeSecrets(String contents) {
-      final encryptedJson = jsonDecode(contents);
-      if (encryptedJson is! Map) {
-        throw const FormatException('Invalid setting secret file');
-      }
-      final payload = encryptedJson['payload'];
-      final iv = encryptedJson['iv'];
-      if (payload is! String || iv is! String) {
-        throw const FormatException('Invalid setting secret payload');
-      }
-      final plainText =
-          crypt.Encrypter(crypt.AES(_key!, mode: crypt.AESMode.gcm)).decrypt(
-            crypt.Encrypted.fromBase64(payload),
-            iv: crypt.IV.fromBase64(iv),
-          );
-      final decoded = jsonDecode(plainText);
-      if (decoded is! Map) {
-        throw const FormatException('Invalid setting secret map');
-      }
-      return {
-        for (final entry in decoded.entries)
-          if (entry.value != null) entry.key.toString(): entry.value.toString(),
-      };
+    final encryptedJson = jsonDecode(contents);
+    if (encryptedJson is! Map) {
+      throw const FormatException('Invalid setting secret file');
+    }
+    final payload = encryptedJson['payload'];
+    final iv = encryptedJson['iv'];
+    if (payload is! String || iv is! String) {
+      throw const FormatException('Invalid setting secret payload');
+    }
+    final plainText = crypt.Encrypter(crypt.AES(_key!, mode: crypt.AESMode.gcm))
+        .decrypt(
+          crypt.Encrypted.fromBase64(payload),
+          iv: crypt.IV.fromBase64(iv),
+        );
+    final decoded = jsonDecode(plainText);
+    if (decoded is! Map) {
+      throw const FormatException('Invalid setting secret map');
+    }
+    return {
+      for (final entry in decoded.entries)
+        if (entry.value != null) entry.key.toString(): entry.value.toString(),
+    };
   }
 
   static void _save() {

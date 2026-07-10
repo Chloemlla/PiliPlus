@@ -50,7 +50,8 @@ abstract final class AtomicFile {
       return contents;
     }
     if (primaryError != null) {
-      final corrupt = '${target.path}.corrupt.${DateTime.now().millisecondsSinceEpoch}';
+      final corrupt =
+          '${target.path}.corrupt.${DateTime.now().millisecondsSinceEpoch}';
       target.renameSync(corrupt);
       throw StateError('Invalid file quarantined at $corrupt: $primaryError');
     }

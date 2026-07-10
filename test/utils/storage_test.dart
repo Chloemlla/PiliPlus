@@ -1,27 +1,40 @@
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/settings_backup_validator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('settings backup validation', () {
     test('accepts map sections', () {
-      final section = GStorage.validateSettingsSection({
-        'setting': {'theme': 'dark'},
-      }, 'setting');
+      final section = SettingsBackupValidator.validateSection(
+        {
+          'setting': {'theme': 'dark'},
+        },
+        'setting',
+        const {},
+      );
 
       expect(section, {'theme': 'dark'});
     });
 
     test('rejects missing sections', () {
       expect(
-        () => GStorage.validateSettingsSection({}, 'setting'),
+        () => SettingsBackupValidator.validateSection(
+          {},
+          'setting',
+          const {},
+        ),
         throwsFormatException,
       );
     });
 
     test('rejects non-map sections', () {
       expect(
-        () => GStorage.validateSettingsSection({'setting': true}, 'setting'),
+        () => SettingsBackupValidator.validateSection(
+          {'setting': true},
+          'setting',
+          const {},
+        ),
         throwsFormatException,
       );
     });

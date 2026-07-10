@@ -12,7 +12,6 @@ import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
-import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/date_utils.dart';

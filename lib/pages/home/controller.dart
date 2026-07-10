@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:pili_plus/http/api.dart';
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/home_tab_type.dart';
+import 'package:pili_plus/pages/home/home_tab_factory.dart';
 import 'package:pili_plus/pages/common/common_controller.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/services/account_service.dart';
@@ -27,7 +28,7 @@ class HomeController extends GetxController
   late final RxString defaultSearch = ''.obs;
   late int lateCheckSearchAt = 0;
 
-  ScrollOrRefreshMixin get controller => tabs[tabController.index].ctr();
+  ScrollOrRefreshMixin get controller => tabs[tabController.index].controller();
 
   @override
   ScrollController get scrollController => controller.scrollController;

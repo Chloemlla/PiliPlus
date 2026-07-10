@@ -4,6 +4,7 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/pages/common/common_page.dart';
 import 'package:pili_plus/pages/home/controller.dart';
+import 'package:pili_plus/pages/home/home_tab_factory.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
@@ -79,7 +80,7 @@ class _HomePageState extends CommonPageState<HomePage>
           child: onBuild(
             tabBarView(
               controller: _homeController.tabController,
-              children: _homeController.tabs.map((e) => e.page).toList(),
+              children: _homeController.tabs.map((e) => e.buildPage()).toList(),
             ),
           ),
         ),

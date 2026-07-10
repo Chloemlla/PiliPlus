@@ -59,5 +59,29 @@ void main() {
       expect(secret?.accessKey, 'access-token');
       expect(secret?.refresh, 'refresh-token');
     });
+
+    test('recovers the last known good encrypted generation', () {
+      const first = AccountSecret(
+        cookies: {'DedeUserID': '12345'},
+        accessKey: 'first',
+        refresh: null,
+      );
+      AccountSecretStore.write('12345', first);
+      AccountSecretStore.write(
+        '12345',
+        const AccountSecret(
+          cookies: {'DedeUserID': '12345'},
+          accessKey: 'second',
+          refresh: null,
+        ),
+      );
+      File(
+        path.join(tempDir.path, AccountSecretStore.dataFileName),
+      ).writeAsStringSync('truncated', flush: true);
+
+      AccountSecretStore.init(tempDir.path);
+
+      expect(AccountSecretStore.read('12345')?.accessKey, 'first');
+    });
   });
 }

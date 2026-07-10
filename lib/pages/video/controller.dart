@@ -61,6 +61,7 @@ import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -319,12 +320,18 @@ class VideoDetailController extends GetxController
 
   final isLoginVideo = Accounts.get(AccountType.video).isLogin;
 
-  late final watchProgress = GStorage.watchProgress;
+  late final watchProgress = GStorage.watchProgressStore;
   void cacheLocalProgress() {
     if (plPlayerController.playerStatus.isCompleted) {
-      watchProgress.put(cid.value.toString(), entry.totalTimeMilli);
+      Persistence.background(
+        watchProgress.put(cid.value.toString(), entry.totalTimeMilli),
+        label: 'completed video progress',
+      );
     } else if (playedTime case final playedTime?) {
-      watchProgress.put(cid.value.toString(), playedTime.inMilliseconds);
+      Persistence.background(
+        watchProgress.put(cid.value.toString(), playedTime.inMilliseconds),
+        label: 'video progress',
+      );
     }
   }
 

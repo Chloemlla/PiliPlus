@@ -7,7 +7,6 @@ import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/network_security_policy.dart';
 import 'package:pili_plus/http/retry_interceptor.dart';
-import 'package:pili_plus/http/user.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_manager/account_mgr.dart';
@@ -46,17 +45,10 @@ class Request {
     if (Accounts.main.isLogin) {
       final coin = Pref.userInfoCache?.money;
       if (coin == null) {
-        setCoin();
+        await LoginUtils.syncCoin();
       } else {
         GlobalData().coins = coin;
       }
-    }
-  }
-
-  static Future<void> setCoin() async {
-    final res = await UserHttp.getCoin();
-    if (res case Success(:final response)) {
-      GlobalData().coins = response;
     }
   }
 

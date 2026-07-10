@@ -108,7 +108,7 @@ abstract final class AccountSecretStore {
     final keyFile = _keyFile!;
     final existing = AtomicFile.readPrimaryOrBackup(
       keyFile,
-      (contents) => _decodeKey(contents),
+      _decodeKey,
     );
     if (existing != null) {
       return _decodeKey(existing);
@@ -135,28 +135,28 @@ abstract final class AccountSecretStore {
   }
 
   static Map<String, AccountSecret> _decodeSecrets(String contents) {
-      final encryptedJson = jsonDecode(contents);
-      if (encryptedJson is! Map) {
-        throw const FormatException('Invalid account secret file');
-      }
-      final payload = encryptedJson['payload'];
-      final iv = encryptedJson['iv'];
-      if (payload is! String || iv is! String) {
-        throw const FormatException('Invalid account secret payload');
-      }
-      final plainText =
-          crypt.Encrypter(crypt.AES(_key!, mode: crypt.AESMode.gcm)).decrypt(
-            crypt.Encrypted.fromBase64(payload),
-            iv: crypt.IV.fromBase64(iv),
-          );
-      final decoded = jsonDecode(plainText);
-      if (decoded is! Map) {
-        throw const FormatException('Invalid account secret map');
-      }
-      return {
-        for (final entry in decoded.entries)
-          entry.key.toString(): AccountSecret.fromJson(entry.value),
-      };
+    final encryptedJson = jsonDecode(contents);
+    if (encryptedJson is! Map) {
+      throw const FormatException('Invalid account secret file');
+    }
+    final payload = encryptedJson['payload'];
+    final iv = encryptedJson['iv'];
+    if (payload is! String || iv is! String) {
+      throw const FormatException('Invalid account secret payload');
+    }
+    final plainText = crypt.Encrypter(crypt.AES(_key!, mode: crypt.AESMode.gcm))
+        .decrypt(
+          crypt.Encrypted.fromBase64(payload),
+          iv: crypt.IV.fromBase64(iv),
+        );
+    final decoded = jsonDecode(plainText);
+    if (decoded is! Map) {
+      throw const FormatException('Invalid account secret map');
+    }
+    return {
+      for (final entry in decoded.entries)
+        entry.key.toString(): AccountSecret.fromJson(entry.value),
+    };
   }
 
   static void _save() {
