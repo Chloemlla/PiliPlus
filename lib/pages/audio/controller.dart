@@ -425,7 +425,7 @@ class AudioController extends GetxController
         }
         videoPlayerServiceHandler?.onStatusChange(playerStatus, false, false);
         if (playing) {
-          final pos = this.position.value;
+          final pos = position.value;
           if (pos > 0) {
             makeHeartBeat(pos, type: .status);
           }

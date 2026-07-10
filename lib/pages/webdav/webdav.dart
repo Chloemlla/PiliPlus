@@ -66,11 +66,27 @@ class WebDav {
       String data = GStorage.exportAllSettings();
       _fileName ??= _getFileName();
       final path = '$_webdavDirectory/$_fileName';
+      final tempPath = '$path.tmp.${DateTime.now().millisecondsSinceEpoch}';
+      final backupPath = '$path.bak';
       try {
-        await _client!.remove(path);
-      } catch (_) {}
-      await _client!.write(path, utf8.encode(data));
-      SmartDialog.showToast('备份成功');
+        await _client!.write(tempPath, utf8.encode(data));
+        final uploaded = await _client!.read(tempPath);
+        if (utf8.decode(uploaded) != data) {
+          throw const FormatException('WebDAV upload verification failed');
+        }
+        try {
+          await _client!.copy(path, backupPath, true);
+        } catch (_) {
+          // The official backup remains untouched when no previous file exists.
+        }
+        await _client!.rename(tempPath, path, true);
+        SmartDialog.showToast('备份成功');
+      } catch (_) {
+        try {
+          await _client!.remove(tempPath);
+        } catch (_) {}
+        rethrow;
+      }
     } catch (e) {
       SmartDialog.showToast('备份失败: $e');
     }

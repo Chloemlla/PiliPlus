@@ -41,6 +41,10 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
     if (box.tryLoadFromMmkv()) {
       return box;
     }
+    throw StateError(
+      'MMKV box $name is marked as migrated but cannot be decoded; '
+      'legacy Hive data was left untouched to avoid restoring stale data.',
+    );
   }
 
   final hive = await openHive();
@@ -240,10 +244,11 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       );
     }
 
-    for (final MapEntry(:key, :value) in encoded.entries) {
-      if (!_store.putRaw(name, key, value)) {
-        return Future.error(StateError('MMKV putAll failed for $name.$key'));
-      }
+    final next = Map<dynamic, E>.of(_cache)..addAll(entries);
+    final nextEncoded = _encodeMap(next, _valueEncoder);
+    if (nextEncoded == null ||
+        !_store.replaceBox(name, jsonEncode(nextEncoded))) {
+      return Future.error(StateError('MMKV putAll failed for $name'));
     }
 
     _cache.addAll(entries);
@@ -290,15 +295,20 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> deleteAll(Iterable<dynamic> keys) {
     _checkOpen();
+    final next = Map<dynamic, E>.of(_cache);
     final deleted = <MapEntry<dynamic, E?>>[];
     for (final key in keys) {
-      if (!_store.removeRaw(name, _encodeKey(key))) {
-        return Future.error(StateError('MMKV deleteAll failed for $name.$key'));
-      }
-      if (_cache.containsKey(key)) {
-        deleted.add(MapEntry<dynamic, E?>(key, _cache.remove(key)));
+      if (next.containsKey(key)) {
+        deleted.add(MapEntry<dynamic, E?>(key, next.remove(key)));
       }
     }
+    final encoded = _encodeMap(next, _valueEncoder);
+    if (encoded == null || !_store.replaceBox(name, jsonEncode(encoded))) {
+      return Future.error(StateError('MMKV deleteAll failed for $name'));
+    }
+    _cache
+      ..clear()
+      ..addAll(next);
     for (final MapEntry(:key, :value) in deleted) {
       _events.add(BoxEvent(key, value, true));
     }

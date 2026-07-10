@@ -66,23 +66,35 @@ public final class AndroidMmkv {
     }
 
     public static boolean replaceBox(@NonNull String name, @NonNull String json) {
+        String previous = exportBox(name);
         try {
             MMKV mmkv = box(name);
             if (mmkv == null) return false;
 
             JSONObject entries = new JSONObject(json);
-            mmkv.clearAll();
-            for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
-                String key = it.next();
-                if (!mmkv.encode(key, entries.getString(key))) {
-                    return false;
+            if (writeEntries(mmkv, entries)) return true;
+            return previous != null && writeEntries(mmkv, new JSONObject(previous)) && false;
+        } catch (Throwable ignored) {
+            if (previous != null) {
+                try {
+                    MMKV mmkv = box(name);
+                    if (mmkv != null) writeEntries(mmkv, new JSONObject(previous));
+                } catch (Throwable restoreIgnored) {
+                    // The caller still receives failure; the export remains available for diagnosis.
                 }
             }
-            mmkv.sync();
-            return true;
-        } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    private static boolean writeEntries(@NonNull MMKV mmkv, @NonNull JSONObject entries) {
+        mmkv.clearAll();
+        for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
+            String key = it.next();
+            if (!mmkv.encode(key, entries.optString(key))) return false;
+        }
+        mmkv.sync();
+        return true;
     }
 
     public static boolean putString(

@@ -38,8 +38,14 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
   ThemeType get nextThemeType =>
       ThemeType.values[(themeType.value.index + 1) % ThemeType.values.length];
 
-  static RxBool anonymity =
-      (Accounts.account.isNotEmpty && !Accounts.heartbeat.isLogin).obs;
+  static RxBool _createAnonymityState() {
+    final state =
+        (Accounts.account.isNotEmpty && !Accounts.heartbeat.isLogin).obs;
+    Accounts.onHeartbeatLoginChanged = (isLogin) => state.value = !isLogin;
+    return state;
+  }
+
+  static final RxBool anonymity = _createAnonymityState();
 
   late final list = <({IconData icon, String title, VoidCallback onTap})>[
     (

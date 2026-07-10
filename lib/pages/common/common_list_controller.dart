@@ -1,5 +1,6 @@
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/common/common_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 abstract class CommonListController<R, T> extends CommonController<R, T> {
@@ -23,37 +24,43 @@ abstract class CommonListController<R, T> extends CommonController<R, T> {
   Future<void> queryData([bool isRefresh = true]) async {
     if (isLoading || (!isRefresh && isEnd)) return;
     isLoading = true;
-    final LoadingState<R> res = await customGetData();
-    if (res case Success(:final response)) {
-      if (!customHandleResponse(isRefresh, res)) {
-        final dataList = getDataList(response);
-        if (dataList == null || dataList.isEmpty) {
-          isEnd = true;
+    try {
+      final LoadingState<R> res = await customGetData();
+      if (res case Success(:final response)) {
+        if (!customHandleResponse(isRefresh, res)) {
+          final dataList = getDataList(response);
+          if (dataList == null || dataList.isEmpty) {
+            isEnd = true;
+            if (isRefresh) {
+              loadingState.value = Success(dataList);
+            } else if (hasFooter == true) {
+              loadingState.refresh();
+            }
+            return;
+          }
+          handleListResponse(dataList);
           if (isRefresh) {
+            checkIsEnd(dataList.length);
             loadingState.value = Success(dataList);
-          } else if (hasFooter == true) {
+          } else if (loadingState.value case Success(:final response)) {
+            response!.addAll(dataList);
+            checkIsEnd(response.length);
             loadingState.refresh();
           }
-          isLoading = false;
-          return;
         }
-        handleListResponse(dataList);
-        if (isRefresh) {
-          checkIsEnd(dataList.length);
-          loadingState.value = Success(dataList);
-        } else if (loadingState.value case Success(:final response)) {
-          response!.addAll(dataList);
-          checkIsEnd(response.length);
-          loadingState.refresh();
-        }
-      }
-      page++;
-    } else {
-      if (isRefresh && !handleError(res is Error ? res.errMsg : null)) {
+        page++;
+      } else if (isRefresh &&
+          !handleError(res is Error ? res.errMsg : null)) {
         loadingState.value = res as Error;
       }
+    } catch (error, stackTrace) {
+      debugPrintStack(label: 'CommonListController query failed: $error', stackTrace: stackTrace);
+      if (isRefresh && !handleError(error.toString())) {
+        loadingState.value = Error(error.toString());
+      }
+    } finally {
+      isLoading = false;
     }
-    isLoading = false;
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:encrypt/encrypt.dart' as crypt;
 import 'package:path/path.dart' as path;
+import 'package:pili_plus/utils/atomic_file.dart';
 
 abstract final class SettingSecretStore {
   static const String keyFileName = 'setting_secrets.key';
@@ -58,22 +59,36 @@ abstract final class SettingSecretStore {
 
   static crypt.Key _readOrCreateKey() {
     final keyFile = _keyFile!;
-    if (keyFile.existsSync()) {
-      return crypt.Key.fromBase64(keyFile.readAsStringSync());
+    final existing = AtomicFile.readPrimaryOrBackup(
+      keyFile,
+      (contents) => _decodeKey(contents),
+    );
+    if (existing != null) {
+      return _decodeKey(existing);
     }
     final key = crypt.Key.fromSecureRandom(32);
-    keyFile.writeAsStringSync(key.base64, flush: true);
+    AtomicFile.replaceText(keyFile, key.base64, validate: _decodeKey);
+    return key;
+  }
+
+  static crypt.Key _decodeKey(String contents) {
+    final key = crypt.Key.fromBase64(contents.trim());
+    if (key.bytes.length != 32) throw const FormatException('Invalid key size');
     return key;
   }
 
   static void _load() {
     _secrets.clear();
     final dataFile = _dataFile!;
-    if (!dataFile.existsSync()) {
+    final contents = AtomicFile.readPrimaryOrBackup(dataFile, _decodeSecrets);
+    if (contents == null) {
       return;
     }
-    try {
-      final encryptedJson = jsonDecode(dataFile.readAsStringSync());
+    _secrets.addAll(_decodeSecrets(contents));
+  }
+
+  static Map<String, String> _decodeSecrets(String contents) {
+      final encryptedJson = jsonDecode(contents);
       if (encryptedJson is! Map) {
         throw const FormatException('Invalid setting secret file');
       }
@@ -91,16 +106,10 @@ abstract final class SettingSecretStore {
       if (decoded is! Map) {
         throw const FormatException('Invalid setting secret map');
       }
-      _secrets.addAll({
+      return {
         for (final entry in decoded.entries)
           if (entry.value != null) entry.key.toString(): entry.value.toString(),
-      });
-    } catch (_) {
-      final corruptPath =
-          '${dataFile.path}.corrupt.${DateTime.now().millisecondsSinceEpoch}';
-      dataFile.renameSync(corruptPath);
-      _secrets.clear();
-    }
+      };
   }
 
   static void _save() {
@@ -108,9 +117,10 @@ abstract final class SettingSecretStore {
     final payload = crypt.Encrypter(
       crypt.AES(_key!, mode: crypt.AESMode.gcm),
     ).encrypt(jsonEncode(_secrets), iv: iv);
-    _dataFile!.writeAsStringSync(
+    AtomicFile.replaceText(
+      _dataFile!,
       jsonEncode({'version': 1, 'iv': iv.base64, 'payload': payload.base64}),
-      flush: true,
+      validate: _decodeSecrets,
     );
   }
 

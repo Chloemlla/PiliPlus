@@ -237,16 +237,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
               onExport: () =>
                   Utils.jsonEncoder.convert(Accounts.account.toMap()),
               onImport: (json) async {
-                final res = json.map(
-                  (key, value) => MapEntry(key, LoginAccount.fromJson(value)),
-                );
-                for (final account in res.values) {
-                  if (account.shouldKeep) {
-                    account.persistSecret();
-                  }
-                }
-                await Accounts.account.putAll(res);
-                await Accounts.refresh();
+                await Accounts.importAccounts(json);
                 MineController.anonymity.value = !Accounts.heartbeat.isLogin;
                 if (Accounts.main.isLogin) {
                   await LoginUtils.onLoginMain();

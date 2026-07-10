@@ -14,6 +14,7 @@ import 'package:pili_plus/utils/accounts/cookie_jar_adapter.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/set_int_adapter.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
+import 'package:pili_plus/utils/settings_backup_validator.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -114,6 +115,7 @@ abstract final class GStorage {
 
   static String exportAllSettings() {
     return Utils.jsonEncoder.convert({
+      'schemaVersion': SettingsBackupValidator.currentSchemaVersion,
       setting.name: sanitizeSettingsForExport(setting.toMap()),
       video.name: video.toMap(),
     });
@@ -123,8 +125,17 @@ abstract final class GStorage {
       importAllJsonSettings(jsonDecode(data));
 
   static Future<void> importAllJsonSettings(Map<String, dynamic> map) async {
-    final settingData = validateSettingsSection(map, setting.name);
-    final videoData = validateSettingsSection(map, video.name);
+    SettingsBackupValidator.validateSchemaVersion(map);
+    final settingData = SettingsBackupValidator.validateSection(
+      map,
+      setting.name,
+      setting.toMap(),
+    );
+    final videoData = SettingsBackupValidator.validateSection(
+      map,
+      video.name,
+      video.toMap(),
+    );
     final importedWebDavPassword = settingData.remove(
       SettingBoxKey.webdavPassword,
     );
@@ -160,17 +171,6 @@ abstract final class GStorage {
       }
       rethrow;
     }
-  }
-
-  static Map<dynamic, dynamic> validateSettingsSection(
-    Map<String, dynamic> map,
-    String boxName,
-  ) {
-    final section = map[boxName];
-    if (section is! Map) {
-      throw FormatException('Invalid settings backup: missing $boxName');
-    }
-    return Map<dynamic, dynamic>.from(section);
   }
 
   static Map<dynamic, dynamic> sanitizeSettingsForExport(

@@ -1,12 +1,12 @@
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/account_type.dart';
-import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:hive_ce/hive.dart';
 
 abstract final class Accounts {
+  static void Function(bool isLogin)? onHeartbeatLoginChanged;
   static late final Box<LoginAccount> account;
   static final List<Account> accountMode = List.filled(
     AccountType.values.length,
@@ -38,31 +38,51 @@ abstract final class Accounts {
     for (int i = 0; i < AccountType.values.length; i++) {
       accountMode[i] = AnonymousAccount();
     }
-    final invalidKeys = <dynamic>[];
+    final obsoleteKeys = <dynamic>[];
     final validAccounts = <String, LoginAccount>{};
     for (final entry in account.toMap().entries) {
       final a = entry.value;
       if (!a.shouldKeep) {
-        invalidKeys.add(entry.key);
+        obsoleteKeys.add(entry.key);
         continue;
       }
       validAccounts[a.secretKey] = a;
+      if (entry.key != a.secretKey) obsoleteKeys.add(entry.key);
       for (final t in a.type) {
         accountMode[t.index] = a;
       }
     }
-    if (invalidKeys.isNotEmpty) {
-      await account.deleteAll(invalidKeys);
-      AccountSecretStore.deleteAll(invalidKeys);
-    }
     if (validAccounts.isNotEmpty) {
       await account.putAll(validAccounts);
+    }
+    if (obsoleteKeys.isNotEmpty) {
+      await account.deleteAll(obsoleteKeys);
     }
     await Future.wait(
       (accountMode.toSet()..removeWhere((i) => i.activated)).map(
         Request.buvidActive,
       ),
     );
+  }
+
+  static Future<void> importAccounts(Map<dynamic, dynamic> json) async {
+    final canonical = <String, LoginAccount>{};
+    for (final value in json.values) {
+      final imported = LoginAccount.fromJson(value);
+      if (!imported.shouldKeep) {
+        throw const FormatException('Imported account is missing credentials');
+      }
+      final key = imported.secretKey;
+      if (canonical.containsKey(key)) {
+        throw FormatException('Duplicate imported account: $key');
+      }
+      canonical[key] = imported;
+    }
+    for (final imported in canonical.values) {
+      imported.persistSecret();
+    }
+    await account.putAll(canonical);
+    await refresh();
   }
 
   static Future<void> clear() async {
@@ -100,7 +120,7 @@ abstract final class Accounts {
             : LoginUtils.onLogoutMain());
         break;
       case AccountType.heartbeat:
-        MineController.anonymity.value = !account.isLogin;
+        onHeartbeatLoginChanged?.call(account.isLogin);
         break;
       default:
         break;
