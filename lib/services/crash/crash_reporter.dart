@@ -14,6 +14,9 @@ abstract final class CrashReporter {
   static ErrorCallback? _previousPlatformErrorHandler;
   static bool _installed = false;
 
+  static bool shouldIgnore(Object error) =>
+      CrashReportFilter.shouldIgnore(error);
+
   static Future<CrashReport?> ensureInitialized() async {
     await CrashReportStore.ensureInitialized();
     CrashReportSystemInfo.update(await _buildSystemInfo());
@@ -49,7 +52,7 @@ abstract final class CrashReporter {
   }
 
   static CrashReport recordErrorSync(Object error, StackTrace? stackTrace) {
-    if (CrashReportFilter.shouldIgnore(error)) {
+    if (shouldIgnore(error)) {
       CrashBreadcrumbs.record('Crash ignored: ${error.runtimeType}');
       return CrashReport.fromError(error, stackTrace);
     }

@@ -3,8 +3,11 @@ abstract final class CrashReportFilter {
     final message = error.toString().trim().toLowerCase();
     if (message.isEmpty) return false;
 
-    return _ignoredMessageFragments.any(message.contains);
+    return _sslSeekFailure.hasMatch(message) ||
+        _ignoredMessageFragments.any(message.contains);
   }
+
+  static final _sslSeekFailure = RegExp(r'\bssl\b.{0,32}\bseek failed\b');
 
   static const _ignoredMessageFragments = <String>[
     'ssl seek failed',

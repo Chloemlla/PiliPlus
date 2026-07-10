@@ -13,8 +13,8 @@ class CrashReportArchive {
   });
 
   const CrashReportArchive.empty()
-    : pendingReportId = null,
-      reports = const [];
+      : pendingReportId = null,
+        reports = const [];
 
   CrashReport? get pendingReport {
     final id = pendingReportId;
@@ -26,16 +26,17 @@ class CrashReportArchive {
   }
 
   factory CrashReportArchive.fromJson(Object? json) {
-    if (json case {'reports': final List<dynamic> items}) {
-      final reports = _decodeReports(items);
-      final pendingReportId = json['pendingReportId'];
-      return CrashReportArchive(
-        pendingReportId: pendingReportId is String ? pendingReportId : null,
-        reports: reports,
-      );
-    }
-    if (json case final Map<String, dynamic> legacy) {
-      final report = CrashReport.fromJson(legacy);
+    if (json is Map<String, dynamic>) {
+      final items = json['reports'];
+      if (items is List<dynamic>) {
+        final reports = _decodeReports(items);
+        final pendingReportId = json['pendingReportId'];
+        return CrashReportArchive(
+          pendingReportId: pendingReportId is String ? pendingReportId : null,
+          reports: reports,
+        );
+      }
+      final report = CrashReport.fromJson(json);
       return CrashReportArchive(
         pendingReportId: report.reportId,
         reports: [report],
@@ -45,8 +46,8 @@ class CrashReportArchive {
   }
 
   CrashReportArchive add(CrashReport report) {
-    if (reports case [final latest, ...]
-        when _isSameOccurrence(latest, report)) {
+    if (reports.isNotEmpty && _isSameOccurrence(reports.first, report)) {
+      final latest = reports.first;
       return CrashReportArchive(
         pendingReportId: latest.reportId,
         reports: reports,

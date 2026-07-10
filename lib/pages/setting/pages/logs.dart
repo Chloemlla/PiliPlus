@@ -249,7 +249,7 @@ class _CrashReportCard extends StatelessWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('崩溃报告已清除'),
+                content: Text('崩溃历史已清空'),
                 duration: _snackBarDisplayDuration,
               ),
             );

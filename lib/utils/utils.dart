@@ -85,6 +85,7 @@ abstract final class Utils {
   /// to treat the exception as unhandled.
   static void reportError(Object exception, [StackTrace? stack]) {
     CrashReporter.recordErrorSync(exception, stack);
+    if (CrashReporter.shouldIgnore(exception)) return;
     Catcher2.reportCheckedError(exception, stack);
   }
 }
