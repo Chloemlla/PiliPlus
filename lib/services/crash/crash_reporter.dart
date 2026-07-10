@@ -4,6 +4,7 @@ import 'dart:ui' show ErrorCallback, PlatformDispatcher;
 import 'package:pili_plus/build_config.dart';
 import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_filter.dart';
 import 'package:pili_plus/services/crash/crash_report_store.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -48,6 +49,10 @@ abstract final class CrashReporter {
   }
 
   static CrashReport recordErrorSync(Object error, StackTrace? stackTrace) {
+    if (CrashReportFilter.shouldIgnore(error)) {
+      CrashBreadcrumbs.record('Crash ignored: ${error.runtimeType}');
+      return CrashReport.fromError(error, stackTrace);
+    }
     CrashBreadcrumbs.record('Crash captured: ${error.runtimeType}');
     final report = CrashReport.fromError(error, stackTrace);
     try {

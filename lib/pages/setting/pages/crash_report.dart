@@ -61,7 +61,7 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
           fullscreenDialog: true,
           builder: (_) => CrashReportPage(
             report: report,
-            clearStoredReportOnContinue: true,
+            markStoredReportSeenOnContinue: true,
           ),
         ),
       );
@@ -74,11 +74,11 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
 
 class CrashReportPage extends StatefulWidget {
   final CrashReport report;
-  final bool clearStoredReportOnContinue;
+  final bool markStoredReportSeenOnContinue;
 
   const CrashReportPage({
     required this.report,
-    this.clearStoredReportOnContinue = false,
+    this.markStoredReportSeenOnContinue = false,
     super.key,
   });
 
@@ -127,7 +127,8 @@ class _CrashReportPageState extends State<CrashReportPage> {
           const SizedBox(height: 12),
           _ActionPanel(
             report: report,
-            clearStoredReportOnContinue: widget.clearStoredReportOnContinue,
+            markStoredReportSeenOnContinue:
+                widget.markStoredReportSeenOnContinue,
           ),
         ],
       ),
@@ -341,11 +342,11 @@ class _StackTraceSection extends StatelessWidget {
 
 class _ActionPanel extends StatelessWidget {
   final CrashReport report;
-  final bool clearStoredReportOnContinue;
+  final bool markStoredReportSeenOnContinue;
 
   const _ActionPanel({
     required this.report,
-    required this.clearStoredReportOnContinue,
+    required this.markStoredReportSeenOnContinue,
   });
 
   @override
@@ -377,16 +378,26 @@ class _ActionPanel extends StatelessWidget {
           ),
           OutlinedButton.icon(
             onPressed: () async {
-              if (clearStoredReportOnContinue) {
-                await CrashReportStore.clear();
+              if (markStoredReportSeenOnContinue) {
+                await CrashReportStore.markSeen(report.reportId);
+              } else {
+                await CrashReportStore.remove(report.reportId);
               }
               if (context.mounted) {
                 Navigator.of(context).pop();
-                SmartDialog.showToast('崩溃报告已清除。');
+                SmartDialog.showToast(
+                  markStoredReportSeenOnContinue
+                      ? '崩溃报告已保留至历史。'
+                      : '崩溃报告已删除。',
+                );
               }
             },
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('清除并继续'),
+            icon: Icon(
+              markStoredReportSeenOnContinue
+                  ? Icons.check_outlined
+                  : Icons.delete_outline,
+            ),
+            label: Text(markStoredReportSeenOnContinue ? '继续使用' : '删除报告'),
           ),
         ],
       ),

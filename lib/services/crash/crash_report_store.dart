@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -20,8 +21,26 @@ abstract final class CrashReportStore {
   }
 
   static void saveSync(CrashReport report) {
+    _saveArchiveSync(_loadArchive().add(report));
+  }
+
+  static Future<void> save(CrashReport report) async => saveSync(report);
+
+  static CrashReport? load() => _loadArchive().pendingReport;
+
+  static List<CrashReport> loadAll() => _loadArchive().reports;
+
+  static Future<void> markSeen(String reportId) async {
+    _saveArchiveSync(_loadArchive().markSeen(reportId));
+  }
+
+  static Future<void> remove(String reportId) async {
+    _saveArchiveSync(_loadArchive().remove(reportId));
+  }
+
+  static void _saveArchiveSync(CrashReportArchive archive) {
     final files = _requireFiles();
-    final payload = jsonEncode(report.toJson());
+    final payload = jsonEncode(archive.toJson());
     var saved = false;
     for (final file in files) {
       try {
@@ -39,20 +58,18 @@ abstract final class CrashReportStore {
     }
   }
 
-  static Future<void> save(CrashReport report) async => saveSync(report);
-
-  static CrashReport? load() {
+  static CrashReportArchive _loadArchive() {
     for (final file in _requireFiles()) {
       if (!file.existsSync()) continue;
       try {
-        final json =
-            jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-        return CrashReport.fromJson(json);
+        return CrashReportArchive.fromJson(
+          jsonDecode(file.readAsStringSync()),
+        );
       } catch (_) {
         continue;
       }
     }
-    return null;
+    return const CrashReportArchive.empty();
   }
 
   static Future<void> clear() async {
