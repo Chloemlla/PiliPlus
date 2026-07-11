@@ -8,9 +8,7 @@ import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recogni
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
-import 'package:pili_plus/models/common/badge_type.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
-import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/dynamics/article_content_model.dart' show Pic;
 import 'package:pili_plus/models/dynamics/result.dart' show DynamicStat;
 import 'package:pili_plus/pages/article/controller.dart';
