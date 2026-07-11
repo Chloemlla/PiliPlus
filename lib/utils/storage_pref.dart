@@ -265,10 +265,10 @@ abstract final class Pref {
     }
 
     final codecs = _setting.get(SettingBoxKey.preferCodecs);
-    if (codecs is List && codecs.isNotEmpty) {
+    if (codecs is List) {
       return codecs.map((i) => VideoDecodeFormatType.values.byName(i)).toList();
     }
-    return const [];
+    return const <VideoDecodeFormatType>[.AVC, .AV1];
   }
 
   static String get hardwareDecoding => _setting.get(
@@ -867,9 +867,9 @@ abstract final class Pref {
       _video.get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0);
 
   static double get longPressSpeedGain => _video.get(
-        VideoBoxKey.longPressSpeedGain,
-        defaultValue: LongPressSpeedFormulaDefaults.gain,
-      );
+    VideoBoxKey.longPressSpeedGain,
+    defaultValue: LongPressSpeedFormulaDefaults.gain,
+  );
 
   static LongPressSpeedFormula get longPressSpeedFormula =>
       LongPressSpeedFormula.fromIndex(
@@ -880,9 +880,9 @@ abstract final class Pref {
       );
 
   static String get longPressSpeedCustomFormula => _video.get(
-        VideoBoxKey.longPressSpeedCustomFormula,
-        defaultValue: LongPressSpeedFormulaDefaults.customFormula,
-      );
+    VideoBoxKey.longPressSpeedCustomFormula,
+    defaultValue: LongPressSpeedFormulaDefaults.customFormula,
+  );
 
   static bool get defaultShowComment =>
       _setting.get(SettingBoxKey.defaultShowComment, defaultValue: false);
