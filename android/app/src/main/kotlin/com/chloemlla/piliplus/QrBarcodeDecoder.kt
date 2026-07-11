@@ -4,17 +4,10 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.barcode.BarcodeScanner
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import java.io.IOException
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 
 internal object QrBarcodeDecoder {
-    fun createScanner(): BarcodeScanner = BarcodeScanning.getClient()
-
     fun decodeImage(
         context: Context,
         uri: Uri,
@@ -23,49 +16,21 @@ internal object QrBarcodeDecoder {
     ) {
         val executor = Executors.newSingleThreadExecutor()
         val mainExecutor = ContextCompat.getMainExecutor(context)
-        val cleaned = AtomicBoolean(false)
-        var bitmap: android.graphics.Bitmap? = null
-        var scanner: BarcodeScanner? = null
-        fun cleanup() {
-            if (!cleaned.compareAndSet(false, true)) return
-            bitmap?.recycle()
-            try {
-                scanner?.close()
-            } catch (_: Exception) {
-                // Scanner cleanup must not terminate the app process.
-            } catch (_: LinkageError) {
-                // Native scanner cleanup must not terminate the app process.
-            }
-            executor.shutdown()
-        }
         executor.execute {
+            var bitmap: android.graphics.Bitmap? = null
             try {
-                val decodedBitmap = decodeSampledBitmap(context, uri)
-                val activeScanner = createScanner()
-                bitmap = decodedBitmap
-                scanner = activeScanner
-                activeScanner.process(InputImage.fromBitmap(decodedBitmap, 0))
-                    .addOnSuccessListener(mainExecutor) { barcodes ->
-                        onSuccess(
-                            barcodes.firstNotNullOfOrNull { barcode ->
-                                barcode.rawValue?.takeIf {
-                                    barcode.format == Barcode.FORMAT_QR_CODE &&
-                                        it.isNotBlank()
-                                }
-                            },
-                        )
-                    }
-                    .addOnFailureListener(mainExecutor) { onError(it) }
-                    .addOnCompleteListener(mainExecutor) { cleanup() }
+                bitmap = decodeSampledBitmap(context, uri)
+                val value = ZxingQrDecoder().decode(bitmap)
+                mainExecutor.execute { onSuccess(value) }
             } catch (error: OutOfMemoryError) {
                 mainExecutor.execute { onError(error) }
-                cleanup()
             } catch (exception: Exception) {
                 mainExecutor.execute { onError(exception) }
-                cleanup()
             } catch (error: LinkageError) {
                 mainExecutor.execute { onError(error) }
-                cleanup()
+            } finally {
+                bitmap?.recycle()
+                executor.shutdown()
             }
         }
     }

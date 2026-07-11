@@ -20,7 +20,6 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.barcode.BarcodeScanner
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -32,7 +31,6 @@ class QrScannerActivity : ComponentActivity() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var imageAnalysis: ImageAnalysis? = null
-    private var scanner: BarcodeScanner? = null
     private var frameAnalyzer: QrFrameAnalyzer? = null
     private lateinit var statusText: TextView
     private lateinit var torchButton: TextView
@@ -63,14 +61,6 @@ class QrScannerActivity : ComponentActivity() {
         releaseCamera()
         frameAnalyzer?.close()
         frameAnalyzer = null
-        try {
-            scanner?.close()
-        } catch (_: Exception) {
-            // The Activity is already being destroyed; do not crash during cleanup.
-        } catch (_: LinkageError) {
-            // Native scanner cleanup must not terminate the app process.
-        }
-        scanner = null
         analyzerExecutor.shutdownNow()
         super.onDestroy()
     }
@@ -147,11 +137,7 @@ class QrScannerActivity : ComponentActivity() {
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
                         imageAnalysis = analysis
-                        val activeScanner = createScannerOrFinish()
-                            ?: return@addListener
-                        scanner = activeScanner
                         val analyzer = QrFrameAnalyzer(
-                            scanner = activeScanner,
                             onResult = ::finishWithResult,
                             onRecoverableFailure = {
                                 runOnUiThread {
@@ -163,7 +149,6 @@ class QrScannerActivity : ComponentActivity() {
                             onFatalFailure = ::finishWithScannerError,
                         )
                         frameAnalyzer = analyzer
-                        scanner = null
                         analysis.setAnalyzer(
                             analyzerExecutor,
                             analyzer,
@@ -211,26 +196,6 @@ class QrScannerActivity : ComponentActivity() {
             "无法连接相机",
             error,
         )
-    }
-
-    private fun createScannerOrFinish(): BarcodeScanner? {
-        return try {
-            QrBarcodeDecoder.createScanner()
-        } catch (exception: Exception) {
-            finishWithScannerError(
-                "scanner_unavailable",
-                "无法初始化二维码识别器",
-                exception,
-            )
-            null
-        } catch (error: LinkageError) {
-            finishWithScannerError(
-                "scanner_unavailable",
-                "二维码识别组件不可用",
-                error,
-            )
-            null
-        }
     }
 
     private fun finishWithScannerError(code: String, fallback: String, error: Throwable) {
