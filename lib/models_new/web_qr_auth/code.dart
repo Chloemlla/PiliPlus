@@ -7,11 +7,12 @@ final class WebQrLoginCode {
   final String key;
 
   static WebQrLoginCode parse(String value) {
-    final uri = Uri.tryParse(value.trim());
+    final input = value.trim();
+    final uri = Uri.tryParse(input);
     if (uri == null ||
+        !_hasExactAuthority(input) ||
         uri.scheme != 'https' ||
         uri.host != host ||
-        uri.authority != host ||
         uri.path != path ||
         uri.userInfo.isNotEmpty ||
         uri.hasPort ||
@@ -30,6 +31,18 @@ final class WebQrLoginCode {
     }
 
     return WebQrLoginCode._(key);
+  }
+
+  static bool _hasExactAuthority(String value) {
+    final schemeEnd = value.indexOf('://');
+    if (schemeEnd == -1) {
+      return false;
+    }
+
+    final authorityStart = schemeEnd + 3;
+    final authorityEnd = value.indexOf('/', authorityStart);
+    return authorityEnd != -1 &&
+        value.substring(authorityStart, authorityEnd).toLowerCase() == host;
   }
 
   static final _keyPattern = RegExp(r'^[A-Za-z0-9_-]{16,256}$');

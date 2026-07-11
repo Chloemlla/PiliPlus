@@ -30,6 +30,8 @@ void main() {
           '?qrcode_key=0123456789abcdef0123456789abcdef',
       'https://account.bilibili.com:443/h5/account-h5/auth/scan-web'
           '?qrcode_key=0123456789abcdef0123456789abcdef',
+      'https://account.bilibili.com:0443/h5/account-h5/auth/scan-web'
+          '?qrcode_key=0123456789abcdef0123456789abcdef',
       'https://account.bilibili.com/h5/account-h5/auth/scan-web/'
           '?qrcode_key=0123456789abcdef0123456789abcdef',
       'https://account.bilibili.com/h5/account-h5/auth/scan-web'
