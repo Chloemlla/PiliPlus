@@ -34,7 +34,13 @@ internal object QrBarcodeDecoder {
         fun cleanup() {
             if (!cleaned.compareAndSet(false, true)) return
             bitmap?.recycle()
-            scanner?.close()
+            try {
+                scanner?.close()
+            } catch (_: Exception) {
+                // Scanner cleanup must not terminate the app process.
+            } catch (_: LinkageError) {
+                // Native scanner cleanup must not terminate the app process.
+            }
             executor.shutdown()
         }
         executor.execute {
@@ -58,6 +64,9 @@ internal object QrBarcodeDecoder {
                 cleanup()
             } catch (exception: Exception) {
                 mainExecutor.execute { onError(exception) }
+                cleanup()
+            } catch (error: LinkageError) {
+                mainExecutor.execute { onError(error) }
                 cleanup()
             }
         }

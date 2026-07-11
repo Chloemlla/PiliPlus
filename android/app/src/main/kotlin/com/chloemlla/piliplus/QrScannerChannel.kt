@@ -1,7 +1,6 @@
 package com.chloemlla.piliplus
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -66,7 +65,7 @@ internal class QrScannerChannel(
         }
         try {
             activity.startActivityForResult(intent, IMAGE_REQUEST_CODE)
-        } catch (exception: ActivityNotFoundException) {
+        } catch (exception: Exception) {
             completeError("picker_unavailable", exception.message ?: "无法打开图片选择器")
         }
     }

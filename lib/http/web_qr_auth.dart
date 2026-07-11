@@ -1,5 +1,6 @@
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/retry_interceptor.dart';
 import 'package:pili_plus/models_new/web_qr_auth/scene.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/app_sign.dart';
@@ -167,7 +168,10 @@ abstract final class WebQrAuthHttp {
       'user-agent': Constants.userAgent,
       'x-bili-trace-id': Constants.traceId,
     },
-    extra: {'account': account},
+    extra: {
+      'account': account,
+      RetryInterceptor.disableRetryKey: true,
+    },
   );
 
   static Map<String, Object?> _requireSuccess(Object? responseData) {
