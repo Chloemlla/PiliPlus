@@ -7,8 +7,7 @@ class CrashReportHistoryPage extends StatefulWidget {
   const CrashReportHistoryPage({super.key});
 
   @override
-  State<CrashReportHistoryPage> createState() =>
-      _CrashReportHistoryPageState();
+  State<CrashReportHistoryPage> createState() => _CrashReportHistoryPageState();
 }
 
 class _CrashReportHistoryPageState extends State<CrashReportHistoryPage> {
@@ -29,11 +28,11 @@ class _CrashReportHistoryPageState extends State<CrashReportHistoryPage> {
     final padding = MediaQuery.viewPaddingOf(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('崩溃历史'),
+        title: const Text('异常报告历史'),
         actions: [
           if (_reports.isNotEmpty)
             IconButton(
-              tooltip: '清空崩溃历史',
+              tooltip: '清空异常报告历史',
               onPressed: _clearAll,
               icon: const Icon(Icons.delete_sweep_outlined),
             ),
@@ -41,7 +40,7 @@ class _CrashReportHistoryPageState extends State<CrashReportHistoryPage> {
         ],
       ),
       body: _reports.isEmpty
-          ? const Center(child: Text('暂无崩溃报告'))
+          ? const Center(child: Text('暂无异常报告'))
           : ListView.separated(
               padding: EdgeInsets.fromLTRB(
                 padding.left + 12,
@@ -82,8 +81,8 @@ class _CrashReportHistoryPageState extends State<CrashReportHistoryPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清空崩溃历史？'),
-        content: const Text('所有已保存的崩溃报告都会被删除，此操作无法撤销。'),
+        title: const Text('清空异常报告历史？'),
+        content: const Text('所有已保存的异常报告都会被删除，此操作无法撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:pili_plus/build_config.dart';
@@ -16,6 +17,7 @@ import 'package:pili_plus/router/app_pages.dart';
 import 'package:pili_plus/services/account_service.dart';
 import 'package:pili_plus/services/android_first_launch_permission_service.dart';
 import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
+import 'package:pili_plus/services/crash/crash_context.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_handler.dart';
 import 'package:pili_plus/services/crash/crash_reporter.dart';
@@ -95,18 +97,50 @@ Future<void> _initAppPath() async {
   appSupportDirPath = (await getApplicationSupportDirectory()).path;
 }
 
-void main() async {
+void main() {
+  var startupCompleted = false;
+  runZonedGuarded(
+    () async {
+      CrashReporter.install();
+      await _main();
+      startupCompleted = true;
+    },
+    (error, stackTrace) {
+      final severity = startupCompleted
+          ? CrashSeverity.unhandled
+          : CrashSeverity.fatal;
+      CrashReporter.recordErrorSync(
+        error,
+        stackTrace,
+        source: CrashSource.platformDispatcher,
+        severity: severity,
+        operation: 'mainZone',
+        reason: 'uncaught_zone_error',
+      );
+      if (!startupCompleted) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+    },
+  );
+}
+
+Future<void> _main() async {
   ScaledWidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   await _initAppPath();
   CrashBreadcrumbs.record('main.start');
   final startupCrashReport = await CrashReporter.ensureInitialized();
-  CrashReporter.install();
   try {
     await GStorage.init();
     CrashBreadcrumbs.record('GStorage initialized');
-  } catch (e) {
-    CrashReporter.recordErrorSync(e, StackTrace.current);
+  } catch (e, stackTrace) {
+    CrashReporter.recordErrorSync(
+      e,
+      stackTrace,
+      severity: CrashSeverity.fatal,
+      operation: 'GStorage.init',
+      reason: 'startup_storage_initialization_failed',
+    );
     await Utils.copyText(e.toString());
     if (kDebugMode) debugPrint('GStorage init error: $e');
     exit(0);
@@ -217,6 +251,7 @@ void main() async {
       logger: logger,
       customParameters: customParameters,
     );
+    CrashReporter.install(force: true);
   } else {
     runApp(MyApp(startupCrashReport: startupCrashReport));
   }

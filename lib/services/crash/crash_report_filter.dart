@@ -5,12 +5,19 @@ abstract final class CrashReportFilter {
     final message = error.toString().trim().toLowerCase();
     if (message.isEmpty) return false;
 
-    return _sslSeekFailure.hasMatch(message) ||
+    final knownDiagnostic =
+        _sslSeekFailure.hasMatch(message) ||
         _ignoredMessageFragments.any(message.contains);
+    if (!knownDiagnostic) return false;
+    if (error is! String && _hasApplicationStack(stackTrace)) return false;
+    return true;
   }
 
   static bool _hasUsefulStack(StackTrace? stackTrace) =>
       stackTrace?.toString().trim().isNotEmpty ?? false;
+
+  static bool _hasApplicationStack(StackTrace? stackTrace) =>
+      stackTrace?.toString().contains('package:pili_plus/') ?? false;
 
   static final _sslSeekFailure = RegExp(r'\bssl\b.{0,32}\bseek failed\b');
 

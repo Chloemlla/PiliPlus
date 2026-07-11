@@ -226,7 +226,7 @@ class _CrashReportCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(Icons.warning_amber_rounded, color: colorScheme.error),
-        title: const Text('崩溃历史'),
+        title: const Text('异常报告历史'),
         subtitle: Text(
           '共 ${reports.length} 条 · 最近 ${reports.first.crashedAtText}',
         ),
@@ -249,7 +249,7 @@ class _CrashReportCard extends StatelessWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('崩溃历史已清空'),
+                content: Text('异常报告历史已清空'),
                 duration: _snackBarDisplayDuration,
               ),
             );

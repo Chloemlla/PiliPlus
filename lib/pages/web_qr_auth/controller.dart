@@ -4,6 +4,7 @@ import 'package:pili_plus/http/web_qr_auth.dart';
 import 'package:pili_plus/models_new/web_qr_auth/code.dart';
 import 'package:pili_plus/models_new/web_qr_auth/scene.dart';
 import 'package:pili_plus/pages/login/geetest/geetest_webview_dialog.dart';
+import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/android/qr_scanner.dart';
@@ -43,27 +44,36 @@ final class WebQrAuthController extends GetxController {
       !smsVerifying.value &&
       !scanning.value;
 
-  Future<void> scanCamera() => _runScanner(AndroidQrScanner.scanCamera);
+  Future<void> scanCamera() =>
+      _runScanner('camera', AndroidQrScanner.scanCamera);
 
-  Future<void> scanImage() => _runScanner(AndroidQrScanner.scanImage);
+  Future<void> scanImage() => _runScanner('image', AndroidQrScanner.scanImage);
 
   Future<void> submitManualUrl(String value) => acceptRawValue(value);
 
-  Future<void> _runScanner(Future<String?> Function() scanner) async {
+  Future<void> _runScanner(
+    String source,
+    Future<String?> Function() scanner,
+  ) async {
     if (!_ensureLoggedIn()) return;
     if (!canStartInput) {
       SmartDialog.showToast('当前授权请求正在处理中');
       return;
     }
     scanning.value = true;
+    CrashBreadcrumbs.record('Web QR scan start: $source');
     try {
       final value = await scanner();
       if (isClosed) return;
       scanning.value = false;
       if (value != null) {
+        CrashBreadcrumbs.record('Web QR scan decoded: $source');
         await acceptRawValue(value);
+      } else {
+        CrashBreadcrumbs.record('Web QR scan cancelled: $source');
       }
     } on AndroidQrScannerException catch (error) {
+      CrashBreadcrumbs.record('Web QR scan error: $source/${error.code}');
       if (isClosed) return;
       if (error.canOpenSettings) {
         await _showPermissionDialog(error.message);
@@ -71,6 +81,7 @@ final class WebQrAuthController extends GetxController {
         SmartDialog.showToast(error.message);
       }
     } catch (_) {
+      CrashBreadcrumbs.record('Web QR scan unexpected error: $source');
       if (isClosed) return;
       SmartDialog.showToast('二维码识别失败，请重试');
     } finally {

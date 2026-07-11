@@ -15,11 +15,16 @@ import com.ryanheise.audioservice.AudioServiceActivity
 class MainActivity : AudioServiceActivity() {
     private var credentialResult: MethodChannel.Result? = null
     private var qrScannerChannel: QrScannerChannel? = null
+    private var nativeCrashChannel: NativeCrashChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         NativeMediaService.attachFlutterEngine(this, flutterEngine)
         qrScannerChannel = QrScannerChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        nativeCrashChannel = NativeCrashChannel(
+            applicationContext,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "pili_plus/android_credential_auth"
@@ -38,6 +43,8 @@ class MainActivity : AudioServiceActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         qrScannerChannel?.dispose()
         qrScannerChannel = null
+        nativeCrashChannel?.dispose()
+        nativeCrashChannel = null
         NativeMediaService.detachFlutterEngine()
         super.cleanUpFlutterEngine(flutterEngine)
     }

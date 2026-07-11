@@ -45,8 +45,13 @@ abstract final class PiliAndroidHelper {
         uid,
         jCookie,
       );
-    } catch (e) {
-      Utils.reportError(e);
+    } catch (e, stackTrace) {
+      Utils.reportErrorWithContext(
+        e,
+        stack: stackTrace,
+        module: 'android/jni',
+        operation: 'biliSendCommAntifraud',
+      );
     } finally {
       jCommentText.release();
       jSourceId.release();

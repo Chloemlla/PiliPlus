@@ -1,14 +1,23 @@
 import 'package:pili_plus/services/crash/crash_reporter.dart';
+import 'package:pili_plus/services/crash/crash_context.dart';
 import 'package:catcher_2/catcher_2.dart';
 
 class CrashReportHandler extends ReportHandler {
   @override
-  Future<bool> handle(Report report) async {
+  Future<bool> handle(Report report) => Future.sync(() {
     final stackTrace = report.stackTrace;
     CrashReporter.recordErrorSync(
       report.error,
-      stackTrace is StackTrace ? stackTrace : null,
+      switch (stackTrace) {
+        StackTrace() => stackTrace,
+        String() when stackTrace.trim().isNotEmpty => StackTrace.fromString(
+          stackTrace,
+        ),
+        _ => null,
+      },
+      source: CrashSource.catcher,
+      severity: CrashSeverity.handled,
     );
     return true;
-  }
+  });
 }

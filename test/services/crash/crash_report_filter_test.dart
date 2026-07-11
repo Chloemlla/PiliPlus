@@ -80,6 +80,15 @@ void main() {
         ),
         isFalse,
       );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError('tcp: Connection refused while updating app state'),
+          StackTrace.fromString(
+            '#0 Controller.load (package:pili_plus/pages/video/controller.dart:1)',
+          ),
+        ),
+        isFalse,
+      );
     });
   });
 }

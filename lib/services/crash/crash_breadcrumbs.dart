@@ -34,20 +34,25 @@ abstract final class CrashBreadcrumbs {
 }
 
 class CrashBreadcrumbNavigatorObserver extends NavigatorObserver {
+  static String currentRoute = '';
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    CrashBreadcrumbs.record('Route push ${_routeName(route)}');
+    currentRoute = _routeName(route);
+    CrashBreadcrumbs.record('Route push $currentRoute');
     super.didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    currentRoute = _routeName(previousRoute);
     CrashBreadcrumbs.record('Route pop ${_routeName(route)}');
     super.didPop(route, previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    currentRoute = _routeName(newRoute);
     CrashBreadcrumbs.record(
       'Route replace ${_routeName(oldRoute)} -> ${_routeName(newRoute)}',
     );

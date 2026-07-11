@@ -94,7 +94,7 @@ class _CrashReportPageState extends State<CrashReportPage> {
     final padding = MediaQuery.viewPaddingOf(context);
     final report = widget.report;
     return Scaffold(
-      appBar: AppBar(title: const Text('已保存崩溃报告')),
+      appBar: AppBar(title: const Text('已保存异常报告')),
       body: ListView(
         padding: EdgeInsets.only(
           left: padding.left + 12,
@@ -149,10 +149,12 @@ class _SummaryCard extends StatelessWidget {
         spacing: 8,
         children: [
           Icon(Icons.warning_amber_rounded, color: colorScheme.error),
-          const Expanded(
+          Expanded(
             child: Text(
-              'PiliPlus 已从异常退出中恢复。继续使用前，可以先查看、复制或分享这份报告。',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              report.isFatalCandidate
+                  ? 'PiliPlus 检测到上次会话的未处理异常。报告中的来源、模块和时间可帮助判断实际触发位置。'
+                  : '这是应用主动保存的已处理异常，不代表应用曾因此退出。',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -166,6 +168,13 @@ class _SummaryCard extends StatelessWidget {
           _MetadataPill(label: '线程', value: report.threadName),
           _MetadataPill(label: '进程', value: report.processName),
           _MetadataPill(label: '时间', value: report.crashedAtText),
+          _MetadataPill(label: '来源', value: report.source.label),
+          _MetadataPill(label: '级别', value: report.severity.label),
+          _MetadataPill(label: '模块', value: report.module),
+          if (report.route.isNotEmpty)
+            _MetadataPill(label: '路由', value: report.route),
+          if (report.reason.isNotEmpty)
+            _MetadataPill(label: '原因', value: report.reason),
         ],
       ),
       const SizedBox(height: 16),
@@ -386,9 +395,7 @@ class _ActionPanel extends StatelessWidget {
               if (context.mounted) {
                 Navigator.of(context).pop();
                 SmartDialog.showToast(
-                  markStoredReportSeenOnContinue
-                      ? '崩溃报告已保留至历史。'
-                      : '崩溃报告已删除。',
+                  markStoredReportSeenOnContinue ? '异常报告已保留至历史。' : '异常报告已删除。',
                 );
               }
             },
@@ -448,7 +455,7 @@ class _ActionPanel extends StatelessWidget {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          subject: 'PiliPlus 崩溃报告',
+          subject: 'PiliPlus 异常报告',
           sharePositionOrigin: await ShareUtils.sharePositionOrigin,
         ),
       );

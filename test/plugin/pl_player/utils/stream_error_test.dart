@@ -16,6 +16,12 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        PlPlayerStreamError.isInterruptedNetworkStream(
+          'HTTPS: STREAM ENDS PREMATURELY at 1, should be 2',
+        ),
+        isTrue,
+      );
     });
 
     test('keeps unrelated player errors reportable', () {
@@ -45,6 +51,18 @@ void main() {
       expect(
         PlPlayerStreamError.isNetworkOpenError(
           'tcp: ffurl_read returned 0xffffff99',
+        ),
+        isTrue,
+      );
+      expect(
+        PlPlayerStreamError.isNetworkOpenError(
+          'tcp: Connection to tcp://upos.example:443 failed: Connection refused',
+        ),
+        isTrue,
+      );
+      expect(
+        PlPlayerStreamError.isNetworkOpenError(
+          'tcp: Failed to resolve hostname cdn.example',
         ),
         isTrue,
       );

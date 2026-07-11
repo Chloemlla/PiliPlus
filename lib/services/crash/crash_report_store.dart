@@ -10,6 +10,8 @@ abstract final class CrashReportStore {
   static const _fileName = 'crash_report.json';
   static List<File>? _files;
 
+  static bool get isInitialized => _files != null;
+
   static Future<void> ensureInitialized() async {
     if (_files != null) return;
     final dirs = await Future.wait([
@@ -20,23 +22,24 @@ abstract final class CrashReportStore {
     _files = [for (final dir in dirs) File(p.join(dir.path, _fileName))];
   }
 
-  static void saveSync(CrashReport report) {
-    _saveArchiveSync(_loadArchive().add(report));
+  static void saveSync(CrashReport report, {required bool makePending}) {
+    _saveArchiveSync(_loadArchive().add(report, makePending: makePending));
   }
 
-  static Future<void> save(CrashReport report) async => saveSync(report);
+  static Future<void> save(
+    CrashReport report, {
+    required bool makePending,
+  }) => Future.sync(() => saveSync(report, makePending: makePending));
 
   static CrashReport? load() => _loadArchive().pendingReport;
 
   static List<CrashReport> loadAll() => _loadArchive().reports;
 
-  static Future<void> markSeen(String reportId) async {
-    _saveArchiveSync(_loadArchive().markSeen(reportId));
-  }
+  static Future<void> markSeen(String reportId) =>
+      Future.sync(() => _saveArchiveSync(_loadArchive().markSeen(reportId)));
 
-  static Future<void> remove(String reportId) async {
-    _saveArchiveSync(_loadArchive().remove(reportId));
-  }
+  static Future<void> remove(String reportId) =>
+      Future.sync(() => _saveArchiveSync(_loadArchive().remove(reportId)));
 
   static void _saveArchiveSync(CrashReportArchive archive) {
     final files = _requireFiles();
@@ -59,17 +62,34 @@ abstract final class CrashReportStore {
   }
 
   static CrashReportArchive _loadArchive() {
+    final replicas = <({int modifiedAt, CrashReportArchive archive})>[];
     for (final file in _requireFiles()) {
       if (!file.existsSync()) continue;
       try {
-        return CrashReportArchive.fromJson(
-          jsonDecode(file.readAsStringSync()),
+        replicas.add(
+          (
+            modifiedAt: file.lastModifiedSync().millisecondsSinceEpoch,
+            archive: CrashReportArchive.fromJson(
+              jsonDecode(file.readAsStringSync()),
+            ),
+          ),
         );
       } catch (_) {
         continue;
       }
     }
-    return const CrashReportArchive.empty();
+    if (replicas.isEmpty) return const CrashReportArchive.empty();
+    var latestModifiedAt = replicas.first.modifiedAt;
+    for (final replica in replicas.skip(1)) {
+      if (replica.modifiedAt > latestModifiedAt) {
+        latestModifiedAt = replica.modifiedAt;
+      }
+    }
+    return CrashReportArchive.mergeReplicas(
+      replicas
+          .where((replica) => replica.modifiedAt == latestModifiedAt)
+          .map((replica) => replica.archive),
+    );
   }
 
   static Future<void> clear() async {

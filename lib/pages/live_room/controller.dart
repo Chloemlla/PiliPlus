@@ -42,7 +42,8 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/video_utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
+import 'package:flutter/foundation.dart'
+    show debugPrint, kDebugMode, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -415,7 +416,7 @@ class LiveRoomController extends GetxController {
       }
     } else {
       if (kDebugMode) {
-        Utils.reportError(res.toString());
+        debugPrint('Live room prefetch failed: $res');
       }
     }
   }
