@@ -55,8 +55,9 @@ class CrashReportArchive {
     if (duplicateIndex != -1) {
       updated.removeAt(duplicateIndex);
     }
-    updated.add(candidate);
-    updated.sort((a, b) => b.crashedAtMillis.compareTo(a.crashedAtMillis));
+    updated
+      ..add(candidate)
+      ..sort((a, b) => b.crashedAtMillis.compareTo(a.crashedAtMillis));
     final nextPending = _selectPending(
       reports: updated,
       currentPendingId: pendingReportId,
@@ -162,8 +163,9 @@ class CrashReportArchive {
     final pending = _findById(reports, pendingReportId);
     if (pending != null) {
       if (retained.length >= maxReports) retained.removeLast();
-      retained.add(pending);
-      retained.sort((a, b) => b.crashedAtMillis.compareTo(a.crashedAtMillis));
+      retained
+        ..add(pending)
+        ..sort((a, b) => b.crashedAtMillis.compareTo(a.crashedAtMillis));
     }
     return retained.toList(growable: false);
   }

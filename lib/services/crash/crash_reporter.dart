@@ -192,8 +192,9 @@ abstract final class CrashReporter {
             systemInfo: CrashReportSystemInfo.cached,
           );
           CrashReportStore.saveSync(report, makePending: true);
-          if (recordId != null && recordId.isNotEmpty)
+          if (recordId != null && recordId.isNotEmpty) {
             acknowledged.add(recordId);
+          }
         } catch (_) {
           continue;
         }
