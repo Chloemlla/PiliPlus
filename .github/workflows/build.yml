@@ -211,8 +211,8 @@ jobs:
         with:
           api-level: 35
           target: google_apis
-          arch: arm64-v8a
-          profile: pixel_7_pro
+          arch: x86_64
+          profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: gradle -p android -Pdart-defines="$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)" :app:generateBaselineProfile --no-daemon --stacktrace
 
