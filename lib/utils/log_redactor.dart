@@ -2,12 +2,12 @@ abstract final class LogRedactor {
   static const redacted = '[REDACTED]';
 
   static final RegExp _sensitiveKey = RegExp(
-    r'^(authorization|cookie|set-cookie|sessdata|bili_jct|csrf|access[_-]?key|accesskey|refresh[_-]?token|refreshtoken|password|passwd|pwd|keypassword|storepassword)$',
+    r'^(authorization|cookie|set-cookie|sessdata|bili_jct|csrf|access[_-]?key|accesskey|refresh[_-]?token|refreshtoken|qrcode[_-]?key|captcha[_-]?key|verify[_-]?key|verify[_-]?code|sms[_-]?code|recaptcha[_-]?token|password|passwd|pwd|keypassword|storepassword)$',
     caseSensitive: false,
   );
 
   static final RegExp _queryParam = RegExp(
-    r'\b(SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd)=([^&\s;,]+)',
+    r'\b(SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|qrcode_key|captcha_key|verify_key|verify_code|recaptcha_token|code|password|passwd|pwd)=([^&\s;,]+)',
     caseSensitive: false,
   );
   static final RegExp _header = RegExp(
@@ -15,7 +15,15 @@ abstract final class LogRedactor {
     caseSensitive: false,
   );
   static final RegExp _jsonString = RegExp(
-    r'("?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|password|passwd|pwd|authorization|cookie)"?\s*:\s*)"[^"]*"',
+    r'("?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|qrcode_key|captcha_key|verify_key|verify_code|recaptcha_token|password|passwd|pwd|authorization|cookie)"?\s*:\s*)"[^"]*"',
+    caseSensitive: false,
+  );
+  static final RegExp _structuredValue = RegExp(
+    r'''(["']?(?:SESSDATA|bili_jct|csrf|access_key|accessKey|refresh_token|refreshToken|qrcode_key|captcha_key|verify_key|verify_code|sms_code|recaptcha_token|password|passwd|pwd|authorization|cookie)["']?\s*:\s*)(?:"[^"]*"|'[^']*'|[^,}\]\r\n]+)''',
+    caseSensitive: false,
+  );
+  static final RegExp _shortSecretCode = RegExp(
+    r'''\b(code|verify_code|sms_code)\s*[:=]\s*["']?(\d{6,8})''',
     caseSensitive: false,
   );
   static final RegExp _windowsUserHome = RegExp(r'[A-Za-z]:\\Users\\[^\\\s]+');
@@ -51,6 +59,14 @@ abstract final class LogRedactor {
         .replaceAllMapped(
           _jsonString,
           (match) => '${match.group(1)}"$redacted"',
+        )
+        .replaceAllMapped(
+          _structuredValue,
+          (match) => '${match.group(1)}"$redacted"',
+        )
+        .replaceAllMapped(
+          _shortSecretCode,
+          (match) => '${match.group(1)}=$redacted',
         )
         .replaceAll(_windowsUserHome, '[user-home]')
         .replaceAll(_unixUserHome, '[user-home]')

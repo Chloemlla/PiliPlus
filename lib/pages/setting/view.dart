@@ -196,6 +196,12 @@ class _SettingPageState extends State<SettingPage> {
           leading: const Icon(Icons.switch_account_outlined),
           title: Text('切换账号', style: titleStyle),
         ),
+        ListTile(
+          onTap: () => Get.toNamed('/webQrAuth'),
+          leading: const Icon(Icons.qr_code_scanner_outlined),
+          title: Text('扫描网页登录二维码', style: titleStyle),
+          subtitle: Text('授权当前主账号登录 B 站网页', style: subTitleStyle),
+        ),
         Obx(
           () => _noAccount.value
               ? const SizedBox.shrink()

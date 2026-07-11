@@ -66,6 +66,7 @@ import 'package:pili_plus/pages/subscription/view.dart';
 import 'package:pili_plus/pages/subscription_detail/view.dart';
 import 'package:pili_plus/pages/video/view.dart';
 import 'package:pili_plus/pages/webview/view.dart';
+import 'package:pili_plus/pages/web_qr_auth/view.dart';
 import 'package:pili_plus/pages/whisper/view.dart';
 import 'package:pili_plus/pages/whisper_detail/view.dart';
 import 'package:get/get.dart';
@@ -81,6 +82,7 @@ class Routes {
     GetPage(name: '/videoV', page: () => const VideoDetailPageV()),
     //
     GetPage(name: '/webview', page: () => const WebviewPage()),
+    GetPage(name: '/webQrAuth', page: () => const WebQrAuthPage()),
     // 设置
     GetPage(name: '/setting', page: () => const SettingPage()),
     //

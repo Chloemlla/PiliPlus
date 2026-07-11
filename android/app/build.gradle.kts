@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = "com.chloemlla.piliplus"
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = targetAndroidSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -104,6 +104,12 @@ flutter {
 }
 
 dependencies {
+    val cameraXVersion = "1.6.1"
+
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.tencent:mmkv-static:1.3.14")
 }
 

@@ -47,6 +47,11 @@
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
         <activity
+            android:name=".QrScannerActivity"
+            android:exported="false"
+            android:hardwareAccelerated="true"
+            android:theme="@style/QrScannerTheme" />
+        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:exported="true"
@@ -240,6 +245,10 @@
             android:value="2" />
     </application>
 
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
