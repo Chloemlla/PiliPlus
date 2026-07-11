@@ -26,9 +26,60 @@ void main() {
       );
     });
 
-    test('keeps unrelated failures reportable', () {
-      expect(CrashReportFilter.shouldIgnore('Could not open codec'), isFalse);
-      expect(CrashReportFilter.shouldIgnore(StateError('boom')), isFalse);
+    test('ignores bare player diagnostics instead of treating them as code', () {
+      const messages = <String>[
+        'Seek failed (to 1790, size 18217805)',
+        'tcp: Connection to tcp://upos.example:443 failed: Connection refused',
+        'tls: mbedtls_ssl_handshake returned -0x7280',
+        'amediacodec: java.lang.IllegalStateException: Released state',
+        'NULL: Invalid NAL unit size (115387 > 86588).',
+        'unsupported format for accessing property',
+        '',
+      ];
+
+      for (final message in messages) {
+        expect(
+          CrashReportFilter.shouldIgnore(message),
+          isTrue,
+          reason: message,
+        );
+      }
+    });
+
+    test('ignores known player diagnostics even when wrapped', () {
+      expect(
+        CrashReportFilter.shouldIgnore(
+          Exception('tcp: Failed to resolve hostname upos.example'),
+        ),
+        isTrue,
+      );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          Exception('NULL: missing picture in access unit with size 86598'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('keeps real Dart failures reportable', () {
+      final stackTrace = StackTrace.fromString(
+        '#0 Navigator.of (package:flutter/src/widgets/navigator.dart:2937)',
+      );
+
+      expect(
+        CrashReportFilter.shouldIgnore(
+          'application invariant failed',
+          stackTrace,
+        ),
+        isFalse,
+      );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError('Null check operator used on a null value'),
+          stackTrace,
+        ),
+        isFalse,
+      );
     });
   });
 }
