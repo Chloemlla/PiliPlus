@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -14,35 +15,49 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanner
-import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-@androidx.annotation.OptIn(markerClass = [ExperimentalGetImage::class])
 class QrScannerActivity : ComponentActivity() {
     private val analyzerExecutor = Executors.newSingleThreadExecutor()
-    private val processing = AtomicBoolean(false)
     private val delivered = AtomicBoolean(false)
     private val destroyed = AtomicBoolean(false)
-    private val scanner: BarcodeScanner = QrBarcodeDecoder.createScanner()
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var imageAnalysis: ImageAnalysis? = null
+    private var scanner: BarcodeScanner? = null
+    private var frameAnalyzer: QrFrameAnalyzer? = null
     private lateinit var statusText: TextView
     private lateinit var torchButton: TextView
     private var torchEnabled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(buildContentView())
+        try {
+            scanner = QrBarcodeDecoder.createScanner()
+        } catch (exception: Exception) {
+            finishWithScannerError("scanner_unavailable", "无法初始化二维码识别器", exception)
+            return
+        } catch (error: LinkageError) {
+            finishWithScannerError("scanner_unavailable", "二维码识别组件不可用", error)
+            return
+        }
+        try {
+            setContentView(buildContentView())
+        } catch (exception: Exception) {
+            finishWithScannerError("camera_unavailable", "无法打开扫码界面", exception)
+            return
+        } catch (error: LinkageError) {
+            finishWithScannerError("camera_unavailable", "扫码界面组件不可用", error)
+            return
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) !=
             PackageManager.PERMISSION_GRANTED
         ) {
@@ -54,9 +69,17 @@ class QrScannerActivity : ComponentActivity() {
 
     override fun onDestroy() {
         destroyed.set(true)
-        imageAnalysis?.clearAnalyzer()
-        cameraProvider?.unbindAll()
-        scanner.close()
+        releaseCamera()
+        frameAnalyzer?.close()
+        frameAnalyzer = null
+        try {
+            scanner?.close()
+        } catch (_: Exception) {
+            // The Activity is already being destroyed; do not crash during cleanup.
+        } catch (_: LinkageError) {
+            // Native scanner cleanup must not terminate the app process.
+        }
+        scanner = null
         analyzerExecutor.shutdownNow()
         super.onDestroy()
     }
@@ -116,98 +139,148 @@ class QrScannerActivity : ComponentActivity() {
 
     private fun startCamera() {
         val previewView = findViewById<PreviewView>(PREVIEW_VIEW_ID)
-        val providerFuture = ProcessCameraProvider.getInstance(this)
-        providerFuture.addListener(
-            {
-                if (destroyed.get() || isFinishing || isDestroyed) {
-                    return@addListener
-                }
-                try {
-                    val provider = providerFuture.get()
-                    cameraProvider = provider
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
+        try {
+            val providerFuture = ProcessCameraProvider.getInstance(this)
+            providerFuture.addListener(
+                {
+                    if (destroyed.get() || isFinishing || isDestroyed) {
+                        return@addListener
                     }
-                    val analysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                    imageAnalysis = analysis
-                    analysis.setAnalyzer(analyzerExecutor) { imageProxy ->
-                        val mediaImage = imageProxy.image
-                        if (mediaImage == null || !processing.compareAndSet(false, true)) {
-                            imageProxy.close()
-                            return@setAnalyzer
+                    try {
+                        val provider = providerFuture.get()
+                        cameraProvider = provider
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
                         }
-                        val image = InputImage.fromMediaImage(
-                            mediaImage,
-                            imageProxy.imageInfo.rotationDegrees,
-                        )
-                        scanner.process(image)
-                            .addOnSuccessListener { barcodes ->
-                                if (destroyed.get() || isFinishing || isDestroyed) {
-                                    return@addOnSuccessListener
-                                }
-                                val rawValue = barcodes.firstNotNullOfOrNull {
-                                    it.rawValue?.takeIf(String::isNotBlank)
-                                }
-                                if (rawValue != null) finishWithResult(rawValue)
-                            }
-                            .addOnFailureListener {
-                                if (!destroyed.get() && !isFinishing && !isDestroyed) {
-                                    runOnUiThread {
+                        val analysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                        imageAnalysis = analysis
+                        val activeScanner = scanner
+                            ?: throw IllegalStateException("二维码识别器尚未初始化")
+                        val analyzer = QrFrameAnalyzer(
+                            scanner = activeScanner,
+                            onResult = ::finishWithResult,
+                            onRecoverableFailure = {
+                                runOnUiThread {
+                                    if (!destroyed.get() && !isFinishing && !isDestroyed) {
                                         statusText.text = "识别失败，请调整距离后重试"
                                     }
                                 }
-                            }
-                            .addOnCompleteListener {
-                                processing.set(false)
-                                imageProxy.close()
-                            }
+                            },
+                            onFatalFailure = ::finishWithScannerError,
+                        )
+                        frameAnalyzer = analyzer
+                        scanner = null
+                        analysis.setAnalyzer(
+                            analyzerExecutor,
+                            analyzer,
+                        )
+                        provider.unbindAll()
+                        if (destroyed.get() || isFinishing || isDestroyed) {
+                            analysis.clearAnalyzer()
+                            return@addListener
+                        }
+                        camera = provider.bindToLifecycle(
+                            this,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            analysis,
+                        )
+                        val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
+                        torchButton.isEnabled = hasFlash
+                        torchButton.alpha = if (hasFlash) 1f else 0.5f
+                    } catch (exception: Exception) {
+                        bindCameraFailure(exception)
+                    } catch (error: LinkageError) {
+                        bindCameraFailure(error)
                     }
-                    provider.unbindAll()
-                    if (destroyed.get() || isFinishing || isDestroyed) {
-                        analysis.clearAnalyzer()
-                        return@addListener
-                    }
-                    camera = provider.bindToLifecycle(
-                        this,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        analysis,
-                    )
-                    val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
-                    torchButton.isEnabled = hasFlash
-                    torchButton.alpha = if (hasFlash) 1f else 0.5f
-                } catch (exception: Exception) {
-                    finishWithError(
-                        "camera_unavailable",
-                        exception.message ?: "无法连接相机",
-                    )
-                }
-            },
-            ContextCompat.getMainExecutor(this),
+                },
+                ContextCompat.getMainExecutor(this),
+            )
+        } catch (exception: Exception) {
+            finishWithScannerError(
+                "camera_unavailable",
+                "无法连接相机",
+                exception,
+            )
+        } catch (error: LinkageError) {
+            finishWithScannerError(
+                "camera_unavailable",
+                "相机组件不可用",
+                error,
+            )
+        }
+    }
+
+    private fun bindCameraFailure(error: Throwable) {
+        finishWithScannerError(
+            "camera_unavailable",
+            "无法连接相机",
+            error,
         )
+    }
+
+    private fun finishWithScannerError(code: String, fallback: String, error: Throwable) {
+        val message = error.message?.takeIf(String::isNotBlank) ?: fallback
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            finishWithError(code, message)
+        } else {
+            runOnUiThread { finishWithError(code, message) }
+        }
+    }
+
+    private fun releaseCamera() {
+        try {
+            imageAnalysis?.clearAnalyzer()
+        } catch (_: Exception) {
+            // Continue releasing the remaining camera resources.
+        } catch (_: LinkageError) {
+            // Continue releasing the remaining camera resources.
+        }
+        try {
+            cameraProvider?.unbindAll()
+        } catch (_: Exception) {
+            // The provider may already be shutting down after an OEM camera failure.
+        } catch (_: LinkageError) {
+            // CameraX may be partially initialized after a linkage failure.
+        }
+        imageAnalysis = null
+        camera = null
+        cameraProvider = null
     }
 
     private fun toggleTorch() {
         val activeCamera = camera ?: return
         torchEnabled = !torchEnabled
-        activeCamera.cameraControl.enableTorch(torchEnabled)
-        torchButton.text = if (torchEnabled) "关闭手电筒" else "手电筒"
+        try {
+            activeCamera.cameraControl.enableTorch(torchEnabled)
+            torchButton.text = if (torchEnabled) "关闭手电筒" else "手电筒"
+        } catch (exception: Exception) {
+            torchEnabled = false
+            torchButton.text = "手电筒"
+            statusText.text = exception.message ?: "无法控制手电筒"
+        }
     }
 
     private fun finishWithResult(value: String) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread { finishWithResult(value) }
+            return
+        }
         if (destroyed.get() || isFinishing || isDestroyed ||
             !delivered.compareAndSet(false, true)
         ) return
-        imageAnalysis?.clearAnalyzer()
-        cameraProvider?.unbindAll()
+        releaseCamera()
         setResult(Activity.RESULT_OK, Intent().putExtra(EXTRA_QR_VALUE, value))
         finish()
     }
 
     private fun finishWithError(code: String, message: String) {
-        if (!delivered.compareAndSet(false, true)) return
+        if (destroyed.get() || isFinishing || isDestroyed ||
+            !delivered.compareAndSet(false, true)
+        ) return
+        releaseCamera()
         setResult(
             RESULT_ERROR,
             Intent()
@@ -218,9 +291,10 @@ class QrScannerActivity : ComponentActivity() {
     }
 
     private fun cancelScan() {
-        if (!delivered.compareAndSet(false, true)) return
-        imageAnalysis?.clearAnalyzer()
-        cameraProvider?.unbindAll()
+        if (destroyed.get() || isFinishing || isDestroyed ||
+            !delivered.compareAndSet(false, true)
+        ) return
+        releaseCamera()
         setResult(Activity.RESULT_CANCELED)
         finish()
     }
