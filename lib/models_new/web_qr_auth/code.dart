@@ -11,6 +11,7 @@ final class WebQrLoginCode {
     if (uri == null ||
         uri.scheme != 'https' ||
         uri.host != host ||
+        uri.authority != host ||
         uri.path != path ||
         uri.userInfo.isNotEmpty ||
         uri.hasPort ||

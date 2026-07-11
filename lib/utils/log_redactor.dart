@@ -55,7 +55,6 @@ abstract final class LogRedactor {
   static String redactText(String value) {
     return value
         .replaceAllMapped(_queryParam, (match) => '${match.group(1)}=$redacted')
-        .replaceAllMapped(_header, (match) => '${match.group(1)}: $redacted')
         .replaceAllMapped(
           _jsonString,
           (match) => '${match.group(1)}"$redacted"',
@@ -64,6 +63,7 @@ abstract final class LogRedactor {
           _structuredValue,
           (match) => '${match.group(1)}"$redacted"',
         )
+        .replaceAllMapped(_header, (match) => '${match.group(1)}: $redacted')
         .replaceAllMapped(
           _shortSecretCode,
           (match) => '${match.group(1)}=$redacted',
