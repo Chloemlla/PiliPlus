@@ -27,7 +27,7 @@ abstract final class AndroidQrScanner {
     return _invoke('scanCamera');
   }
 
-  static Future<String?> scanImage() async {
+  static Future<String?> scanImage() {
     if (!isSupported) {
       throw const AndroidQrScannerException(
         'unsupported',

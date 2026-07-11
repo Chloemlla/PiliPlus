@@ -178,10 +178,9 @@ class _WebQrAuthPageState extends State<WebQrAuthPage> {
               onPressed: () async {
                 final data = await Clipboard.getData(Clipboard.kTextPlain);
                 if (data?.text case final text?) {
-                  textController.text = text;
-                  textController.selection = TextSelection.collapsed(
-                    offset: text.length,
-                  );
+                  textController
+                    ..text = text
+                    ..selection = TextSelection.collapsed(offset: text.length);
                 }
               },
               icon: const Icon(Icons.content_paste_outlined),
