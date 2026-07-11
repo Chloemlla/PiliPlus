@@ -47,7 +47,9 @@ void main() {
           .add(first)
           .add(duplicate);
 
-      expect(archive.reports, [first]);
+      expect(archive.reports, hasLength(1));
+      expect(archive.reports.single.reportId, first.reportId);
+      expect(archive.reports.single.crashedAtMillis, first.crashedAtMillis);
       expect(archive.pendingReport?.reportId, first.reportId);
     });
 
@@ -117,7 +119,11 @@ void main() {
       'keeps a newer pending report when importing an older fatal event',
       () {
         final newer = _report(2000, severity: CrashSeverity.fatal);
-        final older = _report(1000, severity: CrashSeverity.fatal);
+        final older = _report(
+          1000,
+          rootCause: 'older failure',
+          severity: CrashSeverity.fatal,
+        );
 
         final archive = const CrashReportArchive.empty().add(newer).add(older);
 
