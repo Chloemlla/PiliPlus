@@ -35,12 +35,14 @@ final class _FailingAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) async {
+  ) {
     calls++;
-    throw DioException(
-      requestOptions: options,
-      type: DioExceptionType.connectionError,
-      error: const FormatException('simulated transport failure'),
+    return Future<ResponseBody>.error(
+      DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+        error: const FormatException('simulated transport failure'),
+      ),
     );
   }
 
