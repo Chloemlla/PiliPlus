@@ -41,15 +41,6 @@ class QrScannerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            scanner = QrBarcodeDecoder.createScanner()
-        } catch (exception: Exception) {
-            finishWithScannerError("scanner_unavailable", "无法初始化二维码识别器", exception)
-            return
-        } catch (error: LinkageError) {
-            finishWithScannerError("scanner_unavailable", "二维码识别组件不可用", error)
-            return
-        }
-        try {
             setContentView(buildContentView())
         } catch (exception: Exception) {
             finishWithScannerError("camera_unavailable", "无法打开扫码界面", exception)
@@ -156,8 +147,9 @@ class QrScannerActivity : ComponentActivity() {
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                             .build()
                         imageAnalysis = analysis
-                        val activeScanner = scanner
-                            ?: throw IllegalStateException("二维码识别器尚未初始化")
+                        val activeScanner = createScannerOrFinish()
+                            ?: return@addListener
+                        scanner = activeScanner
                         val analyzer = QrFrameAnalyzer(
                             scanner = activeScanner,
                             onResult = ::finishWithResult,
@@ -219,6 +211,26 @@ class QrScannerActivity : ComponentActivity() {
             "无法连接相机",
             error,
         )
+    }
+
+    private fun createScannerOrFinish(): BarcodeScanner? {
+        return try {
+            QrBarcodeDecoder.createScanner()
+        } catch (exception: Exception) {
+            finishWithScannerError(
+                "scanner_unavailable",
+                "无法初始化二维码识别器",
+                exception,
+            )
+            null
+        } catch (error: LinkageError) {
+            finishWithScannerError(
+                "scanner_unavailable",
+                "二维码识别组件不可用",
+                error,
+            )
+            null
+        }
     }
 
     private fun finishWithScannerError(code: String, fallback: String, error: Throwable) {

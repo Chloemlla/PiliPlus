@@ -4,6 +4,7 @@ import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -39,8 +40,11 @@ internal class QrFrameAnalyzer(
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     if (closed.get()) return@addOnSuccessListener
-                    val rawValue = barcodes.firstNotNullOfOrNull {
-                        it.rawValue?.takeIf(String::isNotBlank)
+                    val rawValue = barcodes.firstNotNullOfOrNull { barcode ->
+                        barcode.rawValue?.takeIf {
+                            barcode.format == Barcode.FORMAT_QR_CODE &&
+                                it.isNotBlank()
+                        }
                     }
                     if (rawValue != null) onResult(rawValue)
                 }

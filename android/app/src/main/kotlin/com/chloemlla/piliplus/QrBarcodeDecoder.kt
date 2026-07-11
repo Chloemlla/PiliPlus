@@ -5,7 +5,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanner
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -14,11 +13,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal object QrBarcodeDecoder {
-    private val options = BarcodeScannerOptions.Builder()
-        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-        .build()
-
-    fun createScanner(): BarcodeScanner = BarcodeScanning.getClient(options)
+    fun createScanner(): BarcodeScanner = BarcodeScanning.getClient()
 
     fun decodeImage(
         context: Context,
@@ -52,8 +47,11 @@ internal object QrBarcodeDecoder {
                 activeScanner.process(InputImage.fromBitmap(decodedBitmap, 0))
                     .addOnSuccessListener(mainExecutor) { barcodes ->
                         onSuccess(
-                            barcodes.firstNotNullOfOrNull {
-                                it.rawValue?.takeIf(String::isNotBlank)
+                            barcodes.firstNotNullOfOrNull { barcode ->
+                                barcode.rawValue?.takeIf {
+                                    barcode.format == Barcode.FORMAT_QR_CODE &&
+                                        it.isNotBlank()
+                                }
                             },
                         )
                     }
