@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/pages/video/controller.dart';
@@ -9,20 +10,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:get/get.dart';
 
 /// Delegates video/audio downloads to Seal via the L3 external download protocol.
 ///
-/// Status events arrive from native [SealDownloadStatusBridge] (Application-scoped
-/// receiver). Call [ensureListening] early on Android so queued terminal events
-/// are not dropped when the user is still in Seal.
+/// The entire lifecycle is presented by a self-owned animated status panel
+/// (launch → waiting → accepted → completed/failed/canceled), instead of bare
+/// toasts.
 abstract final class SealDownloadUtils {
   static const _channel = MethodChannel('pili_plus/seal_download');
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
-  static const _dialogTag = 'seal_download_complete';
+  static const _panelTag = 'seal_download_panel';
 
   static bool _listening = false;
   static final Set<String> _handledEvents = <String>{};
-  static final Set<String> _pendingRequestIds = <String>{};
+  static final Map<String, _SealSession> _sessions = <String, _SealSession>{};
+  static String? _activeRequestId;
 
   static bool get isSupported => Platform.isAndroid;
 
@@ -36,7 +39,6 @@ abstract final class SealDownloadUtils {
         debugPrint('SealDownloadUtils: listening for DOWNLOAD_STATUS');
       }
     }
-    // Always re-ack readiness so native can flush after engine re-attach.
     unawaited(
       _channel.invokeMethod<void>('readyForStatus').catchError((Object _) {}),
     );
@@ -57,13 +59,28 @@ abstract final class SealDownloadUtils {
     ensureListening();
     final url = pageUrlOf(ctr);
     if (url == null || url.isEmpty) {
-      SmartDialog.showToast('无法构造视频链接');
+      await _showErrorPanel(
+        title: '无法委托下载',
+        message: '无法构造视频链接',
+      );
       return;
     }
 
     final requestId =
         'piliplus-${extractAudio ? 'audio' : 'video'}-${DateTime.now().microsecondsSinceEpoch}';
-    _pendingRequestIds.add(requestId);
+    final title = _titleOf(ctr);
+    final session = _SealSession(
+      requestId: requestId,
+      extractAudio: extractAudio,
+      pageUrl: url,
+      mediaTitle: title,
+      autoStart: Pref.sealAutoStart,
+    );
+    _sessions[requestId] = session;
+    _activeRequestId = requestId;
+    session.phase.value = SealPanelPhase.launching;
+    await _showOrUpdatePanel(session);
+
     try {
       final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'delegateDownload',
@@ -76,28 +93,43 @@ abstract final class SealDownloadUtils {
         },
       );
       if (result == null) {
-        _pendingRequestIds.remove(requestId);
+        _finishSession(
+          session,
+          SealPanelPhase.failed,
+          message: '未收到 Seal 启动结果',
+        );
         return;
       }
       final status = SealDownloadStatus.fromMap(result);
       if (status.status == 'launched') {
-        final kind = extractAudio ? '音频' : '视频';
-        if (Pref.sealAutoStart) {
-          SmartDialog.showToast('正在委托 Seal 下载$kind…完成后将提示');
-        } else {
-          SmartDialog.showToast('已打开 Seal，请确认下载$kind；完成后将提示');
-        }
+        session.phase.value = Pref.sealAutoStart
+            ? SealPanelPhase.waitingAuto
+            : SealPanelPhase.waitingUi;
+        session.message.value = Pref.sealAutoStart
+            ? '已委托 Seal，正在自动入队…'
+            : '已打开 Seal，请在 Seal 中确认下载';
+        await _showOrUpdatePanel(session);
+      } else {
+        await _applyStatusToSession(session, status);
       }
     } on PlatformException catch (error) {
-      _pendingRequestIds.remove(requestId);
       if (error.code == 'not_installed') {
-        await _promptInstallSeal();
+        session.phase.value = SealPanelPhase.notInstalled;
+        session.message.value = '请先安装 Seal 后再下载';
+        await _showOrUpdatePanel(session);
         return;
       }
-      SmartDialog.showToast(error.message ?? '委托 Seal 失败');
+      _finishSession(
+        session,
+        SealPanelPhase.failed,
+        message: error.message ?? '委托 Seal 失败',
+      );
     } catch (error) {
-      _pendingRequestIds.remove(requestId);
-      SmartDialog.showToast('委托 Seal 失败：$error');
+      _finishSession(
+        session,
+        SealPanelPhase.failed,
+        message: '委托 Seal 失败：$error',
+      );
     }
   }
 
@@ -112,6 +144,23 @@ abstract final class SealDownloadUtils {
     return '${HttpString.baseUrl}/video/$bvid';
   }
 
+  static String _titleOf(VideoDetailController ctr) {
+    try {
+      final args = Get.arguments;
+      if (args is Map) {
+        final t = args['title']?.toString().trim();
+        if (t != null && t.isNotEmpty) return t;
+        final fav = args['favTitle']?.toString().trim();
+        if (fav != null && fav.isNotEmpty) return fav;
+      }
+    } catch (_) {}
+    if (ctr.watchLaterTitle.trim().isNotEmpty) {
+      return ctr.watchLaterTitle.trim();
+    }
+    return ctr.bvid;
+  }
+
+
   static Future<dynamic> _onMethodCall(MethodCall call) async {
     if (call.method != 'onDownloadStatus') return null;
     final args = call.arguments;
@@ -122,16 +171,6 @@ abstract final class SealDownloadUtils {
   }
 
   static Future<void> _handleStatusEvent(SealDownloadStatus status) async {
-    final requestId = status.callerRequestId;
-    if (requestId != null && requestId.isNotEmpty) {
-      // Terminal or accepted/rejected ends the "pending" wait for this request.
-      if (status.isTerminal ||
-          status.status == 'accepted' ||
-          status.status == 'rejected') {
-        _pendingRequestIds.remove(requestId);
-      }
-    }
-
     final key = _eventKey(status);
     if (!_handledEvents.add(key)) return;
     if (_handledEvents.length > 120) {
@@ -148,35 +187,105 @@ abstract final class SealDownloadUtils {
       );
     }
 
-    switch (status.status) {
-      case 'accepted':
-        SmartDialog.showToast('已交给 Seal 下载');
-      case 'needs_ui':
-        // Launch toast already covers open-UI; keep quiet to avoid spam.
-        break;
-      case 'rejected':
-        SmartDialog.showToast(
-          status.userFacingErrorMessage ?? 'Seal 拒绝了下载请求',
-        );
-      case 'completed':
-        await _showCompletedDialog(status);
-      case 'failed':
-        SmartDialog.showToast(
-          status.userFacingErrorMessage ?? 'Seal 下载失败',
-        );
-      case 'canceled':
-        SmartDialog.showToast('已取消 Seal 下载');
-      case 'launched':
-        break;
-      default:
-        if (status.status.isNotEmpty) {
-          SmartDialog.showToast('Seal 状态：${status.status}');
-        }
+    final session = _resolveSession(status);
+    if (session != null) {
+      await _applyStatusToSession(session, status);
+      return;
+    }
+
+    // Orphan terminal event (e.g. after app restart): still show panel.
+    if (status.isTerminal ||
+        status.status == 'accepted' ||
+        status.status == 'rejected') {
+      final orphan = _SealSession(
+        requestId:
+            status.callerRequestId ??
+            'orphan-${DateTime.now().microsecondsSinceEpoch}',
+        extractAudio: status.isAudioHint,
+        pageUrl: '',
+        mediaTitle: status.displayName ?? 'Seal 下载',
+        autoStart: false,
+      );
+      _sessions[orphan.requestId] = orphan;
+      _activeRequestId = orphan.requestId;
+      await _applyStatusToSession(orphan, status);
     }
   }
 
+  static _SealSession? _resolveSession(SealDownloadStatus status) {
+    final requestId = status.callerRequestId;
+    if (requestId != null && _sessions.containsKey(requestId)) {
+      return _sessions[requestId];
+    }
+    if (_activeRequestId != null && _sessions.containsKey(_activeRequestId)) {
+      return _sessions[_activeRequestId!];
+    }
+    if (_sessions.length == 1) return _sessions.values.first;
+    return null;
+  }
+
+  static Future<void> _applyStatusToSession(
+    _SealSession session,
+    SealDownloadStatus status,
+  ) async {
+    switch (status.status) {
+      case 'accepted':
+        session.taskId = status.taskId;
+        session.phase.value = SealPanelPhase.accepted;
+        session.message.value = '已交给 Seal 下载，完成后将在此更新';
+      case 'needs_ui':
+        session.phase.value = SealPanelPhase.waitingUi;
+        session.message.value = '已打开 Seal，请确认下载配置';
+      case 'rejected':
+        _finishSession(
+          session,
+          SealPanelPhase.rejected,
+          message: status.userFacingErrorMessage ?? 'Seal 拒绝了下载请求',
+        );
+      case 'completed':
+        session.taskId = status.taskId ?? session.taskId;
+        session.contentUri = status.contentUri;
+        session.displayName = status.displayName;
+        session.mimeType = status.mimeType;
+        session.phase.value = SealPanelPhase.completed;
+        session.message.value = (status.contentUri?.isNotEmpty == true)
+            ? '下载完成，可打开或分享文件'
+            : '下载完成（文件在 Seal 中查看）';
+      case 'failed':
+        _finishSession(
+          session,
+          SealPanelPhase.failed,
+          message: status.userFacingErrorMessage ?? 'Seal 下载失败',
+        );
+      case 'canceled':
+        _finishSession(
+          session,
+          SealPanelPhase.canceled,
+          message: '已取消 Seal 下载',
+        );
+      case 'launched':
+        session.phase.value = session.autoStart
+            ? SealPanelPhase.waitingAuto
+            : SealPanelPhase.waitingUi;
+      default:
+        if (status.status.isNotEmpty) {
+          session.message.value = 'Seal 状态：${status.status}';
+        }
+    }
+    await _showOrUpdatePanel(session);
+  }
+
+  static void _finishSession(
+    _SealSession session,
+    SealPanelPhase phase, {
+    required String message,
+  }) {
+    session.phase.value = phase;
+    session.message.value = message;
+    unawaited(_showOrUpdatePanel(session));
+  }
+
   static String _eventKey(SealDownloadStatus status) {
-    // Prefer stable ids; fall back to content uri so completed still dedupes.
     final request = status.callerRequestId ?? '';
     final task = status.taskId ?? '';
     final uri = status.contentUri ?? '';
@@ -184,58 +293,76 @@ abstract final class SealDownloadUtils {
     return '$request|$task|${status.status}|${status.errorCode ?? ''}|$uri|$source';
   }
 
-  static Future<void> _promptInstallSeal() async {
-    SmartDialog.showToast('请先安装 Seal');
-    await PageUtils.launchURL(releasesUrl);
+  static Future<void> _showErrorPanel({
+    required String title,
+    required String message,
+  }) async {
+    final session = _SealSession(
+      requestId: 'error-${DateTime.now().microsecondsSinceEpoch}',
+      extractAudio: false,
+      pageUrl: '',
+      mediaTitle: title,
+      autoStart: false,
+    );
+    session.phase.value = SealPanelPhase.failed;
+    session.message.value = message;
+    _sessions[session.requestId] = session;
+    _activeRequestId = session.requestId;
+    await _showOrUpdatePanel(session);
   }
 
-  static Future<void> _showCompletedDialog(SealDownloadStatus status) async {
-    final hasUri = status.contentUri?.isNotEmpty == true;
-    final fileName = (status.displayName?.isNotEmpty == true)
-        ? status.displayName!
-        : (hasUri ? '下载完成' : 'Seal 下载完成（无文件链接）');
-
-    // Always give immediate toast so background users still see something.
-    SmartDialog.showToast(
-      hasUri ? 'Seal 下载完成：可打开或分享' : 'Seal 下载完成',
-    );
-
+  static Future<void> _showOrUpdatePanel(_SealSession session) async {
+    final isOpen = SmartDialog.checkExist(tag: _panelTag);
+    if (isOpen) {
+      // ValueNotifiers drive the already-open panel.
+      return;
+    }
     await SmartDialog.show(
-      tag: _dialogTag,
+      tag: _panelTag,
+      keepSingle: true,
+      clickMaskDismiss: false,
+      backType: SmartBackType.normal,
       animationType: SmartAnimationType.scale,
-      clickMaskDismiss: true,
+      animationTime: const Duration(milliseconds: 320),
       builder: (context) {
-        final theme = Theme.of(context);
-        return _SealSuccessCard(
-          fileName: fileName,
-          subtitle: status.isAudioHint
-              ? '音频已就绪'
-              : (status.isVideoHint ? '视频已就绪' : null),
-          showActions: hasUri,
-          onOpen: hasUri
-              ? () async {
-                  SmartDialog.dismiss(tag: _dialogTag);
-                  await openContentUri(
-                    uri: status.contentUri!,
-                    mimeType: status.mimeType,
-                  );
-                }
-              : null,
-          onShare: hasUri
-              ? () async {
-                  SmartDialog.dismiss(tag: _dialogTag);
-                  await shareContentUri(
-                    uri: status.contentUri!,
-                    mimeType: status.mimeType,
-                    displayName: status.displayName,
-                  );
-                }
-              : null,
-          onClose: () => SmartDialog.dismiss(tag: _dialogTag),
-          theme: theme,
+        return _SealStatusPanel(
+          session: session,
+          onClose: () => _closePanel(session),
+          onInstall: () async {
+            await PageUtils.launchURL(releasesUrl);
+          },
+          onOpen: () async {
+            final uri = session.contentUri;
+            if (uri == null || uri.isEmpty) return;
+            await openContentUri(uri: uri, mimeType: session.mimeType);
+          },
+          onShare: () async {
+            final uri = session.contentUri;
+            if (uri == null || uri.isEmpty) return;
+            await shareContentUri(
+              uri: uri,
+              mimeType: session.mimeType,
+              displayName: session.displayName,
+            );
+          },
+          onRetry: () async {
+            await _closePanel(session);
+            // Re-delegate with same mode; caller should re-tap menu if needed.
+          },
         );
       },
     );
+  }
+
+  static Future<void> _closePanel(_SealSession session) async {
+    await SmartDialog.dismiss(tag: _panelTag);
+    if (_activeRequestId == session.requestId) {
+      _activeRequestId = null;
+    }
+    // Keep session until terminal so late events can reopen if needed.
+    if (session.phase.value.isTerminal) {
+      _sessions.remove(session.requestId);
+    }
   }
 
   static Future<void> openContentUri({
@@ -271,6 +398,64 @@ abstract final class SealDownloadUtils {
       SmartDialog.showToast('无法分享文件：$error');
     }
   }
+}
+
+enum SealPanelPhase {
+  launching,
+  waitingUi,
+  waitingAuto,
+  accepted,
+  completed,
+  failed,
+  rejected,
+  canceled,
+  notInstalled;
+
+  bool get isBusy =>
+      this == launching ||
+      this == waitingUi ||
+      this == waitingAuto ||
+      this == accepted;
+
+  bool get isTerminal =>
+      this == completed ||
+      this == failed ||
+      this == rejected ||
+      this == canceled ||
+      this == notInstalled;
+
+  bool get isSuccess => this == completed;
+
+  bool get isError =>
+      this == failed || this == rejected || this == notInstalled;
+}
+
+final class _SealSession {
+  _SealSession({
+    required this.requestId,
+    required this.extractAudio,
+    required this.pageUrl,
+    required this.mediaTitle,
+    required this.autoStart,
+  });
+
+  final String requestId;
+  final bool extractAudio;
+  final String pageUrl;
+  final String mediaTitle;
+  final bool autoStart;
+
+  final ValueNotifier<SealPanelPhase> phase = ValueNotifier(
+    SealPanelPhase.launching,
+  );
+  final ValueNotifier<String> message = ValueNotifier('正在连接 Seal…');
+
+  String? taskId;
+  String? contentUri;
+  String? displayName;
+  String? mimeType;
+
+  String get kindLabel => extractAudio ? '音频' : '视频';
 }
 
 final class SealDownloadStatus {
@@ -350,166 +535,210 @@ final class SealDownloadStatus {
   }
 }
 
-class _SealSuccessCard extends StatefulWidget {
-  const _SealSuccessCard({
-    required this.fileName,
-    required this.showActions,
+class _SealStatusPanel extends StatefulWidget {
+  const _SealStatusPanel({
+    required this.session,
+    required this.onClose,
+    required this.onInstall,
     required this.onOpen,
     required this.onShare,
-    required this.onClose,
-    required this.theme,
-    this.subtitle,
+    required this.onRetry,
   });
 
-  final String fileName;
-  final String? subtitle;
-  final bool showActions;
-  final FutureOr<void> Function()? onOpen;
-  final FutureOr<void> Function()? onShare;
-  final VoidCallback onClose;
-  final ThemeData theme;
+  final _SealSession session;
+  final FutureOr<void> Function() onClose;
+  final FutureOr<void> Function() onInstall;
+  final FutureOr<void> Function() onOpen;
+  final FutureOr<void> Function() onShare;
+  final FutureOr<void> Function() onRetry;
 
   @override
-  State<_SealSuccessCard> createState() => _SealSuccessCardState();
+  State<_SealStatusPanel> createState() => _SealStatusPanelState();
 }
 
-class _SealSuccessCardState extends State<_SealSuccessCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
+class _SealStatusPanelState extends State<_SealStatusPanel>
+    with TickerProviderStateMixin {
+  late final AnimationController _enter = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 700),
+    duration: const Duration(milliseconds: 520),
   );
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat(reverse: true);
+  late final AnimationController _success = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 780),
+  );
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 480),
+  );
+
   late final Animation<double> _scale = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.elasticOut,
+    parent: _enter,
+    curve: Curves.easeOutBack,
   );
   late final Animation<double> _fade = CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(0, 0.5, curve: Curves.easeOut),
+    parent: _enter,
+    curve: const Interval(0, 0.55, curve: Curves.easeOut),
   );
+
+  SealPanelPhase? _lastPhase;
 
   @override
   void initState() {
     super.initState();
-    _controller.forward();
+    widget.session.phase.addListener(_onPhase);
+    widget.session.message.addListener(_onMessage);
+    _enter.forward();
+    _onPhase();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    widget.session.phase.removeListener(_onPhase);
+    widget.session.message.removeListener(_onMessage);
+    _enter.dispose();
+    _pulse.dispose();
+    _success.dispose();
+    _shake.dispose();
     super.dispose();
+  }
+
+  void _onMessage() {
+    if (mounted) setState(() {});
+  }
+
+  void _onPhase() {
+    final phase = widget.session.phase.value;
+    if (_lastPhase == phase) {
+      if (mounted) setState(() {});
+      return;
+    }
+    _lastPhase = phase;
+    if (phase.isBusy) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+    if (phase.isSuccess) {
+      _success
+        ..reset()
+        ..forward();
+    }
+    if (phase.isError || phase == SealPanelPhase.canceled) {
+      _shake
+        ..reset()
+        ..forward();
+    }
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = widget.theme.colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final session = widget.session;
+    final phase = session.phase.value;
+    final hasUri = session.contentUri?.isNotEmpty == true;
+
     return FadeTransition(
       opacity: _fade,
       child: ScaleTransition(
         scale: _scale,
-        child: Material(
-          color: Colors.transparent,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 340),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.shadow.withValues(alpha: 0.2),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 26, 22, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              colorScheme.primary,
-                              colorScheme.tertiary,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.check_rounded,
-                          size: 40,
-                          color: colorScheme.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Seal 下载完成',
-                        style: widget.theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (widget.subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.subtitle!,
-                          style: widget.theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.primary,
-                          ),
+        child: AnimatedBuilder(
+          animation: _shake,
+          builder: (context, child) {
+            final t = _shake.value;
+            final dx = math.sin(t * math.pi * 6) * (1 - t) * 10;
+            return Transform.translate(offset: Offset(dx, 0), child: child);
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        cs.surfaceContainerHigh,
+                        Color.alphaBlend(
+                          cs.primary.withValues(alpha: 0.06),
+                          cs.surfaceContainerHigh,
                         ),
                       ],
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.fileName,
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: widget.theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      if (widget.showActions)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton.tonal(
-                                onPressed: widget.onOpen == null
-                                    ? null
-                                    : () => widget.onOpen!(),
-                                child: const Text('打开'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: widget.onShare == null
-                                    ? null
-                                    : () => widget.onShare!(),
-                                child: const Text('分享'),
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Text(
-                          '文件在 Seal 中查看',
-                          style: widget.theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      TextButton(
-                        onPressed: widget.onClose,
-                        child: const Text('关闭'),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cs.shadow.withValues(alpha: 0.22),
+                        blurRadius: 28,
+                        offset: const Offset(0, 14),
                       ),
                     ],
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildHero(cs, phase),
+                        const SizedBox(height: 18),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 280),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: Text(
+                            _headline(phase, session),
+                            key: ValueKey('h-$phase'),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 280),
+                          child: Text(
+                            session.message.value,
+                            key: ValueKey(session.message.value),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _metaChip(theme, cs, session),
+                        if (phase == SealPanelPhase.completed &&
+                            (session.displayName?.isNotEmpty == true ||
+                                hasUri)) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            session.displayName ?? '已完成文件',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
+                        _buildActions(theme, cs, phase, hasUri),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -518,5 +747,240 @@ class _SealSuccessCardState extends State<_SealSuccessCard>
         ),
       ),
     );
+  }
+
+  Widget _buildHero(ColorScheme cs, SealPanelPhase phase) {
+    final icon = _iconFor(phase);
+    final colors = _gradientFor(cs, phase);
+
+    Widget core = Container(
+      width: 84,
+      height: 84,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.last.withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Icon(icon, size: 40, color: cs.onPrimary),
+    );
+
+    if (phase.isBusy) {
+      core = AnimatedBuilder(
+        animation: _pulse,
+        builder: (context, child) {
+          final s = 0.94 + (_pulse.value * 0.08);
+          final glow = 0.18 + (_pulse.value * 0.22);
+          return Transform.scale(
+            scale: s,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.first.withValues(alpha: glow),
+                    blurRadius: 24 + _pulse.value * 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: core,
+      );
+    }
+
+    if (phase.isSuccess) {
+      core = ScaleTransition(
+        scale: CurvedAnimation(parent: _success, curve: Curves.elasticOut),
+        child: core,
+      );
+    }
+
+    return core;
+  }
+
+  Widget _metaChip(ThemeData theme, ColorScheme cs, _SealSession session) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            session.extractAudio
+                ? Icons.music_note_rounded
+                : Icons.movie_outlined,
+            size: 16,
+            color: cs.onPrimaryContainer,
+          ),
+          const SizedBox(width: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 240),
+            child: Text(
+              '${session.kindLabel} · ${session.mediaTitle}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: cs.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActions(
+    ThemeData theme,
+    ColorScheme cs,
+    SealPanelPhase phase,
+    bool hasUri,
+  ) {
+    if (phase == SealPanelPhase.notInstalled) {
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => widget.onInstall(),
+              icon: const Icon(Icons.download_rounded),
+              label: const Text('前往安装 Seal'),
+            ),
+          ),
+          TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
+        ],
+      );
+    }
+
+    if (phase == SealPanelPhase.completed) {
+      return Column(
+        children: [
+          if (hasUri)
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: () => widget.onOpen(),
+                    child: const Text('打开'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => widget.onShare(),
+                    child: const Text('分享'),
+                  ),
+                ),
+              ],
+            )
+          else
+            Text(
+              '可在 Seal 下载列表中查看文件',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
+        ],
+      );
+    }
+
+    if (phase.isBusy) {
+      return Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              minHeight: 6,
+              backgroundColor: cs.surfaceContainerHighest,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            phase == SealPanelPhase.waitingUi
+                ? '确认后可返回本页，完成后将自动更新'
+                : '请稍候，状态会自动刷新',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.outline,
+            ),
+          ),
+          TextButton(
+            onPressed: () => widget.onClose(),
+            child: const Text('后台等待'),
+          ),
+        ],
+      );
+    }
+
+    // failed / rejected / canceled
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.tonal(
+            onPressed: () => widget.onClose(),
+            child: const Text('知道了'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _headline(SealPanelPhase phase, _SealSession session) {
+    return switch (phase) {
+      SealPanelPhase.launching => '正在启动 Seal',
+      SealPanelPhase.waitingUi => '等待在 Seal 中确认',
+      SealPanelPhase.waitingAuto => '正在自动入队',
+      SealPanelPhase.accepted => 'Seal 下载进行中',
+      SealPanelPhase.completed => 'Seal 下载完成',
+      SealPanelPhase.failed => '下载失败',
+      SealPanelPhase.rejected => '请求被拒绝',
+      SealPanelPhase.canceled => '已取消下载',
+      SealPanelPhase.notInstalled => '未安装 Seal',
+    };
+  }
+
+  IconData _iconFor(SealPanelPhase phase) {
+    return switch (phase) {
+      SealPanelPhase.launching => Icons.rocket_launch_rounded,
+      SealPanelPhase.waitingUi => Icons.touch_app_rounded,
+      SealPanelPhase.waitingAuto => Icons.hourglass_top_rounded,
+      SealPanelPhase.accepted => Icons.cloud_download_rounded,
+      SealPanelPhase.completed => Icons.check_rounded,
+      SealPanelPhase.failed => Icons.error_outline_rounded,
+      SealPanelPhase.rejected => Icons.block_rounded,
+      SealPanelPhase.canceled => Icons.cancel_outlined,
+      SealPanelPhase.notInstalled => Icons.install_mobile_rounded,
+    };
+  }
+
+  List<Color> _gradientFor(ColorScheme cs, SealPanelPhase phase) {
+    if (phase.isSuccess) {
+      return [cs.primary, cs.tertiary];
+    }
+    if (phase.isError) {
+      return [cs.error, cs.errorContainer];
+    }
+    if (phase == SealPanelPhase.canceled) {
+      return [cs.outline, cs.secondary];
+    }
+    return [cs.primary, cs.secondary];
   }
 }
