@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -32,6 +33,7 @@ class QrScannerActivity : ComponentActivity() {
     private var camera: Camera? = null
     private var imageAnalysis: ImageAnalysis? = null
     private var frameAnalyzer: QrFrameAnalyzer? = null
+    private lateinit var previewView: PreviewView
     private lateinit var statusText: TextView
     private lateinit var torchButton: TextView
     private var torchEnabled = false
@@ -53,7 +55,9 @@ class QrScannerActivity : ComponentActivity() {
             finishWithError("permission_denied", "未获得相机权限")
             return
         }
-        startCamera()
+        previewView.post {
+            if (!destroyed.get() && !isFinishing && !isDestroyed) startCamera()
+        }
     }
 
     override fun onDestroy() {
@@ -72,10 +76,9 @@ class QrScannerActivity : ComponentActivity() {
 
     private fun buildContentView(): FrameLayout {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
-        val previewView = PreviewView(this).apply {
+        previewView = PreviewView(this).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
             scaleType = PreviewView.ScaleType.FILL_CENTER
-            id = PREVIEW_VIEW_ID
         }
         root.addView(previewView, matchParentLayoutParams())
         root.addView(QrScanOverlayView(this), matchParentLayoutParams())
@@ -119,7 +122,6 @@ class QrScannerActivity : ComponentActivity() {
     }
 
     private fun startCamera() {
-        val previewView = findViewById<PreviewView>(PREVIEW_VIEW_ID)
         try {
             val providerFuture = ProcessCameraProvider.getInstance(this)
             providerFuture.addListener(
@@ -130,6 +132,8 @@ class QrScannerActivity : ComponentActivity() {
                     try {
                         val provider = providerFuture.get()
                         cameraProvider = provider
+                        val cameraSelector = selectCamera(provider)
+                            ?: throw IllegalStateException("设备没有可用摄像头")
                         val preview = Preview.Builder().build().also {
                             it.setSurfaceProvider(previewView.surfaceProvider)
                         }
@@ -160,7 +164,7 @@ class QrScannerActivity : ComponentActivity() {
                         }
                         camera = provider.bindToLifecycle(
                             this,
-                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            cameraSelector,
                             preview,
                             analysis,
                         )
@@ -198,12 +202,20 @@ class QrScannerActivity : ComponentActivity() {
         )
     }
 
+    private fun selectCamera(provider: ProcessCameraProvider): CameraSelector? = when {
+        provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) ->
+            CameraSelector.DEFAULT_BACK_CAMERA
+        provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) ->
+            CameraSelector.DEFAULT_FRONT_CAMERA
+        else -> null
+    }
+
     private fun finishWithScannerError(code: String, fallback: String, error: Throwable) {
-        val message = error.message?.takeIf(String::isNotBlank) ?: fallback
+        Log.e(TAG, fallback, error)
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            finishWithError(code, message)
+            finishWithError(code, fallback)
         } else {
-            runOnUiThread { finishWithError(code, message) }
+            runOnUiThread { finishWithError(code, fallback) }
         }
     }
 
@@ -297,7 +309,7 @@ class QrScannerActivity : ComponentActivity() {
         const val EXTRA_ERROR_MESSAGE = "error_message"
         const val RESULT_ERROR = Activity.RESULT_FIRST_USER + 1
 
-        private const val PREVIEW_VIEW_ID = 0x7103
+        private const val TAG = "QrScannerActivity"
         private const val matchParent = ViewGroup.LayoutParams.MATCH_PARENT
         private const val wrapContent = ViewGroup.LayoutParams.WRAP_CONTENT
     }
