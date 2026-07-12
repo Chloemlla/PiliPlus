@@ -195,6 +195,7 @@ Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/
 - [x] 会员彩色弹幕
 - [x] 播放全部/继续播放/倒序播放
 - [x] Cookie登录
+- [x] B 站网页二维码授权（Android）
 - [x] 显示视频分段信息
 - [x] 调节字幕大小
 - [x] 调节全屏弹幕大小
