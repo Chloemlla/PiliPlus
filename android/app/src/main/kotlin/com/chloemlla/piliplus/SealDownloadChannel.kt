@@ -2,6 +2,7 @@ package com.chloemlla.piliplus
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -85,6 +86,9 @@ internal class SealDownloadChannel(
         val requestId = call.argument<String>("requestId")
 
         val intent = Intent(ACTION_DOWNLOAD).apply {
+            // Prefer QuickDownloadActivity so extract_audio maps to the dialog type UI.
+            // Avoid ambiguous resolve that may open MainActivity with the last global type.
+            component = ComponentName(sealPackage, "com.chloemlla.seal.QuickDownloadActivity")
             setPackage(sealPackage)
             type = "text/plain"
             putExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION)
