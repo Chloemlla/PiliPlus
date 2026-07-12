@@ -419,6 +419,12 @@ class _SearchPageState extends State<SearchPage> {
       onExport: () => jsonEncode(_searchController.historyList),
       onImport: (json) {
         final list = List<String>.from(json);
+        if (list.length > BaseSearchController.maxSearchHistory) {
+          list.removeRange(
+            BaseSearchController.maxSearchHistory,
+            list.length,
+          );
+        }
         _searchController.historyList.value = list;
         GStorage.historyWord.put('cacheList', list);
       },

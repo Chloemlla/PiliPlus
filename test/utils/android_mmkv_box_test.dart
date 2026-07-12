@@ -274,6 +274,47 @@ void main() {
     },
   );
 
+  test('lazy open loads keys without decoding all values', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final name = _newHiveBoxName(hiveBoxNames, 'lazy_open');
+    final hive = await Hive.openBox<dynamic>(name);
+    await hive.putAll({'a': 1, 'b': 2, 'c': 3});
+    final migrated = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      openHive: () => Future.value(hive),
+    );
+    await migrated.close();
+
+    final exportBefore = store.exportCount;
+    final lazy = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      loadMode: AndroidMmkvLoadMode.lazy,
+      openHive: () => Future.error(StateError('Hive should not open')),
+    );
+
+    // Keys-only open should not fully export values.
+    expect(store.exportCount, exportBefore);
+    expect(store.exportKeysCount, greaterThan(0));
+    expect(lazy.length, 3);
+    expect(lazy.get('b'), 2); // materialize one key
+    expect(lazy.get('a'), 1);
+    await lazy.close();
+  });
+
+  test('close does not require sync and clears memory', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('close_soft', store: store);
+    await box.put('k', 1);
+    final syncBefore = store.syncCount;
+    await box.close();
+    expect(store.syncCount, syncBefore);
+    expect(box.isOpen, isFalse);
+  });
+
   test('native clear failures remain visible after a box is closed', () async {
     final box = AndroidMmkvBackedBox<dynamic>(
       'clearFailure',
@@ -301,9 +342,11 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   bool failNextReplace = false;
   bool failNextPutAll = false;
   int exportCount = 0;
+  int exportKeysCount = 0;
   int replaceCount = 0;
   int putAllCount = 0;
   int removeAllCount = 0;
+  int syncCount = 0;
   final Map<String, Map<String, String>> _boxes = {};
 
   @override
@@ -323,7 +366,18 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   }
 
   @override
+  String? exportKeys(String name) {
+    exportKeysCount++;
+    final keys = (_boxes[name] ?? const {}).keys.toList();
+    return jsonEncode(keys);
+  }
+
+  @override
   String? getRaw(String name, String key) => _boxes[name]?[key];
+
+  @override
+  bool containsKey(String name, String key) =>
+      _boxes[name]?.containsKey(key) ?? false;
 
   @override
   bool putRaw(String name, String key, String value) {
@@ -375,5 +429,8 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   }
 
   @override
-  bool sync(String name) => true;
+  bool sync(String name) {
+    syncCount++;
+    return true;
+  }
 }

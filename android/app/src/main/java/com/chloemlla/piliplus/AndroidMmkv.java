@@ -68,6 +68,46 @@ public final class AndroidMmkv {
         }
     }
 
+    /** Export only keys (no values) for cheap lazy box open. */
+    @Nullable
+    public static String exportKeys(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return null;
+
+            JSONArray keysJson = new JSONArray();
+            String[] keys = mmkv.allKeys();
+            if (keys != null) {
+                for (String key : keys) {
+                    keysJson.put(key);
+                }
+            }
+            return keysJson.toString();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static int count(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return -1;
+            String[] keys = mmkv.allKeys();
+            return keys == null ? 0 : keys.length;
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    public static boolean containsKey(@NonNull String name, @NonNull String key) {
+        try {
+            MMKV mmkv = box(name);
+            return mmkv != null && mmkv.containsKey(key);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     @Nullable
     public static String getString(@NonNull String name, @NonNull String key) {
         try {

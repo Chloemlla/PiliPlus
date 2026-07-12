@@ -16,6 +16,14 @@ const _$jniVersionCheck = jni$_.JniVersionCheck(1, 0);
 typedef AndroidMmkvValueEncoder<E> = Object? Function(E value);
 typedef AndroidMmkvValueDecoder<E> = E Function(Object? value);
 
+enum AndroidMmkvLoadMode {
+  /// Decode all entries into memory on open (default).
+  eager,
+
+  /// Load keys only; decode values on first access. Best for large boxes.
+  lazy,
+}
+
 Future<Box<E>> openAndroidMmkvBackedBox<E>({
   required String name,
   required Future<Box<E>> Function() openHive,
@@ -24,6 +32,7 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
   AndroidMmkvValueDecoder<E>? valueDecoder,
   AndroidMmkvStoreBackend store = const AndroidMmkvStore(),
   bool? isAndroid,
+  AndroidMmkvLoadMode loadMode = AndroidMmkvLoadMode.eager,
 }) async {
   if (!(isAndroid ?? Platform.isAndroid) || !store.isAvailable) {
     return openHive();
@@ -37,6 +46,7 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
       valueEncoder: valueEncoder,
       valueDecoder: valueDecoder,
       store: store,
+      loadMode: loadMode,
     );
     if (box.tryLoadFromMmkv()) {
       return box;
@@ -54,6 +64,7 @@ Future<Box<E>> openAndroidMmkvBackedBox<E>({
     valueEncoder: valueEncoder,
     valueDecoder: valueDecoder,
     store: store,
+    loadMode: loadMode,
   );
   if (!box.replaceAllFrom(hive.toMap())) {
     return hive;
@@ -75,10 +86,12 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     AndroidMmkvValueEncoder<E>? valueEncoder,
     AndroidMmkvValueDecoder<E>? valueDecoder,
     AndroidMmkvStoreBackend store = const AndroidMmkvStore(),
+    AndroidMmkvLoadMode loadMode = AndroidMmkvLoadMode.eager,
   }) : _keyComparator = keyComparator,
        _valueEncoder = valueEncoder,
        _valueDecoder = valueDecoder,
-       _store = store;
+       _store = store,
+       _loadMode = loadMode;
 
   @override
   final String name;
@@ -87,16 +100,33 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   final AndroidMmkvValueEncoder<E>? _valueEncoder;
   final AndroidMmkvValueDecoder<E>? _valueDecoder;
   final AndroidMmkvStoreBackend _store;
+  final AndroidMmkvLoadMode _loadMode;
   final Map<dynamic, E> _cache = <dynamic, E>{};
+  /// Encoded keys present on disk but not yet decoded into [_cache] (lazy mode).
+  final Set<String> _pendingEncodedKeys = <String>{};
   final StreamController<BoxEvent> _events =
       StreamController<BoxEvent>.broadcast(sync: true);
 
   bool _open = true;
   int _nextAutoKey = 0;
+  bool get _isLazy => _loadMode == AndroidMmkvLoadMode.lazy;
 
   bool tryLoadFromMmkv() {
     try {
       _checkOpen();
+      if (_isLazy) {
+        final keysJson = _store.exportKeys(name);
+        if (keysJson == null) return false;
+        final decoded = jsonDecode(keysJson);
+        if (decoded is! List) return false;
+        _cache.clear();
+        _pendingEncodedKeys
+          ..clear()
+          ..addAll(decoded.whereType<String>());
+        _resetNextAutoKey();
+        return true;
+      }
+
       final json = _store.exportBox(name);
       if (json == null) return false;
 
@@ -112,6 +142,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       _cache
         ..clear()
         ..addAll(next);
+      _pendingEncodedKeys.clear();
       _resetNextAutoKey();
       return true;
     } catch (_) {
@@ -130,12 +161,16 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     _cache
       ..clear()
       ..addAll(entries);
+    _pendingEncodedKeys.clear();
     _resetNextAutoKey();
     return true;
   }
 
   @override
-  Iterable<E> get values => _sortedKeys().map((key) => _cache[key] as E);
+  Iterable<E> get values {
+    _materializeAll();
+    return _sortedKeys().map((key) => _cache[key] as E);
+  }
 
   @override
   Iterable<E> valuesBetween({dynamic startKey, dynamic endKey}) {
@@ -154,18 +189,22 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   E? get(dynamic key, {E? defaultValue}) {
     _checkOpen();
-    return _cache.containsKey(key) ? _cache[key] : defaultValue;
+    if (_cache.containsKey(key)) return _cache[key];
+    if (_materializeKey(key)) return _cache[key];
+    return defaultValue;
   }
 
   @override
   E? getAt(int index) {
     _checkOpen();
-    return _cache[_sortedKeys()[index]];
+    final key = keyAt(index);
+    return get(key);
   }
 
   @override
   Map<dynamic, E> toMap() {
     _checkOpen();
+    _materializeAll();
     return Map<dynamic, E>.of(_cache);
   }
 
@@ -176,7 +215,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   bool get isOpen => _open;
 
   @override
-  bool get lazy => false;
+  bool get lazy => _isLazy;
 
   @override
   Iterable<dynamic> get keys => _sortedKeys();
@@ -184,7 +223,9 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   int get length {
     _checkOpen();
-    return _cache.length;
+    if (!_isLazy || _pendingEncodedKeys.isEmpty) return _cache.length;
+    // Count unique logical keys: cache + pending not already cached.
+    return _cache.length + _pendingEncodedKeys.length;
   }
 
   @override
@@ -209,22 +250,28 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   bool containsKey(dynamic key) {
     _checkOpen();
-    return _cache.containsKey(key);
+    if (_cache.containsKey(key)) return true;
+    if (!_isLazy) return false;
+    final encoded = _encodeKey(key);
+    if (_pendingEncodedKeys.contains(encoded)) return true;
+    return _store.containsKey(name, encoded);
   }
 
   @override
   Future<void> put(dynamic key, E value) {
     _checkOpen();
+    final encodedKey = _encodeKey(key);
     final encodedValue = _encodeEntry(value, _valueEncoder);
     if (encodedValue == null) {
       return Future.error(
         UnsupportedError('Unsupported MMKV value for $name.$key: $value'),
       );
     }
-    if (!_store.putRaw(name, _encodeKey(key), encodedValue)) {
+    if (!_store.putRaw(name, encodedKey, encodedValue)) {
       return Future.error(StateError('MMKV put failed for $name.$key'));
     }
 
+    _pendingEncodedKeys.remove(encodedKey);
     _cache[key] = value;
     _events.add(BoxEvent(key, value, false));
     _resetNextAutoKey();
@@ -250,6 +297,9 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       return Future.error(StateError('MMKV putAll failed for $name'));
     }
 
+    for (final key in encoded.keys) {
+      _pendingEncodedKeys.remove(key);
+    }
     _cache.addAll(entries);
     for (final MapEntry(:key, :value) in entries.entries) {
       _events.add(BoxEvent(key, value, false));
@@ -277,12 +327,14 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> delete(dynamic key) {
     _checkOpen();
-    if (!_store.removeRaw(name, _encodeKey(key))) {
+    final encodedKey = _encodeKey(key);
+    if (!_store.removeRaw(name, encodedKey)) {
       return Future.error(StateError('MMKV delete failed for $name.$key'));
     }
+    final hadPending = _pendingEncodedKeys.remove(encodedKey);
     final hadValue = _cache.containsKey(key);
     final oldValue = _cache.remove(key);
-    if (hadValue) {
+    if (hadValue || hadPending) {
       _events.add(BoxEvent(key, oldValue, true));
     }
     return Future.value();
@@ -297,10 +349,12 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     final deleted = <MapEntry<dynamic, E?>>[];
     final encodedKeys = <String>[];
     for (final key in keys) {
-      if (_cache.containsKey(key)) {
-        deleted.add(MapEntry<dynamic, E?>(key, _cache[key]));
-        encodedKeys.add(_encodeKey(key));
-      }
+      final encodedKey = _encodeKey(key);
+      final inCache = _cache.containsKey(key);
+      final inPending = _pendingEncodedKeys.contains(encodedKey);
+      if (!inCache && !inPending) continue;
+      deleted.add(MapEntry<dynamic, E?>(key, inCache ? _cache[key] : null));
+      encodedKeys.add(encodedKey);
     }
     if (encodedKeys.isEmpty) return Future.value();
 
@@ -310,13 +364,18 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
 
     for (final MapEntry(:key, :value) in deleted) {
       _cache.remove(key);
+      _pendingEncodedKeys.remove(_encodeKey(key));
       _events.add(BoxEvent(key, value, true));
     }
     return Future.value();
   }
 
   @override
-  Future<void> compact() => flush();
+  Future<void> compact() {
+    _checkOpen();
+    // MMKV manages its own file layout; avoid expensive process-wide sync here.
+    return Future.value();
+  }
 
   @override
   Future<int> clear() {
@@ -325,19 +384,24 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       return Future.error(StateError('MMKV clear failed for $name'));
     }
 
+    final count = length;
     final deleted = Map<dynamic, E>.of(_cache);
     _cache.clear();
+    _pendingEncodedKeys.clear();
     for (final MapEntry(:key, :value) in deleted.entries) {
       _events.add(BoxEvent(key, value, true));
     }
-    return Future.value(deleted.length);
+    return Future.value(count);
   }
 
   @override
   Future<void> close() async {
     if (!_open) return;
-    await flush();
+    // MMKV mmap writes are durable without forced sync; skip flush on close
+    // to avoid exit jank. Callers that need fsync can still await flush().
     _open = false;
+    _cache.clear();
+    _pendingEncodedKeys.clear();
     await _events.close();
   }
 
@@ -364,9 +428,72 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
 
   List<dynamic> _sortedKeys() {
     _checkOpen();
+    if (_isLazy && _pendingEncodedKeys.isNotEmpty) {
+      final keys = <dynamic>{
+        ..._cache.keys,
+        for (final encoded in _pendingEncodedKeys) _decodeKey(encoded),
+      }.toList();
+      keys.sort(_keyComparator ?? _defaultKeyComparator);
+      return keys;
+    }
     final keys = _cache.keys.toList();
     keys.sort(_keyComparator ?? _defaultKeyComparator);
     return keys;
+  }
+
+  bool _materializeKey(dynamic key) {
+    if (!_isLazy) return false;
+    final encodedKey = _encodeKey(key);
+    if (!_pendingEncodedKeys.contains(encodedKey) &&
+        !_store.containsKey(name, encodedKey)) {
+      return false;
+    }
+    final raw = _store.getRaw(name, encodedKey);
+    if (raw == null) {
+      _pendingEncodedKeys.remove(encodedKey);
+      return false;
+    }
+    try {
+      final value = _decodeEntry(raw, _valueDecoder);
+      _cache[key] = value;
+      _pendingEncodedKeys.remove(encodedKey);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _materializeAll() {
+    if (!_isLazy || _pendingEncodedKeys.isEmpty) return;
+    // Prefer one export for bulk materialization when many keys remain.
+    if (_pendingEncodedKeys.length > 8) {
+      final json = _store.exportBox(name);
+      if (json != null) {
+        try {
+          final decoded = jsonDecode(json);
+          if (decoded is Map) {
+            for (final MapEntry(:key, :value) in decoded.entries) {
+              if (key is! String || value is! String) continue;
+              final logical = _decodeKey(key);
+              if (_cache.containsKey(logical)) continue;
+              _cache[logical] = _decodeEntry(value, _valueDecoder);
+            }
+            _pendingEncodedKeys.clear();
+            return;
+          }
+        } catch (_) {
+          // Fall through to per-key materialization.
+        }
+      }
+    }
+    for (final encoded in _pendingEncodedKeys.toList(growable: false)) {
+      final logical = _decodeKey(encoded);
+      if (_cache.containsKey(logical)) {
+        _pendingEncodedKeys.remove(encoded);
+        continue;
+      }
+      _materializeKey(logical);
+    }
   }
 
   void _checkOpen() {
@@ -395,9 +522,13 @@ abstract interface class AndroidMmkvStoreBackend {
 
   String? exportBox(String name);
 
+  String? exportKeys(String name);
+
   bool replaceBox(String name, String json);
 
   String? getRaw(String name, String key);
+
+  bool containsKey(String name, String key);
 
   bool putRaw(String name, String key, String value);
 
@@ -432,12 +563,19 @@ final class AndroidMmkvStore implements AndroidMmkvStoreBackend {
   String? exportBox(String name) => _AndroidMmkvBindings.exportBox(name);
 
   @override
+  String? exportKeys(String name) => _AndroidMmkvBindings.exportKeys(name);
+
+  @override
   bool replaceBox(String name, String json) =>
       _AndroidMmkvBindings.replaceBox(name, json);
 
   @override
   String? getRaw(String name, String key) =>
       _AndroidMmkvBindings.getString(name, key);
+
+  @override
+  bool containsKey(String name, String key) =>
+      _AndroidMmkvBindings.containsKey(name, key);
 
   @override
   bool putRaw(String name, String key, String value) =>
@@ -687,6 +825,90 @@ abstract final class _AndroidMmkvBindings {
       ).object<jni$_.JString?>()?.toDartString(releaseOriginal: true);
     } finally {
       jName.release();
+    }
+  }
+
+
+  static final _id_exportKeys = _class.staticMethodId(
+    r'exportKeys',
+    r'(Ljava/lang/String;)Ljava/lang/String;',
+  );
+
+  static final _exportKeys =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<(jni$_.Pointer<jni$_.Void>,)>,
+              )
+            >
+          >('globalEnv_CallStaticObjectMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  static String? exportKeys(String name) {
+    final jName = name.toJString();
+    try {
+      final classRef = _class.reference;
+      final nameRef = jName.reference;
+      return _exportKeys(
+        classRef.pointer,
+        _id_exportKeys.pointer,
+        nameRef.pointer,
+      ).object<jni$_.JString?>()?.toDartString(releaseOriginal: true);
+    } finally {
+      jName.release();
+    }
+  }
+
+  static final _id_containsKey = _class.staticMethodId(
+    r'containsKey',
+    r'(Ljava/lang/String;Ljava/lang/String;)Z',
+  );
+
+  static final _containsKey =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (jni$_.Pointer<jni$_.Void>, jni$_.Pointer<jni$_.Void>)
+                >,
+              )
+            >
+          >('globalEnv_CallStaticBooleanMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  static bool containsKey(String name, String key) {
+    final jName = name.toJString();
+    final jKey = key.toJString();
+    try {
+      final classRef = _class.reference;
+      final nameRef = jName.reference;
+      final keyRef = jKey.reference;
+      return _containsKey(
+        classRef.pointer,
+        _id_containsKey.pointer,
+        nameRef.pointer,
+        keyRef.pointer,
+      ).boolean;
+    } finally {
+      jName.release();
+      jKey.release();
     }
   }
 

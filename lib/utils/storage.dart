@@ -87,29 +87,33 @@ abstract final class GStorage {
         openHive: () => Hive.openBox('video'),
       ).then((res) => video = res),
       Accounts.init(),
-      openAndroidMmkvBackedBox<int>(
-        name: 'watchProgress',
-        keyComparator: _intStrDescKeyComparator,
-        openHive: () => Hive.openBox<int>(
-          'watchProgress',
-          keyComparator: _intStrDescKeyComparator,
-          compactionStrategy: (entries, deletedEntries) {
-            return deletedEntries > 4;
-          },
-        ),
-      ).then((res) => watchProgress = res),
     ]);
     settingsStore = SettingsStore(setting, video);
+    await migrateSettingSecrets();
+
+    // Large progress box opens after critical prefs so first frame can use Pref sooner.
+    watchProgress = await openAndroidMmkvBackedBox<int>(
+      name: 'watchProgress',
+      keyComparator: _intStrDescKeyComparator,
+      loadMode: AndroidMmkvLoadMode.lazy,
+      openHive: () => Hive.openBox<int>(
+        'watchProgress',
+        keyComparator: _intStrDescKeyComparator,
+        compactionStrategy: (entries, deletedEntries) {
+          return deletedEntries > 4;
+        },
+      ),
+    );
     watchProgressStore = WatchProgressStore(
       watchProgress,
       orderStore: localCache,
     );
-    await migrateSettingSecrets();
 
     if (setting.get(SettingBoxKey.saveReply, defaultValue: false) as bool) {
       reply = await openAndroidMmkvBackedBox<Uint8List>(
         name: 'reply',
         keyComparator: _intStrDescKeyComparator,
+        loadMode: AndroidMmkvLoadMode.lazy,
         openHive: () => Hive.openBox<Uint8List>(
           'reply',
           keyComparator: _intStrDescKeyComparator,

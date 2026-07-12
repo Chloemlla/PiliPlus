@@ -11,7 +11,8 @@ final class WatchProgressStore {
          orderStore: orderStore,
          orderKey: LocalCacheKey.watchProgressWriteOrder,
          maxEntries: maxEntries,
-         existingKeys: _box.keys.map((key) => key.toString()),
+         // Prefer persisted order; avoid forcing full key scan on lazy boxes.
+         existingKeys: _seedKeys(orderStore, _box),
        );
 
   static const int defaultMaxEntries = 2000;
@@ -19,6 +20,17 @@ final class WatchProgressStore {
   final Box<int> _box;
   final int maxEntries;
   final BoundedStringKeyLru _lru;
+
+  static Iterable<String> _seedKeys(Box<dynamic> orderStore, Box<int> box) {
+    final raw = orderStore.get(LocalCacheKey.watchProgressWriteOrder);
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .map((item) => item.toString())
+          .where(box.containsKey);
+    }
+    // Fallback only when no order yet (first run / migration).
+    return box.keys.map((key) => key.toString());
+  }
 
   int? get(String key) => _box.get(key);
 

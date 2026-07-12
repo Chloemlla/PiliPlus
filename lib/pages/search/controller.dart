@@ -54,9 +54,19 @@ abstract class DebounceStreamState<T extends StatefulWidget, S> extends State<T>
 }
 
 class BaseSearchController extends GetxController {
+  static const int maxSearchHistory = 100;
+
   final historyList = List<String>.from(
-    GStorage.historyWord.get('cacheList') ?? const <String>[],
+    _trimHistory(
+      GStorage.historyWord.get('cacheList') ?? const <String>[],
+    ),
   ).obs;
+
+  static List<String> _trimHistory(List<dynamic> raw) {
+    final list = raw.map((item) => item.toString()).toList();
+    if (list.length <= maxSearchHistory) return list;
+    return list.sublist(0, maxSearchHistory);
+  }
 
   late final Rx<LoadingState<SearchTrendingData>> trendingState;
 
@@ -177,8 +187,14 @@ class SSearchController extends GetxController
       historyList
         ..remove(controller.text)
         ..insert(0, controller.text);
+      if (historyList.length > BaseSearchController.maxSearchHistory) {
+        historyList.removeRange(
+          BaseSearchController.maxSearchHistory,
+          historyList.length,
+        );
+      }
       Persistence.background(
-        GStorage.historyWord.put('cacheList', historyList),
+        GStorage.historyWord.put('cacheList', historyList.toList()),
         label: 'search history add',
       );
     }

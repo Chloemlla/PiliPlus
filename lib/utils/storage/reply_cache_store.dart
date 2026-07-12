@@ -16,7 +16,7 @@ final class ReplyCacheStore {
                orderStore: orderStore,
                orderKey: LocalCacheKey.replyWriteOrder,
                maxEntries: maxEntries,
-               existingKeys: box.keys.map((key) => key.toString()),
+               existingKeys: _seedKeys(orderStore, box),
              );
 
   static const int defaultMaxEntries = 500;
@@ -24,6 +24,19 @@ final class ReplyCacheStore {
   final Box<Uint8List>? _box;
   final int maxEntries;
   final BoundedStringKeyLru? _lru;
+
+  static Iterable<String> _seedKeys(
+    Box<dynamic> orderStore,
+    Box<Uint8List> box,
+  ) {
+    final raw = orderStore.get(LocalCacheKey.replyWriteOrder);
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .map((item) => item.toString())
+          .where(box.containsKey);
+    }
+    return box.keys.map((key) => key.toString());
+  }
 
   bool get isEnabled => _box != null;
 
