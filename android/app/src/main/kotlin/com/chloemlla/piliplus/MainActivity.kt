@@ -16,6 +16,7 @@ class MainActivity : AudioServiceActivity() {
     private var credentialResult: MethodChannel.Result? = null
     private var qrScannerChannel: QrScannerChannel? = null
     private var nativeCrashChannel: NativeCrashChannel? = null
+    private var sealDownloadChannel: SealDownloadChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -23,6 +24,10 @@ class MainActivity : AudioServiceActivity() {
         qrScannerChannel = QrScannerChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         nativeCrashChannel = NativeCrashChannel(
             applicationContext,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
+        sealDownloadChannel = SealDownloadChannel(
+            this,
             flutterEngine.dartExecutor.binaryMessenger,
         )
         MethodChannel(
@@ -45,6 +50,8 @@ class MainActivity : AudioServiceActivity() {
         qrScannerChannel = null
         nativeCrashChannel?.dispose()
         nativeCrashChannel = null
+        sealDownloadChannel?.dispose()
+        sealDownloadChannel = null
         NativeMediaService.detachFlutterEngine()
         super.cleanUpFlutterEngine(flutterEngine)
     }
@@ -78,6 +85,9 @@ class MainActivity : AudioServiceActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (qrScannerChannel?.onActivityResult(requestCode, resultCode, data) == true) {
+            return
+        }
+        if (sealDownloadChannel?.onActivityResult(requestCode, resultCode, data) == true) {
             return
         }
         if (requestCode == CREDENTIAL_REQUEST_CODE) {

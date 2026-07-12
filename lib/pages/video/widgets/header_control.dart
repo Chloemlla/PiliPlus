@@ -48,6 +48,7 @@ import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/media_export_utils.dart';
+import 'package:pili_plus/utils/seal_download_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -394,7 +395,11 @@ class HeaderControlState extends State<HeaderControl>
                   dense: true,
                   onTap: () {
                     Get.back();
-                    MediaExportUtils.exportVideo(videoDetailCtr);
+                    if (Platform.isAndroid) {
+                      SealDownloadUtils.downloadVideo(videoDetailCtr);
+                    } else {
+                      MediaExportUtils.exportVideo(videoDetailCtr);
+                    }
                   },
                   leading: const Icon(Icons.download_outlined, size: 20),
                   title: const Text('下载视频', style: titleStyle),
@@ -403,7 +408,11 @@ class HeaderControlState extends State<HeaderControl>
                   dense: true,
                   onTap: () {
                     Get.back();
-                    MediaExportUtils.exportAudio(videoDetailCtr);
+                    if (Platform.isAndroid) {
+                      SealDownloadUtils.downloadAudio(videoDetailCtr);
+                    } else {
+                      MediaExportUtils.exportAudio(videoDetailCtr);
+                    }
                   },
                   leading: const Icon(Icons.music_note_outlined, size: 20),
                   title: const Text('下载音频', style: titleStyle),
@@ -2063,3 +2072,5 @@ child: Obx(() {
     );
   }
 }
+
+

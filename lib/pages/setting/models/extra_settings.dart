@@ -236,6 +236,13 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.openInBrowser,
     defaultVal: false,
   ),
+  const SwitchModel(
+    title: '委托 Seal 时自动开始下载',
+    subtitle: '需在 Seal 设置中开启 Allow external auto-start；关闭时将打开 Seal 确认界面',
+    leading: Icon(Icons.download_for_offline_outlined),
+    setKey: SettingBoxKey.sealAutoStart,
+    defaultVal: false,
+  ),
   NormalModel(
     title: '横向滑动阈值',
     getSubtitle: () => '当前:「${Pref.touchSlopH}」，系统默认值: $deviceTouchSlop',
@@ -1246,3 +1253,5 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
     ),
   );
 }
+
+

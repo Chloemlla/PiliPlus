@@ -468,6 +468,9 @@ abstract final class Pref {
   static bool get openInBrowser =>
       _setting.get(SettingBoxKey.openInBrowser, defaultValue: false);
 
+  static bool get sealAutoStart =>
+      _setting.get(SettingBoxKey.sealAutoStart, defaultValue: false);
+
   static bool get savedRcmdTip =>
       _setting.get(SettingBoxKey.savedRcmdTip, defaultValue: true);
 
@@ -1055,3 +1058,4 @@ abstract final class Pref {
 
   static List? get liveStream => _setting.get(SettingBoxKey.liveStream);
 }
+
