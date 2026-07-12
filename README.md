@@ -61,7 +61,7 @@
 
 - `SealDownloadChannel`：安装检测、`startActivityForResult` 启动、打开/分享 `content_uri`
 - `SealDownloadStatusBridge`（Application 级）：接收定向状态广播，Dart 未就绪时排队，避免退后台丢终态
-- `SealDownloadUtils`：自有动画状态面板覆盖 launch → waiting → accepted → completed/failed/canceled（非裸 Toast）
+- `SealDownloadUtils`：自有动画状态面板覆盖 等待确认 → 进行中 → 完成/失败（跳过「正在启动 Seal」阶段）
 - 状态机防护：晚到的 Activity Result `needs_ui` / 空会话 `canceled` **不会回退**已进入 accepted 或完成态的面板
 - 「后台等待」关闭后仍保留 session 映射，终态广播可再次弹出完成面板
 - 启动时 `ensureListening` + `readyForStatus` 握手，引擎重连后可冲刷缓存事件

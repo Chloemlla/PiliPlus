@@ -78,7 +78,14 @@ abstract final class SealDownloadUtils {
     );
     _sessions[requestId] = session;
     _activeRequestId = requestId;
-    session.phase.value = SealPanelPhase.launching;
+    // Skip launching UX: go straight to wait-confirm / auto-queue panel.
+    final initialBusy = Pref.sealAutoStart
+        ? SealPanelPhase.waitingAuto
+        : SealPanelPhase.waitingUi;
+    session.phase.value = initialBusy;
+    session.message.value = Pref.sealAutoStart
+        ? '已委托 Seal，正在自动入队…'
+        : '已打开 Seal，请在 Seal 中确认下载';
     await _showOrUpdatePanel(session);
 
     try {
@@ -102,13 +109,17 @@ abstract final class SealDownloadUtils {
       }
       final status = SealDownloadStatus.fromMap(result);
       if (status.status == 'launched') {
-        session.phase.value = Pref.sealAutoStart
-            ? SealPanelPhase.waitingAuto
-            : SealPanelPhase.waitingUi;
-        session.message.value = Pref.sealAutoStart
-            ? '已委托 Seal，正在自动入队…'
-            : '已打开 Seal，请在 Seal 中确认下载';
-        await _showOrUpdatePanel(session);
+        // Already showing waitingUi/waitingAuto; only refresh message if needed.
+        if (session.phase.value != SealPanelPhase.accepted &&
+            !session.phase.value.isTerminal) {
+          session.phase.value = Pref.sealAutoStart
+              ? SealPanelPhase.waitingAuto
+              : SealPanelPhase.waitingUi;
+          session.message.value = Pref.sealAutoStart
+              ? '已委托 Seal，正在自动入队…'
+              : '已打开 Seal，请在 Seal 中确认下载';
+          await _showOrUpdatePanel(session);
+        }
       } else {
         await _applyStatusToSession(session, status);
       }
@@ -486,9 +497,9 @@ final class _SealSession {
   final bool autoStart;
 
   final ValueNotifier<SealPanelPhase> phase = ValueNotifier(
-    SealPanelPhase.launching,
+    SealPanelPhase.waitingUi,
   );
-  final ValueNotifier<String> message = ValueNotifier('正在连接 Seal…');
+  final ValueNotifier<String> message = ValueNotifier('请在 Seal 中确认下载');
 
   String? taskId;
   String? contentUri;
@@ -986,7 +997,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
 
   String _headline(SealPanelPhase phase, _SealSession session) {
     return switch (phase) {
-      SealPanelPhase.launching => '正在启动 Seal',
+      SealPanelPhase.launching => '等待在 Seal 中确认',
       SealPanelPhase.waitingUi => '等待在 Seal 中确认',
       SealPanelPhase.waitingAuto => '正在自动入队',
       SealPanelPhase.accepted => 'Seal 下载进行中',
@@ -1000,7 +1011,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
 
   IconData _iconFor(SealPanelPhase phase) {
     return switch (phase) {
-      SealPanelPhase.launching => Icons.rocket_launch_rounded,
+      SealPanelPhase.launching => Icons.touch_app_rounded,
       SealPanelPhase.waitingUi => Icons.touch_app_rounded,
       SealPanelPhase.waitingAuto => Icons.hourglass_top_rounded,
       SealPanelPhase.accepted => Icons.cloud_download_rounded,
