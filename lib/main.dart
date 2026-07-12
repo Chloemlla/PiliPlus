@@ -32,6 +32,7 @@ import 'package:pili_plus/utils/json_file_handler.dart';
 import 'package:pili_plus/utils/max_screen_size.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/seal_download_utils.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -157,7 +158,10 @@ Future<void> _main() async {
   HttpOverrides.global = _CustomHttpOverrides();
 
   if (PlatformUtils.isMobile) {
-    if (Platform.isAndroid) MaxScreenSize.init();
+    if (Platform.isAndroid) {
+      MaxScreenSize.init();
+      SealDownloadUtils.ensureListening();
+    }
     await Future.wait([
       if (Pref.horizontalScreen) ?fullMode() else ?portraitUpMode(),
       setupServiceLocator(),

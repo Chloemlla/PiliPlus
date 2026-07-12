@@ -2,10 +2,7 @@ package com.chloemlla.piliplus
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -13,20 +10,30 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
+/**
+ * Seal L2/L3 download delegate channel.
+ *
+ * Status broadcasts are owned by [SealDownloadStatusBridge] (Application scope).
+ * This channel handles launch + open/share only.
+ */
 internal class SealDownloadChannel(
     private val activity: Activity,
     messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler {
-    private val channel = MethodChannel(messenger, CHANNEL_NAME)
-    private var statusReceiver: BroadcastReceiver? = null
+    private val channel = MethodChannel(messenger, SealDownloadStatusBridge.CHANNEL_NAME)
 
     init {
+        // Attach early so queued Application-level events can flush to Dart.
+        SealDownloadStatusBridge.attachChannel(channel)
         channel.setMethodCallHandler(this)
-        registerStatusReceiver()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "readyForStatus" -> {
+                SealDownloadStatusBridge.onDartReady()
+                result.success(true)
+            }
             "isInstalled" -> result.success(resolveSealPackage() != null)
             "delegateDownload" -> delegateDownload(call, result)
             "openContentUri" -> openContentUri(call, result)
@@ -37,25 +44,27 @@ internal class SealDownloadChannel(
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         if (requestCode != DOWNLOAD_REQUEST_CODE) return false
-        val payload = buildStatusMap(data).toMutableMap()
+        val payload = SealDownloadStatusBridge.buildStatusMap(data).toMutableMap()
         if (payload["status"] == null) {
+            // Seal sometimes closes UI without extras; treat OK as needs_ui opened.
             payload["status"] = when (resultCode) {
                 Activity.RESULT_OK -> "needs_ui"
                 else -> "rejected"
             }
-        }
-        if (resultCode == Activity.RESULT_CANCELED && payload["status"] == "needs_ui") {
-            payload["status"] = "rejected"
+            if (resultCode == Activity.RESULT_OK) {
+                payload.putIfAbsent("error_code", "ok")
+            }
         }
         payload["result_code"] = resultCode
         payload["source"] = "activity_result"
-        emitStatus(payload)
+        SealDownloadStatusBridge.emitActivityResult(payload)
         return true
     }
 
     fun dispose() {
         channel.setMethodCallHandler(null)
-        unregisterStatusReceiver()
+        // Keep Application receiver alive; only detach this messenger if it is ours.
+        SealDownloadStatusBridge.detachChannel(channel)
     }
 
     private fun delegateDownload(call: MethodCall, result: MethodChannel.Result) {
@@ -83,18 +92,23 @@ internal class SealDownloadChannel(
             putExtra(EXTRA_EXTRACT_AUDIO, extractAudio)
             putExtra(EXTRA_AUTO_START, autoStart)
             putExtra(EXTRA_OPEN_UI, openUi)
+            // Fallback only; Seal prefers Activity.callingPackage.
+            putExtra(EXTRA_CALLER_PACKAGE, activity.packageName)
             if (!requestId.isNullOrEmpty()) {
                 putExtra(EXTRA_CALLER_REQUEST_ID, requestId)
             }
         }
 
         try {
+            // Must use Activity.startActivityForResult so Seal can resolve callingPackage
+            // for directed DOWNLOAD_STATUS broadcasts.
             activity.startActivityForResult(intent, DOWNLOAD_REQUEST_CODE)
             result.success(
                 mapOf(
                     "status" to "launched",
                     "caller_request_id" to requestId,
                     "seal_package" to sealPackage,
+                    "caller_package" to activity.packageName,
                 ),
             )
         } catch (_: ActivityNotFoundException) {
@@ -150,41 +164,6 @@ internal class SealDownloadChannel(
         }
     }
 
-    private fun registerStatusReceiver() {
-        if (statusReceiver != null) return
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action != ACTION_DOWNLOAD_STATUS) return
-                val payload = buildStatusMap(intent).toMutableMap()
-                payload["source"] = "broadcast"
-                emitStatus(payload)
-            }
-        }
-        statusReceiver = receiver
-        val filter = IntentFilter(ACTION_DOWNLOAD_STATUS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            activity.registerReceiver(receiver, filter)
-        }
-    }
-
-    private fun unregisterStatusReceiver() {
-        val receiver = statusReceiver ?: return
-        try {
-            activity.unregisterReceiver(receiver)
-        } catch (_: Exception) {
-        }
-        statusReceiver = null
-    }
-
-    private fun emitStatus(payload: Map<String, Any?>) {
-        activity.runOnUiThread {
-            channel.invokeMethod("onDownloadStatus", payload)
-        }
-    }
-
     private fun resolveSealPackage(): String? {
         val pm = activity.packageManager
         for (packageName in SEAL_PACKAGES) {
@@ -209,29 +188,10 @@ internal class SealDownloadChannel(
         }
     }
 
-    private fun buildStatusMap(data: Intent?): Map<String, Any?> {
-        if (data == null) return emptyMap()
-        return mapOf(
-            "protocol_version" to data.getIntExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION),
-            "status" to data.getStringExtra(EXTRA_STATUS),
-            "error_code" to data.getStringExtra(EXTRA_ERROR_CODE),
-            "error_message" to data.getStringExtra(EXTRA_ERROR_MESSAGE),
-            "task_id" to data.getStringExtra(EXTRA_TASK_ID),
-            "task_ids" to data.getStringArrayExtra(EXTRA_TASK_IDS)?.toList(),
-            "caller_request_id" to data.getStringExtra(EXTRA_CALLER_REQUEST_ID),
-            "content_uri" to data.getStringExtra(EXTRA_CONTENT_URI),
-            "display_name" to data.getStringExtra(EXTRA_DISPLAY_NAME),
-            "mime_type" to data.getStringExtra(EXTRA_MIME_TYPE),
-        )
-    }
-
     private companion object {
-        const val CHANNEL_NAME = "pili_plus/seal_download"
         const val DOWNLOAD_REQUEST_CODE = 0x7201
 
         const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
-        const val ACTION_DOWNLOAD_STATUS = "com.chloemlla.seal.action.DOWNLOAD_STATUS"
-
         const val PROTOCOL_VERSION = 1
         const val EXTRA_PROTOCOL_VERSION = "protocol_version"
         const val EXTRA_URL = "url"
@@ -239,14 +199,7 @@ internal class SealDownloadChannel(
         const val EXTRA_AUTO_START = "auto_start"
         const val EXTRA_OPEN_UI = "open_ui"
         const val EXTRA_CALLER_REQUEST_ID = "caller_request_id"
-        const val EXTRA_TASK_ID = "task_id"
-        const val EXTRA_TASK_IDS = "task_ids"
-        const val EXTRA_STATUS = "status"
-        const val EXTRA_ERROR_CODE = "error_code"
-        const val EXTRA_ERROR_MESSAGE = "error_message"
-        const val EXTRA_CONTENT_URI = "content_uri"
-        const val EXTRA_DISPLAY_NAME = "display_name"
-        const val EXTRA_MIME_TYPE = "mime_type"
+        const val EXTRA_CALLER_PACKAGE = "caller_package"
 
         val SEAL_PACKAGES = listOf(
             "com.chloemlla.seal",

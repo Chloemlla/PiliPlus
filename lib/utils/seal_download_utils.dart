@@ -11,6 +11,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 /// Delegates video/audio downloads to Seal via the L3 external download protocol.
+///
+/// Status events arrive from native [SealDownloadStatusBridge] (Application-scoped
+/// receiver). Call [ensureListening] early on Android so queued terminal events
+/// are not dropped when the user is still in Seal.
 abstract final class SealDownloadUtils {
   static const _channel = MethodChannel('pili_plus/seal_download');
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
@@ -18,13 +22,24 @@ abstract final class SealDownloadUtils {
 
   static bool _listening = false;
   static final Set<String> _handledEvents = <String>{};
+  static final Set<String> _pendingRequestIds = <String>{};
 
   static bool get isSupported => Platform.isAndroid;
 
+  /// Wire MethodChannel callbacks as early as possible on Android.
   static void ensureListening() {
-    if (!isSupported || _listening) return;
-    _listening = true;
-    _channel.setMethodCallHandler(_onMethodCall);
+    if (!isSupported) return;
+    if (!_listening) {
+      _listening = true;
+      _channel.setMethodCallHandler(_onMethodCall);
+      if (kDebugMode) {
+        debugPrint('SealDownloadUtils: listening for DOWNLOAD_STATUS');
+      }
+    }
+    // Always re-ack readiness so native can flush after engine re-attach.
+    unawaited(
+      _channel.invokeMethod<void>('readyForStatus').catchError((Object _) {}),
+    );
   }
 
   static Future<void> downloadVideo(VideoDetailController ctr) {
@@ -48,6 +63,7 @@ abstract final class SealDownloadUtils {
 
     final requestId =
         'piliplus-${extractAudio ? 'audio' : 'video'}-${DateTime.now().microsecondsSinceEpoch}';
+    _pendingRequestIds.add(requestId);
     try {
       final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'delegateDownload',
@@ -59,20 +75,28 @@ abstract final class SealDownloadUtils {
           'requestId': requestId,
         },
       );
-      if (result == null) return;
+      if (result == null) {
+        _pendingRequestIds.remove(requestId);
+        return;
+      }
       final status = SealDownloadStatus.fromMap(result);
       if (status.status == 'launched') {
-        SmartDialog.showToast(
-          Pref.sealAutoStart ? '正在委托 Seal 下载…' : '已打开 Seal，请确认下载',
-        );
+        final kind = extractAudio ? '音频' : '视频';
+        if (Pref.sealAutoStart) {
+          SmartDialog.showToast('正在委托 Seal 下载$kind…完成后将提示');
+        } else {
+          SmartDialog.showToast('已打开 Seal，请确认下载$kind；完成后将提示');
+        }
       }
     } on PlatformException catch (error) {
+      _pendingRequestIds.remove(requestId);
       if (error.code == 'not_installed') {
         await _promptInstallSeal();
         return;
       }
       SmartDialog.showToast(error.message ?? '委托 Seal 失败');
     } catch (error) {
+      _pendingRequestIds.remove(requestId);
       SmartDialog.showToast('委托 Seal 失败：$error');
     }
   }
@@ -98,18 +122,37 @@ abstract final class SealDownloadUtils {
   }
 
   static Future<void> _handleStatusEvent(SealDownloadStatus status) async {
-    final key =
-        '${status.callerRequestId ?? ''}|${status.taskId ?? ''}|${status.status}|${status.errorCode ?? ''}';
+    final requestId = status.callerRequestId;
+    if (requestId != null && requestId.isNotEmpty) {
+      // Terminal or accepted/rejected ends the "pending" wait for this request.
+      if (status.isTerminal ||
+          status.status == 'accepted' ||
+          status.status == 'rejected') {
+        _pendingRequestIds.remove(requestId);
+      }
+    }
+
+    final key = _eventKey(status);
     if (!_handledEvents.add(key)) return;
-    if (_handledEvents.length > 100) {
+    if (_handledEvents.length > 120) {
       _handledEvents.remove(_handledEvents.first);
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        'SealDownload status=${status.status} '
+        'code=${status.errorCode} '
+        'task=${status.taskId} '
+        'req=${status.callerRequestId} '
+        'source=${status.source}',
+      );
     }
 
     switch (status.status) {
       case 'accepted':
         SmartDialog.showToast('已交给 Seal 下载');
       case 'needs_ui':
-        // Launch toast already covers the open-UI path.
+        // Launch toast already covers open-UI; keep quiet to avoid spam.
         break;
       case 'rejected':
         SmartDialog.showToast(
@@ -123,11 +166,22 @@ abstract final class SealDownloadUtils {
         );
       case 'canceled':
         SmartDialog.showToast('已取消 Seal 下载');
+      case 'launched':
+        break;
       default:
-        if (kDebugMode) {
-          debugPrint('seal status: ${status.status}');
+        if (status.status.isNotEmpty) {
+          SmartDialog.showToast('Seal 状态：${status.status}');
         }
     }
+  }
+
+  static String _eventKey(SealDownloadStatus status) {
+    // Prefer stable ids; fall back to content uri so completed still dedupes.
+    final request = status.callerRequestId ?? '';
+    final task = status.taskId ?? '';
+    final uri = status.contentUri ?? '';
+    final source = status.source ?? '';
+    return '$request|$task|${status.status}|${status.errorCode ?? ''}|$uri|$source';
   }
 
   static Future<void> _promptInstallSeal() async {
@@ -139,15 +193,24 @@ abstract final class SealDownloadUtils {
     final hasUri = status.contentUri?.isNotEmpty == true;
     final fileName = (status.displayName?.isNotEmpty == true)
         ? status.displayName!
-        : '下载完成';
+        : (hasUri ? '下载完成' : 'Seal 下载完成（无文件链接）');
+
+    // Always give immediate toast so background users still see something.
+    SmartDialog.showToast(
+      hasUri ? 'Seal 下载完成：可打开或分享' : 'Seal 下载完成',
+    );
 
     await SmartDialog.show(
       tag: _dialogTag,
       animationType: SmartAnimationType.scale,
+      clickMaskDismiss: true,
       builder: (context) {
         final theme = Theme.of(context);
         return _SealSuccessCard(
           fileName: fileName,
+          subtitle: status.isAudioHint
+              ? '音频已就绪'
+              : (status.isVideoHint ? '视频已就绪' : null),
           showActions: hasUri,
           onOpen: hasUri
               ? () async {
@@ -220,6 +283,7 @@ final class SealDownloadStatus {
     this.contentUri,
     this.displayName,
     this.mimeType,
+    this.source,
   });
 
   factory SealDownloadStatus.fromMap(Map<dynamic, dynamic> map) {
@@ -232,6 +296,7 @@ final class SealDownloadStatus {
       contentUri: map['content_uri']?.toString(),
       displayName: map['display_name']?.toString(),
       mimeType: map['mime_type']?.toString(),
+      source: map['source']?.toString(),
     );
   }
 
@@ -243,6 +308,29 @@ final class SealDownloadStatus {
   final String? contentUri;
   final String? displayName;
   final String? mimeType;
+  final String? source;
+
+  bool get isTerminal =>
+      status == 'completed' || status == 'failed' || status == 'canceled';
+
+  bool get isAudioHint {
+    final mime = mimeType?.toLowerCase() ?? '';
+    final name = displayName?.toLowerCase() ?? '';
+    return mime.startsWith('audio/') ||
+        name.endsWith('.m4a') ||
+        name.endsWith('.mp3') ||
+        name.endsWith('.opus') ||
+        name.endsWith('.flac');
+  }
+
+  bool get isVideoHint {
+    final mime = mimeType?.toLowerCase() ?? '';
+    final name = displayName?.toLowerCase() ?? '';
+    return mime.startsWith('video/') ||
+        name.endsWith('.mp4') ||
+        name.endsWith('.mkv') ||
+        name.endsWith('.webm');
+  }
 
   String? get userFacingErrorMessage {
     final message = errorMessage?.trim();
@@ -270,9 +358,11 @@ class _SealSuccessCard extends StatefulWidget {
     required this.onShare,
     required this.onClose,
     required this.theme,
+    this.subtitle,
   });
 
   final String fileName;
+  final String? subtitle;
   final bool showActions;
   final FutureOr<void> Function()? onOpen;
   final FutureOr<void> Function()? onShare;
@@ -366,6 +456,15 @@ class _SealSuccessCardState extends State<_SealSuccessCard>
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (widget.subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.subtitle!,
+                          style: widget.theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Text(
                         widget.fileName,
@@ -398,6 +497,13 @@ class _SealSuccessCardState extends State<_SealSuccessCard>
                               ),
                             ),
                           ],
+                        )
+                      else
+                        Text(
+                          '文件在 Seal 中查看',
+                          style: widget.theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       TextButton(
                         onPressed: widget.onClose,

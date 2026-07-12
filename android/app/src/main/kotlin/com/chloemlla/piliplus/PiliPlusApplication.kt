@@ -7,6 +7,7 @@ import java.util.concurrent.Executors
 class PiliPlusApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        SealDownloadStatusBridge.install(this)
         NativeCrashHandler.install(this)
         exitCollectionExecutor.execute {
             try {
