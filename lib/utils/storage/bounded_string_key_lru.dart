@@ -41,15 +41,17 @@ final class BoundedStringKeyLru {
   List<String> get order => List<String>.unmodifiable(_order);
 
   Future<void> touch(String key) async {
-    _order.remove(key);
-    _order.add(key);
+    _order
+      ..remove(key)
+      ..add(key);
     await _persist();
   }
 
   Future<void> touchAll(Iterable<String> keys) async {
     for (final key in keys) {
-      _order.remove(key);
-      _order.add(key);
+      _order
+        ..remove(key)
+        ..add(key);
     }
     await _persist();
   }

@@ -161,9 +161,8 @@ void main() {
     await box.close();
   });
 
-  test('single-key getRaw does not require full export', () async {
-    final store = _MemoryAndroidMmkvStore();
-    store.putRaw('meta', 'k', 'v');
+  test('single-key getRaw does not require full export', () {
+    final store = _MemoryAndroidMmkvStore()..putRaw('meta', 'k', 'v');
     expect(store.getRaw('meta', 'k'), 'v');
     expect(store.exportCount, 0);
   });
@@ -392,8 +391,7 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
       return false;
     }
     putAllCount++;
-    final box = _boxes[name] ??= {};
-    box.addAll(entries);
+    (_boxes[name] ??= {}).addAll(entries);
     return true;
   }
 

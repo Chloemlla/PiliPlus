@@ -394,9 +394,7 @@ abstract final class SealDownloadUtils {
   static Future<void> _closePanel(_SealSession session) async {
     await SmartDialog.dismiss(tag: _panelTag);
     // Keep mapping for late accepted/completed after user taps 后台等待.
-    if (_activeRequestId == null) {
-      _activeRequestId = session.requestId;
-    }
+    _activeRequestId ??= session.requestId;
     // Only drop terminal sessions after the user dismisses the final UI.
     if (session.phase.value.isTerminal) {
       _sessions.remove(session.requestId);
@@ -662,8 +660,9 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
     if (phase.isBusy) {
       if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
     } else {
-      _pulse.stop();
-      _pulse.value = 0;
+      _pulse
+        ..stop()
+        ..value = 0;
     }
     if (phase.isSuccess) {
       _success
@@ -824,7 +823,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
           final glow = 0.18 + (_pulse.value * 0.22);
           return Transform.scale(
             scale: s,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
