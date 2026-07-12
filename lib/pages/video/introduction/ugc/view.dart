@@ -12,7 +12,6 @@ import 'package:pili_plus/common/widgets/selectable_text.dart';
 import 'package:pili_plus/common/widgets/stat/stat.dart';
 import 'package:pili_plus/common/widgets/translucent_column.dart';
 import 'package:pili_plus/http/sponsor_block.dart';
-import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models_new/video/video_ai_conclusion/model_result.dart';
 import 'package:pili_plus/models_new/video/video_detail/data.dart';
 import 'package:pili_plus/models_new/video/video_detail/desc_v2.dart';
