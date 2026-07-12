@@ -185,6 +185,7 @@ Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/
 - [x] 屏蔽带货动态/评论
 - [x] 互动视频
 - [x] 发评/动态反诈
+- [x] 崩溃捕获过滤与历史
 - [x] 高能进度条
 - [x] 滑动跳转预览视频缩略图
 - [x] Live Photo
