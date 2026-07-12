@@ -48,10 +48,14 @@ abstract final class WebQrAuthHttp {
     final data = _signedParams(account, {
       'qrcode_key': qrcodeKey,
       'transient': transient ? 'true' : 'false',
-      'env_key': environmentKey ?? '',
-      'verify_type': verifyKey == null ? '' : 'verify_tel',
-      'verify_key': verifyKey ?? '',
-      'verify_code': verifyCode ?? '',
+      if (environmentKey case final value? when value.isNotEmpty)
+        'env_key': value,
+      if (verifyKey case final value? when value.isNotEmpty) ...{
+        'verify_type': 'verify_tel',
+        'verify_key': value,
+        if (verifyCode case final code? when code.isNotEmpty)
+          'verify_code': code,
+      },
     });
     final response = await Request().post(
       '$_baseUrl/x/passport-login/web/qrcode/confirm',
@@ -103,7 +107,6 @@ abstract final class WebQrAuthHttp {
         'gee_challenge': geetestChallenge,
         'gee_validate': geetestValidate,
         'gee_seccode': geetestSeccode,
-        'img_code': '',
       }),
       options: _options(account),
     );
@@ -149,8 +152,6 @@ abstract final class WebQrAuthHttp {
       's_locale': 'zh_CN',
       'statistics': Constants.statistics,
       if (account.csrf.isNotEmpty) 'csrf': account.csrf,
-      if (account.accessKey case final accessKey? when accessKey.isNotEmpty)
-        'access_key': accessKey,
       ...values,
     };
     AppSign.appSign(params);
