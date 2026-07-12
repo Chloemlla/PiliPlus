@@ -4,10 +4,12 @@ import android.content.Context;
 
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.github.dart_lang.jni_flutter.JniFlutterPlugin;
 import com.tencent.mmkv.MMKV;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Iterator;
@@ -47,6 +49,7 @@ public final class AndroidMmkv {
         return initialized || initialize();
     }
 
+    @Nullable
     public static String exportBox(@NonNull String name) {
         try {
             MMKV mmkv = box(name);
@@ -60,6 +63,17 @@ public final class AndroidMmkv {
                 }
             }
             return entries.toString();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static String getString(@NonNull String name, @NonNull String key) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null || !mmkv.containsKey(key)) return null;
+            return mmkv.decodeString(key, null);
         } catch (Throwable ignored) {
             return null;
         }
@@ -110,11 +124,44 @@ public final class AndroidMmkv {
         }
     }
 
+    public static boolean putAllStrings(@NonNull String name, @NonNull String json) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return false;
+
+            JSONObject entries = new JSONObject(json);
+            for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
+                String key = it.next();
+                if (!mmkv.encode(key, entries.optString(key))) return false;
+            }
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     public static boolean removeValue(@NonNull String name, @NonNull String key) {
         try {
             MMKV mmkv = box(name);
             if (mmkv == null) return false;
             mmkv.removeValueForKey(key);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static boolean removeValues(@NonNull String name, @NonNull String keysJson) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return false;
+
+            JSONArray keys = new JSONArray(keysJson);
+            String[] keyArray = new String[keys.length()];
+            for (int i = 0; i < keys.length(); i++) {
+                keyArray[i] = keys.getString(i);
+            }
+            mmkv.removeValuesForKeys(keyArray);
             return true;
         } catch (Throwable ignored) {
             return false;
@@ -144,6 +191,7 @@ public final class AndroidMmkv {
         }
     }
 
+    @Nullable
     private static MMKV box(String name) {
         if (!isAvailable()) return null;
         return MMKV.mmkvWithID(BOX_PREFIX + name, MMKV.SINGLE_PROCESS_MODE);

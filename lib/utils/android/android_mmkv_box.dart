@@ -237,6 +237,8 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> putAll(Map<dynamic, E> entries) {
     _checkOpen();
+    if (entries.isEmpty) return Future.value();
+
     final encoded = _encodeMap(entries, _valueEncoder);
     if (encoded == null) {
       return Future.error(
@@ -244,10 +246,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       );
     }
 
-    final next = Map<dynamic, E>.of(_cache)..addAll(entries);
-    final nextEncoded = _encodeMap(next, _valueEncoder);
-    if (nextEncoded == null ||
-        !_store.replaceBox(name, jsonEncode(nextEncoded))) {
+    if (!_store.putAllRaw(name, encoded)) {
       return Future.error(StateError('MMKV putAll failed for $name'));
     }
 
@@ -295,21 +294,22 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   @override
   Future<void> deleteAll(Iterable<dynamic> keys) {
     _checkOpen();
-    final next = Map<dynamic, E>.of(_cache);
     final deleted = <MapEntry<dynamic, E?>>[];
+    final encodedKeys = <String>[];
     for (final key in keys) {
-      if (next.containsKey(key)) {
-        deleted.add(MapEntry<dynamic, E?>(key, next.remove(key)));
+      if (_cache.containsKey(key)) {
+        deleted.add(MapEntry<dynamic, E?>(key, _cache[key]));
+        encodedKeys.add(_encodeKey(key));
       }
     }
-    final encoded = _encodeMap(next, _valueEncoder);
-    if (encoded == null || !_store.replaceBox(name, jsonEncode(encoded))) {
+    if (encodedKeys.isEmpty) return Future.value();
+
+    if (!_store.removeAllRaw(name, encodedKeys)) {
       return Future.error(StateError('MMKV deleteAll failed for $name'));
     }
-    _cache
-      ..clear()
-      ..addAll(next);
+
     for (final MapEntry(:key, :value) in deleted) {
+      _cache.remove(key);
       _events.add(BoxEvent(key, value, true));
     }
     return Future.value();
@@ -401,7 +401,11 @@ abstract interface class AndroidMmkvStoreBackend {
 
   bool putRaw(String name, String key, String value);
 
+  bool putAllRaw(String name, Map<String, String> entries);
+
   bool removeRaw(String name, String key);
+
+  bool removeAllRaw(String name, Iterable<String> keys);
 
   bool clearBox(String name);
 
@@ -432,24 +436,29 @@ final class AndroidMmkvStore implements AndroidMmkvStoreBackend {
       _AndroidMmkvBindings.replaceBox(name, json);
 
   @override
-  String? getRaw(String name, String key) {
-    try {
-      final json = exportBox(name);
-      if (json == null) return null;
-      final decoded = jsonDecode(json);
-      return decoded is Map ? decoded[key] as String? : null;
-    } catch (_) {
-      return null;
-    }
-  }
+  String? getRaw(String name, String key) =>
+      _AndroidMmkvBindings.getString(name, key);
 
   @override
   bool putRaw(String name, String key, String value) =>
       _AndroidMmkvBindings.putString(name, key, value);
 
   @override
+  bool putAllRaw(String name, Map<String, String> entries) {
+    if (entries.isEmpty) return true;
+    return _AndroidMmkvBindings.putAllStrings(name, jsonEncode(entries));
+  }
+
+  @override
   bool removeRaw(String name, String key) =>
       _AndroidMmkvBindings.removeValue(name, key);
+
+  @override
+  bool removeAllRaw(String name, Iterable<String> keys) {
+    final list = keys.toList(growable: false);
+    if (list.isEmpty) return true;
+    return _AndroidMmkvBindings.removeValues(name, jsonEncode(list));
+  }
 
   @override
   bool clearBox(String name) => _AndroidMmkvBindings.clearBox(name);
@@ -726,6 +735,52 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 
+
+  static final _id_getString = _class.staticMethodId(
+    r'getString',
+    r'(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;',
+  );
+
+  static final _getString =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (jni$_.Pointer<jni$_.Void>, jni$_.Pointer<jni$_.Void>)
+                >,
+              )
+            >
+          >('globalEnv_CallStaticObjectMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  static String? getString(String name, String key) {
+    final jName = name.toJString();
+    final jKey = key.toJString();
+    try {
+      final classRef = _class.reference;
+      final nameRef = jName.reference;
+      final keyRef = jKey.reference;
+      return _getString(
+        classRef.pointer,
+        _id_getString.pointer,
+        nameRef.pointer,
+        keyRef.pointer,
+      ).object<jni$_.JString?>()?.toDartString(releaseOriginal: true);
+    } finally {
+      jName.release();
+      jKey.release();
+    }
+  }
+
   static final _id_putString = _class.staticMethodId(
     r'putString',
     r'(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z',
@@ -780,6 +835,52 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 
+
+  static final _id_putAllStrings = _class.staticMethodId(
+    r'putAllStrings',
+    r'(Ljava/lang/String;Ljava/lang/String;)Z',
+  );
+
+  static final _putAllStrings =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (jni$_.Pointer<jni$_.Void>, jni$_.Pointer<jni$_.Void>)
+                >,
+              )
+            >
+          >('globalEnv_CallStaticBooleanMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  static bool putAllStrings(String name, String json) {
+    final jName = name.toJString();
+    final jJson = json.toJString();
+    try {
+      final classRef = _class.reference;
+      final nameRef = jName.reference;
+      final jsonRef = jJson.reference;
+      return _putAllStrings(
+        classRef.pointer,
+        _id_putAllStrings.pointer,
+        nameRef.pointer,
+        jsonRef.pointer,
+      ).boolean;
+    } finally {
+      jName.release();
+      jJson.release();
+    }
+  }
+
   static final _id_removeValue = _class.staticMethodId(
     r'removeValue',
     r'(Ljava/lang/String;Ljava/lang/String;)Z',
@@ -822,6 +923,52 @@ abstract final class _AndroidMmkvBindings {
     } finally {
       jName.release();
       jKey.release();
+    }
+  }
+
+
+  static final _id_removeValues = _class.staticMethodId(
+    r'removeValues',
+    r'(Ljava/lang/String;Ljava/lang/String;)Z',
+  );
+
+  static final _removeValues =
+      jni$_.ProtectedJniExtensions.lookup<
+            jni$_.NativeFunction<
+              jni$_.JniResult Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+                jni$_.VarArgs<
+                  (jni$_.Pointer<jni$_.Void>, jni$_.Pointer<jni$_.Void>)
+                >,
+              )
+            >
+          >('globalEnv_CallStaticBooleanMethod')
+          .asFunction<
+            jni$_.JniResult Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+            )
+          >();
+
+  static bool removeValues(String name, String keysJson) {
+    final jName = name.toJString();
+    final jKeys = keysJson.toJString();
+    try {
+      final classRef = _class.reference;
+      final nameRef = jName.reference;
+      final keysRef = jKeys.reference;
+      return _removeValues(
+        classRef.pointer,
+        _id_removeValues.pointer,
+        nameRef.pointer,
+        keysRef.pointer,
+      ).boolean;
+    } finally {
+      jName.release();
+      jKeys.release();
     }
   }
 
@@ -897,3 +1044,4 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 }
+

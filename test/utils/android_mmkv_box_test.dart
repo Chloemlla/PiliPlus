@@ -130,12 +130,12 @@ void main() {
     },
   );
 
-  test('failed batch replacement leaves cache and backend unchanged', () async {
+  test('failed batch putAll leaves cache and backend unchanged', () async {
     final store = _MemoryAndroidMmkvStore();
     final box = AndroidMmkvBackedBox<dynamic>('atomic_batch', store: store);
     await box.putAll(const {'first': 1, 'second': 2});
     final before = store.exportBox('atomic_batch');
-    store.failNextReplace = true;
+    store.failNextPutAll = true;
 
     await expectLater(
       box.putAll(const {'first': 10, 'third': 3}),
@@ -145,6 +145,27 @@ void main() {
     expect(box.toMap(), const {'first': 1, 'second': 2});
     expect(store.exportBox('atomic_batch'), before);
     await box.close();
+  });
+
+  test('putAll and deleteAll use incremental batch ops', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('batch_ops', store: store);
+    await box.putAll(const {'a': 1, 'b': 2, 'c': 3});
+    expect(store.putAllCount, 1);
+    expect(store.replaceCount, 0);
+
+    await box.deleteAll(const ['a', 'c']);
+    expect(store.removeAllCount, 1);
+    expect(box.toMap(), const {'b': 2});
+    expect(store.replaceCount, 0);
+    await box.close();
+  });
+
+  test('single-key getRaw does not require full export', () async {
+    final store = _MemoryAndroidMmkvStore();
+    store.putRaw('meta', 'k', 'v');
+    expect(store.getRaw('meta', 'k'), 'v');
+    expect(store.exportCount, 0);
   });
 
   test('model and typed values survive MMKV round trips', () async {
@@ -278,6 +299,11 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   final bool clearSucceeds;
   bool failNextReplace = false;
+  bool failNextPutAll = false;
+  int exportCount = 0;
+  int replaceCount = 0;
+  int putAllCount = 0;
+  int removeAllCount = 0;
   final Map<String, Map<String, String>> _boxes = {};
 
   @override
@@ -291,7 +317,10 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   }
 
   @override
-  String? exportBox(String name) => jsonEncode(_boxes[name] ?? const {});
+  String? exportBox(String name) {
+    exportCount++;
+    return jsonEncode(_boxes[name] ?? const {});
+  }
 
   @override
   String? getRaw(String name, String key) => _boxes[name]?[key];
@@ -303,8 +332,31 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   }
 
   @override
+  bool putAllRaw(String name, Map<String, String> entries) {
+    if (failNextPutAll) {
+      failNextPutAll = false;
+      return false;
+    }
+    putAllCount++;
+    final box = _boxes[name] ??= {};
+    box.addAll(entries);
+    return true;
+  }
+
+  @override
   bool removeRaw(String name, String key) {
     _boxes[name]?.remove(key);
+    return true;
+  }
+
+  @override
+  bool removeAllRaw(String name, Iterable<String> keys) {
+    removeAllCount++;
+    final box = _boxes[name];
+    if (box == null) return true;
+    for (final key in keys) {
+      box.remove(key);
+    }
     return true;
   }
 
@@ -314,6 +366,7 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
       failNextReplace = false;
       return false;
     }
+    replaceCount++;
     final decoded = jsonDecode(json) as Map<String, dynamic>;
     _boxes[name] = decoded.map(
       (key, value) => MapEntry(key, value as String),

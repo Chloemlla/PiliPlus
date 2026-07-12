@@ -187,7 +187,7 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                                     entry: entry,
                                     removeList: true,
                                   );
-                                  GStorage.watchProgress.delete(
+                                  GStorage.watchProgressStore.delete(
                                     entry.cid.toString(),
                                   );
                                 },
@@ -239,7 +239,7 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                       context: context,
                       title: const Text('确定删除？'),
                       onConfirm: () async {
-                        await GStorage.watchProgress.deleteAll(
+                        await GStorage.watchProgressStore.deleteAll(
                           pageInfo.entries.map((e) => e.cid.toString()),
                         );
                         _downloadService.deletePage(
@@ -382,3 +382,4 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
     );
   }
 }
+

@@ -80,7 +80,7 @@ class DownloadPageController extends GetxController
       title: const Text('确定删除选中视频？'),
       onConfirm: () async {
         SmartDialog.showLoading();
-        final watchProgress = GStorage.watchProgress;
+        final watchProgress = GStorage.watchProgressStore;
         for (final page in allChecked) {
           await watchProgress.deleteAll(
             page.entries.map((e) => e.cid.toString()),
@@ -100,3 +100,4 @@ class DownloadPageController extends GetxController
     );
   }
 }
+

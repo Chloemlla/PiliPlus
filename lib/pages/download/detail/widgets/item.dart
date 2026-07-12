@@ -210,7 +210,7 @@ class DetailItem extends StatelessWidget {
                     ListenableBuilder(
                       listenable: progress!,
                       builder: (_, _) {
-                        final progress = GStorage.watchProgress.get(
+                        final progress = GStorage.watchProgressStore.get(
                           cid.toString(),
                         );
                         if (progress != null) {
@@ -445,3 +445,4 @@ class DetailItem extends StatelessWidget {
     );
   }
 }
+

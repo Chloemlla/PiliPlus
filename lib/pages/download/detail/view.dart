@@ -172,7 +172,7 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
                                 removeList: true,
                               );
                             }
-                            GStorage.watchProgress.delete(entry.cid.toString());
+                            GStorage.watchProgressStore.delete(entry.cid.toString());
                           },
                           controller: this,
                         );
@@ -201,7 +201,7 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
         final isDeleteAll = allChecked.length == _downloadItems.length;
         await Future.wait([
           if (isDeleteAll) _closeSub(),
-          GStorage.watchProgress.deleteAll(
+          GStorage.watchProgressStore.deleteAll(
             allChecked.map((e) => e.cid.toString()),
           ),
           for (final entry in allChecked)
@@ -228,3 +228,4 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
     );
   }
 }
+

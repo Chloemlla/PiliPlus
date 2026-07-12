@@ -100,7 +100,10 @@ abstract final class GStorage {
       ).then((res) => watchProgress = res),
     ]);
     settingsStore = SettingsStore(setting, video);
-    watchProgressStore = WatchProgressStore(watchProgress);
+    watchProgressStore = WatchProgressStore(
+      watchProgress,
+      orderStore: localCache,
+    );
     await migrateSettingSecrets();
 
     if (setting.get(SettingBoxKey.saveReply, defaultValue: false) as bool) {
@@ -118,7 +121,10 @@ abstract final class GStorage {
     } else {
       reply = null;
     }
-    replyCacheStore = ReplyCacheStore(reply);
+    replyCacheStore = ReplyCacheStore(
+      reply,
+      orderStore: localCache,
+    );
   }
 
   static String exportAllSettings() {
@@ -267,3 +273,4 @@ abstract final class GStorage {
     }
   }
 }
+
