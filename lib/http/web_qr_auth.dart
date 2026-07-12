@@ -158,22 +158,31 @@ abstract final class WebQrAuthHttp {
     return params;
   }
 
-  static Options _options(Account account) => Options(
-    contentType: Headers.formUrlEncodedContentType,
-    headers: {
-      ...Constants.baseHeaders,
-      'app-key': 'android_hd',
-      'buvid': LoginUtils.buvid,
-      'env': 'prod',
-      'referer': _referer,
-      'user-agent': Constants.userAgent,
-      'x-bili-trace-id': Constants.traceId,
-    },
-    extra: {
-      'account': account,
-      RetryInterceptor.disableRetryKey: true,
-    },
-  );
+  static Options _options(Account account) {
+    final cookies = account.cookieJar.toList();
+    if (!cookies.any((cookie) => cookie.name == 'SESSDATA')) {
+      throw const WebQrAuthException(-101, '当前账号登录凭证不完整，请重新登录');
+    }
+    return Options(
+      contentType: Headers.formUrlEncodedContentType,
+      headers: {
+        ...Constants.baseHeaders,
+        'app-key': 'android_hd',
+        'buvid': LoginUtils.buvid,
+        'cookie': cookies
+            .map((cookie) => '${cookie.name}=${cookie.value}')
+            .join('; '),
+        'env': 'prod',
+        'referer': _referer,
+        'user-agent': Constants.userAgent,
+        'x-bili-trace-id': Constants.traceId,
+      },
+      extra: {
+        'account': account,
+        RetryInterceptor.disableRetryKey: true,
+      },
+    );
+  }
 
   static Map<String, Object?> _requireSuccess(Object? responseData) {
     final json = _stringMap(responseData);
