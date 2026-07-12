@@ -24,6 +24,7 @@ import 'package:pili_plus/pages/member_guard/view.dart';
 import 'package:pili_plus/pages/member_upower_rank/view.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/bili_colors.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/color_utils.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
@@ -278,13 +279,17 @@ class UserInfoCard extends StatelessWidget {
                     shape: .circle,
                     color: colorScheme.surface,
                   ),
-                  child: Icon(
-                    Icons.offline_bolt,
-                    color: card.officialVerify?.type == 0
-                        ? const Color(0xFFFFCC00)
-                        : Colors.lightBlueAccent,
-                    size: 18,
-                  ),
+                  child: card.officialVerify?.type == 0
+                      ? const Icon(
+                          Icons.offline_bolt,
+                          color: BiliColors.yellow,
+                          size: 18,
+                        )
+                      : const Icon(
+                          Icons.offline_bolt,
+                          color: Colors.lightBlueAccent,
+                          size: 18,
+                        ),
                 ),
               ),
               const TextSpan(text: ' '),

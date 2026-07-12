@@ -1,3 +1,4 @@
+import 'package:pili_plus/common/widgets/animated_multi_height.dart';
 import 'package:flutter/material.dart';
 
 class ExpandablePanel extends StatelessWidget {
@@ -102,6 +103,7 @@ class _AnimatedCrossState extends State<_AnimatedCross> {
     const Key kFirstChildKey = ValueKey<CrossFadeState>(.showFirst);
     const Key kSecondChildKey = ValueKey<CrossFadeState>(.showSecond);
 
+    final bool expand;
     final Key topKey;
     Widget topChild;
     final Key bottomKey;
@@ -109,30 +111,29 @@ class _AnimatedCrossState extends State<_AnimatedCross> {
 
     switch (widget.crossFadeState) {
       case .showFirst:
+        expand = false;
         topKey = kFirstChildKey;
         topChild = firstChild;
         bottomKey = kSecondChildKey;
         bottomChild = secondChild;
       case .showSecond:
+        expand = true;
         topKey = kSecondChildKey;
         topChild = secondChild;
         bottomKey = kFirstChildKey;
         bottomChild = firstChild;
     }
 
-    return ClipRect(
-      child: AnimatedSize(
-        clipBehavior: .none,
-        alignment: widget.alignment,
-        duration: widget.duration,
-        curve: widget.sizeCurve,
-        onEnd: _onEnd,
-        child: AnimatedCrossFade.defaultLayoutBuilder(
-          topChild,
-          topKey,
-          bottomChild,
-          bottomKey,
-        ),
+    return AnimatedMultiHeight(
+      duration: widget.duration,
+      curve: widget.sizeCurve,
+      onEnd: _onEnd,
+      expand: expand,
+      child: AnimatedCrossFade.defaultLayoutBuilder(
+        topChild,
+        topKey,
+        bottomChild,
+        bottomKey,
       ),
     );
   }
