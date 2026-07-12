@@ -61,12 +61,14 @@
 
 - `SealDownloadChannel`：安装检测、`startActivityForResult` 启动、打开/分享 `content_uri`
 - `SealDownloadStatusBridge`（Application 级）：接收定向状态广播，Dart 未就绪时排队，避免退后台丢终态
-- `SealDownloadUtils`：构造 bilibili 页 URL、订阅状态、完成居中成功卡片（打开 / 分享 / 关闭）
+- `SealDownloadUtils`：自有动画状态面板覆盖 launch → waiting → accepted → completed/failed/canceled（非裸 Toast）
+- 状态机防护：晚到的 Activity Result `needs_ui` / 空会话 `canceled` **不会回退**已进入 accepted 或完成态的面板
+- 「后台等待」关闭后仍保留 session 映射，终态广播可再次弹出完成面板
 - 启动时 `ensureListening` + `readyForStatus` 握手，引擎重连后可冲刷缓存事件
 - 非 Android 平台仍走原 `MediaExportUtils` 内置导出
 
-相关提交示例：`edb5ec38a`、`6512bd796`。  
-Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-call-guide.md)。
+相关提交示例：`edb5ec38a`、`6512bd796`、`938ddbebe`。  
+Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-call-guide.md)、[UI 路径终态](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-ui-path-status-callback.md)。
 
 ### 2. B 站网页二维码授权（Android）
 
@@ -132,7 +134,7 @@ Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/
 2. Seal：**设置 → Interface & interaction → External downloads** 开启外部委托
 3. 可选：Seal 开启 *Allow external auto-start*，并在 PiliPlus 开启「委托 Seal 时自动开始下载」
 4. 视频页三点菜单 → 下载视频 / 下载音频
-5. 完成态依赖 Seal L3 状态广播；UI 确认路径需 Seal 侧 watch 任务（详见 Seal 文档）
+5. 完成态依赖 Seal L3 状态广播；UI 确认后应看到「进行中 → 完成」动画面板自动切换（详见 Seal UI 路径文档）
 
 ### 说明
 

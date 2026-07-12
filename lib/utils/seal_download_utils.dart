@@ -189,6 +189,8 @@ abstract final class SealDownloadUtils {
 
     final session = _resolveSession(status);
     if (session != null) {
+      // Keep active pointer so late events still map after 后台等待.
+      _activeRequestId ??= session.requestId;
       await _applyStatusToSession(session, status);
       return;
     }
@@ -224,19 +226,33 @@ abstract final class SealDownloadUtils {
     return null;
   }
 
-  static Future<void> _applyStatusToSession(
+    static Future<void> _applyStatusToSession(
     _SealSession session,
     SealDownloadStatus status,
   ) async {
+    final current = session.phase.value;
     switch (status.status) {
       case 'accepted':
-        session.taskId = status.taskId;
+        // Never regress from a successful terminal phase.
+        if (current == SealPanelPhase.completed) break;
+        session.taskId = status.taskId ?? session.taskId;
         session.phase.value = SealPanelPhase.accepted;
         session.message.value = '已交给 Seal 下载，完成后将在此更新';
       case 'needs_ui':
+        // Activity Result often arrives after the user already confirmed in Seal
+        // (QuickDownloadActivity finishes later). Do not overwrite accepted/terminal.
+        if (current == SealPanelPhase.accepted ||
+            current.isTerminal ||
+            current == SealPanelPhase.waitingAuto) {
+          break;
+        }
         session.phase.value = SealPanelPhase.waitingUi;
         session.message.value = '已打开 Seal，请确认下载配置';
       case 'rejected':
+        if (current == SealPanelPhase.completed ||
+            current == SealPanelPhase.accepted) {
+          break;
+        }
         _finishSession(
           session,
           SealPanelPhase.rejected,
@@ -244,26 +260,46 @@ abstract final class SealDownloadUtils {
         );
       case 'completed':
         session.taskId = status.taskId ?? session.taskId;
-        session.contentUri = status.contentUri;
-        session.displayName = status.displayName;
-        session.mimeType = status.mimeType;
+        session.contentUri = status.contentUri ?? session.contentUri;
+        session.displayName = status.displayName ?? session.displayName;
+        session.mimeType = status.mimeType ?? session.mimeType;
         session.phase.value = SealPanelPhase.completed;
-        session.message.value = (status.contentUri?.isNotEmpty == true)
+        session.message.value = (session.contentUri?.isNotEmpty == true)
             ? '下载完成，可打开或分享文件'
             : '下载完成（文件在 Seal 中查看）';
       case 'failed':
+        if (current == SealPanelPhase.completed) break;
         _finishSession(
           session,
           SealPanelPhase.failed,
           message: status.userFacingErrorMessage ?? 'Seal 下载失败',
         );
       case 'canceled':
+        // Empty-session cancel (UI closed without enqueue) must not clobber
+        // a real accepted/completed task that already reported.
+        if (current == SealPanelPhase.accepted ||
+            current == SealPanelPhase.completed ||
+            current == SealPanelPhase.failed) {
+          break;
+        }
+        // If we already have a task id, prefer keeping in-progress over empty cancel.
+        if (session.taskId != null &&
+            session.taskId!.isNotEmpty &&
+            (status.taskId == null || status.taskId!.isEmpty)) {
+          break;
+        }
         _finishSession(
           session,
           SealPanelPhase.canceled,
           message: '已取消 Seal 下载',
         );
       case 'launched':
+        if (current == SealPanelPhase.accepted ||
+            current.isTerminal ||
+            current == SealPanelPhase.waitingUi ||
+            current == SealPanelPhase.waitingAuto) {
+          break;
+        }
         session.phase.value = session.autoStart
             ? SealPanelPhase.waitingAuto
             : SealPanelPhase.waitingUi;
@@ -274,6 +310,7 @@ abstract final class SealDownloadUtils {
     }
     await _showOrUpdatePanel(session);
   }
+
 
   static void _finishSession(
     _SealSession session,
@@ -356,14 +393,19 @@ abstract final class SealDownloadUtils {
 
   static Future<void> _closePanel(_SealSession session) async {
     await SmartDialog.dismiss(tag: _panelTag);
-    if (_activeRequestId == session.requestId) {
-      _activeRequestId = null;
+    // Keep mapping for late accepted/completed after user taps 后台等待.
+    if (_activeRequestId == null) {
+      _activeRequestId = session.requestId;
     }
-    // Keep session until terminal so late events can reopen if needed.
+    // Only drop terminal sessions after the user dismisses the final UI.
     if (session.phase.value.isTerminal) {
       _sessions.remove(session.requestId);
+      if (_activeRequestId == session.requestId) {
+        _activeRequestId = null;
+      }
     }
   }
+
 
   static Future<void> openContentUri({
     required String uri,
