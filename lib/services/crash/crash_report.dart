@@ -166,15 +166,29 @@ class CrashReport {
       json['processName'],
       'pid:${(json['pid'] as num?)?.toInt() ?? 0}',
     );
+    final recentEvents = [
+      for (final event in json['recentEvents'] as List<dynamic>? ?? const [])
+        if (event.toString().trim().isNotEmpty)
+          _context(event, '', maxLength: 180),
+    ];
+    final capturedSystemInfo = _text(json['systemInfo'], '');
     final nativeInfo = _sanitize(
       <String>[
         systemInfo,
+        if (capturedSystemInfo.isNotEmpty) capturedSystemInfo,
         'Captured app: ${_text(json['appVersion'], 'unknown')}',
         'Captured Android: ${_text(json['androidRelease'], 'unknown')} '
             '(SDK ${json['sdk'] ?? 'unknown'})',
         'Captured device: ${_text(json['manufacturer'], 'unknown')} '
             '${_text(json['model'], 'unknown')}',
         'Captured fingerprint: ${_text(json['fingerprint'], 'unknown')}',
+        if (json['authorName'] != null)
+          'Crash SDK author: ${_text(json['authorName'], 'unknown')}',
+        if (json['authorUrl'] != null)
+          'Crash SDK author URL: ${_text(json['authorUrl'], 'unknown')}',
+        if (json['authorFingerprint'] != null)
+          'Crash SDK fingerprint: ${_text(json['authorFingerprint'], 'unknown')}',
+        if (json['capture'] != null) 'Capture path: ${_text(json['capture'], 'unknown')}',
         if (json['status'] != null) 'Exit status: ${json['status']}',
         if (json['importance'] != null)
           'Exit importance: ${json['importance']}',
@@ -183,12 +197,23 @@ class CrashReport {
       ].join('\n'),
     );
     return CrashReport(
-      reportId: _reportId(
-        crashedAtMillis,
-        exceptionType,
-        rootCause,
-        stackTrace,
-      ),
+      reportId: () {
+        final provided = json['reportId']?.toString().trim();
+        if (provided != null && provided.isNotEmpty) return provided;
+        final recordId = json['recordId']?.toString().trim();
+        // Prefer lumen-crash report IDs; keep generated IDs for exit staging files.
+        if (recordId != null &&
+            recordId.isNotEmpty &&
+            json['capture']?.toString() == 'lumen_crash') {
+          return recordId;
+        }
+        return _reportId(
+          crashedAtMillis,
+          exceptionType,
+          rootCause,
+          stackTrace,
+        );
+      }(),
       crashedAtMillis: crashedAtMillis,
       crashedAtText: _formatDateTime(
         DateTime.fromMillisecondsSinceEpoch(crashedAtMillis),
@@ -199,7 +224,7 @@ class CrashReport {
       processName: processName,
       systemInfo: nativeInfo,
       stackTrace: stackTrace,
-      recentEvents: const [],
+      recentEvents: recentEvents,
       source: source,
       severity: CrashSeverity.parse(json['severity']),
       sessionId: _context('native:$processName:$crashedAtMillis', 'native'),

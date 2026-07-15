@@ -99,6 +99,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      # Prefer a PAT with read:packages for Chloemlla/Project-Lumen when GITHUB_TOKEN cannot read cross-repo packages.
+      GITHUB_TOKEN: ${{ secrets.LUMEN_CRASH_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -144,6 +149,33 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Resolve lumen-crash version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              "https://api.github.com/repos/Chloemlla/Project-Lumen/releases?per_page=100" \
+            | jq -r '
+                [.[]
+                  | select(.draft == false)
+                  | select(.tag_name | startswith("lumen-crash-v"))
+                ]
+                | sort_by(.published_at // .created_at)
+                | reverse
+                | .[0].tag_name
+                | sub("^lumen-crash-v"; "")
+              '
+          )"
+          if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
+            echo "::error::No lumen-crash release found"
+            exit 1
+          fi
+          echo "Resolved lumen-crash version: ${VERSION}"
+          echo "LUMEN_CRASH_VERSION=${VERSION}" >> "$GITHUB_ENV"
 
       - name: Apply Patch
         shell: pwsh

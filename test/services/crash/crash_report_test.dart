@@ -97,5 +97,37 @@ void main() {
       expect(report.stackTrace, 'native stack');
       expect(report.isFatalCandidate, isTrue);
     });
+
+    test('imports lumen-crash bridge payload with author metadata', () {
+      final report = CrashReport.fromNative({
+        'recordId': 'a1b2c3d4e5f6',
+        'timestamp': 2000,
+        'source': 'android_uncaught',
+        'severity': 'fatal',
+        'module': 'MainActivity',
+        'reason': 'uncaught_exception',
+        'exceptionType': 'java.lang.RuntimeException',
+        'message': 'boom',
+        'threadName': 'main',
+        'processName': 'com.chloemlla.piliplus',
+        'stackTrace': 'java.lang.RuntimeException: boom',
+        'systemInfo': 'App: PiliPlus',
+        'recentEvents': ['12:00:00.000  LumenCrash installed'],
+        'authorName': 'ChloeMlla',
+        'authorUrl': 'https://github.com/Chloemlla/',
+        'authorFingerprint': 'abc',
+        'capture': 'lumen_crash',
+      }, systemInfo: 'current system');
+
+      expect(report.source, CrashSource.androidUncaught);
+      expect(report.severity, CrashSeverity.fatal);
+      expect(report.module, 'MainActivity');
+      expect(report.reportId, 'a1b2c3d4e5f6');
+      expect(report.recentEvents, ['12:00:00.000  LumenCrash installed']);
+      expect(report.systemInfo, contains('App: PiliPlus'));
+      expect(report.systemInfo, contains('Crash SDK author: ChloeMlla'));
+      expect(report.systemInfo, contains('Capture path: lumen_crash'));
+      expect(report.isFatalCandidate, isTrue);
+    });
   });
 }

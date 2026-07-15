@@ -23,4 +23,16 @@ abstract final class NativeCrashBridge {
       'recordIds': recordIds,
     });
   }
+
+  static Future<Map<String, dynamic>?> getLumenPendingReport() async {
+    if (!Platform.isAndroid) return null;
+    final report = await _channel.invokeMethod<Object?>('getLumenPendingReport');
+    if (report is! Map) return null;
+    return report.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  static Future<void> clearLumenPendingReport() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('clearLumenPendingReport');
+  }
 }

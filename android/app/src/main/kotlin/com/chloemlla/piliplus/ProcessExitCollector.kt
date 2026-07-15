@@ -78,7 +78,6 @@ internal object ProcessExitCollector {
 
     private fun isReportable(info: ApplicationExitInfo): Boolean {
         return when (info.reason) {
-            ApplicationExitInfo.REASON_CRASH,
             ApplicationExitInfo.REASON_CRASH_NATIVE,
             ApplicationExitInfo.REASON_ANR,
             ApplicationExitInfo.REASON_INITIALIZATION_FAILURE,

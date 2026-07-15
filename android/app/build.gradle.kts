@@ -31,7 +31,8 @@ android {
 
     defaultConfig {
         applicationId = "com.chloemlla.piliplus"
-        minSdk = maxOf(flutter.minSdkVersion, 23)
+        // lumen-crash requires minSdk 26.
+        minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = targetAndroidSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -105,12 +106,18 @@ flutter {
 
 dependencies {
     val cameraXVersion = "1.6.1"
+    val lumenCrashVersion =
+        providers.gradleProperty("lumenCrashVersion")
+            .orElse(providers.environmentVariable("LUMEN_CRASH_VERSION"))
+            .orElse("0.1.0")
+            .get()
 
     implementation("androidx.camera:camera-camera2:$cameraXVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
     implementation("androidx.camera:camera-view:$cameraXVersion")
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.tencent:mmkv-static:1.3.14")
+    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion")
 }
 
 baselineProfile {

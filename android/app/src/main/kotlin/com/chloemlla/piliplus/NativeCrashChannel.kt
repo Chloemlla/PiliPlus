@@ -1,6 +1,7 @@
 package com.chloemlla.piliplus
 
 import android.content.Context
+import com.chloemlla.lumen.crash.LumenCrash
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -26,6 +27,14 @@ internal class NativeCrashChannel(
                     NativeCrashStore.acknowledge(context, recordIds)
                     result.success(null)
                 }
+                "getLumenPendingReport" -> {
+                    val report = runCatching { LumenCrash.loadPendingReport() }.getOrNull()
+                    result.success(report?.let(::lumenReportMap))
+                }
+                "clearLumenPendingReport" -> {
+                    runCatching { LumenCrash.clearPendingReport() }
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         } catch (exception: Exception) {
@@ -35,6 +44,44 @@ internal class NativeCrashChannel(
 
     fun dispose() {
         channel.setMethodCallHandler(null)
+    }
+
+    private fun lumenReportMap(report: com.chloemlla.lumen.crash.CrashReport): Map<String, Any?> {
+        return mapOf(
+            "recordId" to report.reportId,
+            "timestamp" to report.crashedAtMillis,
+            "source" to "android_uncaught",
+            "severity" to "fatal",
+            "module" to moduleFrom(report.exceptionType, report.stackTrace),
+            "reason" to "uncaught_exception",
+            "exceptionType" to report.exceptionType,
+            "message" to report.rootCause,
+            "threadName" to report.threadName,
+            "processName" to report.processName,
+            "stackTrace" to report.stackTrace,
+            "systemInfo" to report.systemInfo,
+            "recentEvents" to report.recentEvents,
+            "authorName" to report.authorName,
+            "authorUrl" to report.authorUrl,
+            "authorFingerprint" to report.authorFingerprint,
+            "capture" to "lumen_crash",
+        )
+    }
+
+    private fun moduleFrom(exceptionType: String, stackTrace: String): String {
+        for (line in stackTrace.lineSequence()) {
+            val marker = "com.chloemlla.piliplus."
+            val index = line.indexOf(marker)
+            if (index < 0) continue
+            val className = line.substring(index + marker.length)
+                .substringBefore('(')
+                .substringBefore('$')
+                .substringBefore('#')
+                .trim()
+            if (className.isEmpty()) continue
+            return className.substringBefore('.')
+        }
+        return exceptionType.substringAfterLast('.').ifBlank { "android" }
     }
 
     private companion object {

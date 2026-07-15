@@ -182,6 +182,7 @@ abstract final class CrashReporter {
 
   static Future<void> _importNativeReports() async {
     try {
+      await _importLumenPendingReport();
       final reports = await NativeCrashBridge.getPendingReports();
       final acknowledged = <String>[];
       for (final json in reports) {
@@ -203,6 +204,17 @@ abstract final class CrashReporter {
     } catch (_) {
       // Native crash import is best-effort; pending files remain for next launch.
     }
+  }
+
+  static Future<void> _importLumenPendingReport() async {
+    final json = await NativeCrashBridge.getLumenPendingReport();
+    if (json == null) return;
+    final report = CrashReport.fromNative(
+      json,
+      systemInfo: CrashReportSystemInfo.cached,
+    );
+    CrashReportStore.saveSync(report, makePending: true);
+    await NativeCrashBridge.clearLumenPendingReport();
   }
 
   static void _flushBufferedReports() {

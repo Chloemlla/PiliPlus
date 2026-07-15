@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.os.Process
-import android.util.Log
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
@@ -15,32 +14,7 @@ internal object NativeCrashStore {
     private const val MAX_REPORTS = 12
     private const val MAX_MESSAGE_LENGTH = 4096
     private const val MAX_STACK_LENGTH = 131_072
-    private const val MAX_THREAD_NAME_LENGTH = 256
     private val recordSequence = AtomicLong()
-
-    fun writeUncaught(context: Context, thread: Thread, error: Throwable) {
-        val timestamp = System.currentTimeMillis()
-        val record = baseRecord(context, timestamp, "android_uncaught").apply {
-            put("severity", "fatal")
-            put("module", moduleFrom(error))
-            put("reason", "uncaught_exception")
-            put("exceptionType", error.javaClass.name)
-            put(
-                "message",
-                sanitizeAndTruncate(error.message ?: error.toString(), MAX_MESSAGE_LENGTH),
-            )
-            put(
-                "threadName",
-                sanitizeAndTruncate(thread.name, MAX_THREAD_NAME_LENGTH),
-            )
-            put("threadId", thread.id)
-            put(
-                "stackTrace",
-                sanitizeAndTruncate(Log.getStackTraceString(error), MAX_STACK_LENGTH),
-            )
-        }
-        writeRecord(context, record)
-    }
 
     fun writeProcessExit(
         context: Context,
@@ -55,9 +29,6 @@ internal object NativeCrashStore {
         processName: String,
         trace: String,
     ) {
-        if (reason == "java_crash" &&
-            hasNearbyUncaught(context, timestamp, processName)
-        ) return
         val record = baseRecord(context, timestamp, "android_exit_info").apply {
             put("severity", "fatal")
             put("module", "android_process")
@@ -152,35 +123,6 @@ internal object NativeCrashStore {
 
     private fun reportDirectory(context: Context) =
         File(context.noBackupFilesDir, DIRECTORY_NAME).apply { mkdirs() }
-
-    private fun hasNearbyUncaught(
-        context: Context,
-        timestamp: Long,
-        processName: String,
-    ): Boolean {
-        return reportDirectory(context)
-            .listFiles { file -> file.extension == "json" }
-            ?.any { file ->
-                try {
-                    val json = JSONObject(file.readText())
-                    json.optString("source") == "android_uncaught" &&
-                        json.optString("processName") == processName &&
-                        kotlin.math.abs(json.optLong("timestamp") - timestamp) <= 5000
-                } catch (_: Exception) {
-                    false
-                }
-            }
-            ?: false
-    }
-
-    private fun moduleFrom(error: Throwable): String {
-        for (frame in error.stackTrace) {
-            val className = frame.className
-            if (!className.startsWith("com.chloemlla.piliplus.")) continue
-            return className.removePrefix("com.chloemlla.piliplus.").substringBefore('.')
-        }
-        return "android"
-    }
 
     private fun appVersion(context: Context): String {
         return try {
