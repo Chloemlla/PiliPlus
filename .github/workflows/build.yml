@@ -241,11 +241,24 @@ jobs:
       - name: Generate Baseline Profile
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 35
-          target: google_apis
+          # aosp_atd + API 34 boots more reliably on GHA than API 35 google_apis.
+          api-level: 34
+          target: aosp_atd
           arch: x86_64
           profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: >-
+            -no-window
+            -gpu swiftshader_indirect
+            -no-snapshot
+            -no-snapshot-save
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+            -netdelay none
+            -netspeed full
           script: gradle -p android -Pdart-defines="$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)" :app:generateBaselineProfile --no-daemon --stacktrace
 
       - name: Validate Baseline Profile
