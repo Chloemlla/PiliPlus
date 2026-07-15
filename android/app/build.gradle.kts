@@ -117,6 +117,10 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraXVersion")
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.tencent:mmkv-static:1.3.14")
+    // lumen-crash publishes Compose artifacts without versions (BOM-managed).
+    // Host must import the same Compose BOM so api deps resolve.
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation(composeBom)
     implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion")
 }
 
