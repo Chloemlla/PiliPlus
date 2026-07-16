@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:math' as math;
 
+import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/utils/page_utils.dart';
@@ -14,9 +14,8 @@ import 'package:get/get.dart';
 
 /// Delegates video/audio downloads to Seal via the L3 external download protocol.
 ///
-/// The entire lifecycle is presented by a self-owned animated status panel
-/// (launch → waiting → accepted → completed/failed/canceled), instead of bare
-/// toasts.
+/// The entire lifecycle is presented by a compact self-owned status panel
+/// (waiting → accepted → completed/failed/canceled), instead of bare toasts.
 abstract final class SealDownloadUtils {
   static const _channel = MethodChannel('pili_plus/seal_download');
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
@@ -370,8 +369,8 @@ abstract final class SealDownloadUtils {
       keepSingle: true,
       clickMaskDismiss: false,
       backType: SmartBackType.normal,
-      animationType: SmartAnimationType.scale,
-      animationTime: const Duration(milliseconds: 320),
+      animationType: SmartAnimationType.centerFade_otherSlide,
+      animationTime: const Duration(milliseconds: 220),
       builder: (context) {
         return _SealStatusPanel(
           session: session,
@@ -608,83 +607,40 @@ class _SealStatusPanel extends StatefulWidget {
 }
 
 class _SealStatusPanelState extends State<_SealStatusPanel>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
+  static const _panelRadius = BorderRadius.all(Radius.circular(18));
+  static const _stepLabels = <String>['确认', '下载', '完成'];
+
   late final AnimationController _enter = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 520),
-  );
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  )..repeat(reverse: true);
-  late final AnimationController _success = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 780),
-  );
-  late final AnimationController _shake = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 480),
-  );
-
-  late final Animation<double> _scale = CurvedAnimation(
-    parent: _enter,
-    curve: Curves.easeOutBack,
+    duration: const Duration(milliseconds: 220),
   );
   late final Animation<double> _fade = CurvedAnimation(
     parent: _enter,
-    curve: const Interval(0, 0.55, curve: Curves.easeOut),
+    curve: Curves.easeOutCubic,
   );
-
-  SealPanelPhase? _lastPhase;
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 0.04),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
 
   @override
   void initState() {
     super.initState();
-    widget.session.phase.addListener(_onPhase);
-    widget.session.message.addListener(_onMessage);
+    widget.session.phase.addListener(_onChanged);
+    widget.session.message.addListener(_onChanged);
     _enter.forward();
-    _onPhase();
   }
 
   @override
   void dispose() {
-    widget.session.phase.removeListener(_onPhase);
-    widget.session.message.removeListener(_onMessage);
+    widget.session.phase.removeListener(_onChanged);
+    widget.session.message.removeListener(_onChanged);
     _enter.dispose();
-    _pulse.dispose();
-    _success.dispose();
-    _shake.dispose();
     super.dispose();
   }
 
-  void _onMessage() {
-    if (mounted) setState(() {});
-  }
-
-  void _onPhase() {
-    final phase = widget.session.phase.value;
-    if (_lastPhase == phase) {
-      if (mounted) setState(() {});
-      return;
-    }
-    _lastPhase = phase;
-    if (phase.isBusy) {
-      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
-    } else {
-      _pulse
-        ..stop()
-        ..value = 0;
-    }
-    if (phase.isSuccess) {
-      _success
-        ..reset()
-        ..forward();
-    }
-    if (phase.isError || phase == SealPanelPhase.canceled) {
-      _shake
-        ..reset()
-        ..forward();
-    }
+  void _onChanged() {
     if (mounted) setState(() {});
   }
 
@@ -695,99 +651,135 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
     final session = widget.session;
     final phase = session.phase.value;
     final hasUri = session.contentUri?.isNotEmpty == true;
+    final statusColor = _statusColor(cs, phase);
 
     return FadeTransition(
       opacity: _fade,
-      child: ScaleTransition(
-        scale: _scale,
-        child: AnimatedBuilder(
-          animation: _shake,
-          builder: (context, child) {
-            final t = _shake.value;
-            final dx = math.sin(t * math.pi * 6) * (1 - t) * 10;
-            return Transform.translate(offset: Offset(dx, 0), child: child);
-          },
-          child: Material(
-            color: Colors.transparent,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
+      child: SlideTransition(
+        position: _slide,
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        cs.surfaceContainerHigh,
-                        Color.alphaBlend(
-                          cs.primary.withValues(alpha: 0.06),
-                          cs.surfaceContainerHigh,
-                        ),
-                      ],
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: _panelRadius,
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.5),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: cs.shadow.withValues(alpha: 0.22),
-                        blurRadius: 28,
-                        offset: const Offset(0, 14),
+                        color: cs.shadow.withValues(alpha: 0.14),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
                       ),
                     ],
-                    border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.35),
-                    ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _buildHero(cs, phase),
-                        const SizedBox(height: 18),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          child: Text(
-                            _headline(phase, session),
-                            key: ValueKey('h-$phase'),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _StatusBadge(
+                              icon: _iconFor(phase),
+                              color: statusColor,
+                              busy: phase.isBusy,
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          child: Text(
-                            session.message.value,
-                            key: ValueKey(session.message.value),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                              height: 1.35,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 180),
+                                    switchInCurve: Curves.easeOut,
+                                    switchOutCurve: Curves.easeIn,
+                                    child: Text(
+                                      _headline(phase),
+                                      key: ValueKey('h-$phase'),
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 180),
+                                    child: Text(
+                                      session.message.value,
+                                      key: ValueKey(session.message.value),
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         _metaChip(theme, cs, session),
                         if (phase == SealPanelPhase.completed &&
                             (session.displayName?.isNotEmpty == true ||
                                 hasUri)) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            session.displayName ?? '已完成文件',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
+                          const SizedBox(height: 10),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest.withValues(
+                                alpha: 0.55,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.insert_drive_file_outlined,
+                                    size: 16,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      session.displayName ?? '已完成文件',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 18),
+                        if (!phase.isError &&
+                            phase != SealPanelPhase.canceled) ...[
+                          const SizedBox(height: 14),
+                          _StepTrack(
+                            activeIndex: _stepIndex(phase),
+                            labels: _stepLabels,
+                            color: statusColor,
+                            completed: phase.isSuccess,
+                          ),
+                        ],
+                        const SizedBox(height: 14),
                         _buildActions(theme, cs, phase, hasUri),
                       ],
                     ),
@@ -801,99 +793,42 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
     );
   }
 
-  Widget _buildHero(ColorScheme cs, SealPanelPhase phase) {
-    final icon = _iconFor(phase);
-    final colors = _gradientFor(cs, phase);
-
-    Widget core = Container(
-      width: 84,
-      height: 84,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.last.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Icon(icon, size: 40, color: cs.onPrimary),
-    );
-
-    if (phase.isBusy) {
-      core = AnimatedBuilder(
-        animation: _pulse,
-        builder: (context, child) {
-          final s = 0.94 + (_pulse.value * 0.08);
-          final glow = 0.18 + (_pulse.value * 0.22);
-          return Transform.scale(
-            scale: s,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.first.withValues(alpha: glow),
-                    blurRadius: 24 + _pulse.value * 10,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-          );
-        },
-        child: core,
-      );
-    }
-
-    if (phase.isSuccess) {
-      core = ScaleTransition(
-        scale: CurvedAnimation(parent: _success, curve: Curves.elasticOut),
-        child: core,
-      );
-    }
-
-    return core;
-  }
-
   Widget _metaChip(ThemeData theme, ColorScheme cs, _SealSession session) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: cs.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            session.extractAudio
-                ? Icons.music_note_rounded
-                : Icons.movie_outlined,
-            size: 16,
-            color: cs.onPrimaryContainer,
-          ),
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: Text(
-              '${session.kindLabel} · ${session.mediaTitle}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: cs.onPrimaryContainer,
-                fontWeight: FontWeight.w600,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: cs.secondaryContainer.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                session.extractAudio
+                    ? Icons.music_note_rounded
+                    : Icons.movie_outlined,
+                size: 15,
+                color: cs.onSecondaryContainer,
               ),
-            ),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Text(
+                  '${session.kindLabel} · ${session.mediaTitle}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cs.onSecondaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -906,15 +841,14 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
   ) {
     if (phase == SealPanelPhase.notInstalled) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => widget.onInstall(),
-              icon: const Icon(Icons.download_rounded),
-              label: const Text('前往安装 Seal'),
-            ),
+          FilledButton.icon(
+            onPressed: () => widget.onInstall(),
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('前往安装 Seal'),
           ),
+          const SizedBox(height: 4),
           TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
         ],
       );
@@ -922,21 +856,24 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
 
     if (phase == SealPanelPhase.completed) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (hasUri)
             Row(
               children: [
                 Expanded(
-                  child: FilledButton.tonal(
+                  child: FilledButton.tonalIcon(
                     onPressed: () => widget.onOpen(),
-                    child: const Text('打开'),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: const Text('打开'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: FilledButton(
+                  child: FilledButton.icon(
                     onPressed: () => widget.onShare(),
-                    child: const Text('分享'),
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text('分享'),
                   ),
                 ),
               ],
@@ -944,10 +881,12 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
           else
             Text(
               '可在 Seal 下载列表中查看文件',
+              textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
             ),
+          const SizedBox(height: 4),
           TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
         ],
       );
@@ -955,23 +894,24 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
 
     if (phase.isBusy) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              minHeight: 6,
+              minHeight: 4,
               backgroundColor: cs.surfaceContainerHighest,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             phase == SealPanelPhase.waitingUi
-                ? '确认后可返回本页，完成后将自动更新'
+                ? '确认后可返回本页，完成后会自动更新'
+                : phase == SealPanelPhase.accepted
+                ? '可继续浏览，下载完成后会自动更新'
                 : '请稍候，状态会自动刷新',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.outline,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
           ),
           TextButton(
             onPressed: () => widget.onClose(),
@@ -981,21 +921,25 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
       );
     }
 
-    // failed / rejected / canceled
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.tonal(
-            onPressed: () => widget.onClose(),
-            child: const Text('知道了'),
-          ),
-        ),
-      ],
+    return FilledButton.tonal(
+      onPressed: () => widget.onClose(),
+      child: const Text('知道了'),
     );
   }
 
-  String _headline(SealPanelPhase phase, _SealSession session) {
+  int _stepIndex(SealPanelPhase phase) {
+    return switch (phase) {
+      SealPanelPhase.launching ||
+      SealPanelPhase.waitingUi ||
+      SealPanelPhase.waitingAuto =>
+        0,
+      SealPanelPhase.accepted => 1,
+      SealPanelPhase.completed => 2,
+      _ => 0,
+    };
+  }
+
+  String _headline(SealPanelPhase phase) {
     return switch (phase) {
       SealPanelPhase.launching => '等待在 Seal 中确认',
       SealPanelPhase.waitingUi => '等待在 Seal 中确认',
@@ -1023,16 +967,183 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
     };
   }
 
-  List<Color> _gradientFor(ColorScheme cs, SealPanelPhase phase) {
-    if (phase.isSuccess) {
-      return [cs.primary, cs.tertiary];
-    }
-    if (phase.isError) {
-      return [cs.error, cs.errorContainer];
-    }
-    if (phase == SealPanelPhase.canceled) {
-      return [cs.outline, cs.secondary];
-    }
-    return [cs.primary, cs.secondary];
+  Color _statusColor(ColorScheme cs, SealPanelPhase phase) {
+    if (phase.isSuccess) return cs.primary;
+    if (phase.isError) return cs.error;
+    if (phase == SealPanelPhase.canceled) return cs.outline;
+    return cs.primary;
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.icon,
+    required this.color,
+    required this.busy,
+  });
+
+  final IconData icon;
+  final Color color;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.22)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (busy)
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.8,
+                  color: color.withValues(alpha: 0.55),
+                ),
+              ),
+            Icon(icon, size: 22, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepTrack extends StatelessWidget {
+  const _StepTrack({
+    required this.activeIndex,
+    required this.labels,
+    required this.color,
+    required this.completed,
+  });
+
+  final int activeIndex;
+  final List<String> labels;
+  final Color color;
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < labels.length; i++) ...[
+              if (i > 0)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: (completed || i <= activeIndex)
+                            ? color.withValues(alpha: 0.75)
+                            : cs.outlineVariant.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+              _StepDot(
+                index: i,
+                activeIndex: activeIndex,
+                color: color,
+                completed: completed,
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var i = 0; i < labels.length; i++)
+              Expanded(
+                child: Text(
+                  labels[i],
+                  textAlign: i == 0
+                      ? TextAlign.left
+                      : i == labels.length - 1
+                      ? TextAlign.right
+                      : TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: (completed || i <= activeIndex)
+                        ? cs.onSurface
+                        : cs.outline,
+                    fontWeight: (completed || i == activeIndex)
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StepDot extends StatelessWidget {
+  const _StepDot({
+    required this.index,
+    required this.activeIndex,
+    required this.color,
+    required this.completed,
+  });
+
+  final int index;
+  final int activeIndex;
+  final Color color;
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final done = completed || index < activeIndex;
+    final active = !completed && index == activeIndex;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: active ? 18 : 12,
+      height: active ? 18 : 12,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done || active ? color : cs.surfaceContainerHighest,
+        border: Border.all(
+          color: done || active
+              ? color
+              : cs.outlineVariant.withValues(alpha: 0.8),
+          width: active ? 2 : 1,
+        ),
+      ),
+      child: done
+          ? Icon(
+              Icons.check_rounded,
+              size: active ? 12 : 10,
+              color: cs.onPrimary,
+            )
+          : active
+          ? Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: cs.onPrimary,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
+    );
   }
 }
