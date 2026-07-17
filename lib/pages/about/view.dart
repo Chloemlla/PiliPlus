@@ -11,6 +11,7 @@ import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
+import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
@@ -173,6 +174,16 @@ Commit Hash: ${BuildConfig.commitHash}''',
             leading: const Icon(Icons.code),
             title: const Text('Source Code'),
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
+          ),
+          ListTile(
+            onTap: () => FirstLaunchOssNoticeService.openManual(),
+            leading: const Icon(Icons.balance_outlined),
+            title: const Text('开源声明与第三方鸣谢'),
+            subtitle: Text(
+              '源码地址、永久免费提示、协议与依赖鸣谢',
+              style: subTitleStyle,
+            ),
+            trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
           ),
           ListTile(
             onTap: () => FirstLaunchImprovementsGuideService.openManual(),

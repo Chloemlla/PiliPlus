@@ -1,15 +1,13 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/pages/onboarding/improvements_guide_page.dart';
-import 'package:pili_plus/services/android_first_launch_permission_service.dart';
+import 'package:pili_plus/pages/onboarding/oss_notice_page.dart';
+import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 
-/// First-install fullscreen guide that explains Chloemlla/main branch deltas.
-class FirstLaunchImprovementsGuideGate extends StatefulWidget {
-  const FirstLaunchImprovementsGuideGate({
+/// First-install open-source notice (source URL, free notice, licenses).
+class FirstLaunchOssNoticeGate extends StatefulWidget {
+  const FirstLaunchOssNoticeGate({
     required this.child,
     super.key,
   });
@@ -17,18 +15,17 @@ class FirstLaunchImprovementsGuideGate extends StatefulWidget {
   final Widget child;
 
   @override
-  State<FirstLaunchImprovementsGuideGate> createState() =>
-      _FirstLaunchImprovementsGuideGateState();
+  State<FirstLaunchOssNoticeGate> createState() =>
+      _FirstLaunchOssNoticeGateState();
 }
 
-class _FirstLaunchImprovementsGuideGateState
-    extends State<FirstLaunchImprovementsGuideGate> {
+class _FirstLaunchOssNoticeGateState extends State<FirstLaunchOssNoticeGate> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      FirstLaunchImprovementsGuideService.maybeShow();
+      FirstLaunchOssNoticeService.maybeShow();
     });
   }
 
@@ -36,44 +33,36 @@ class _FirstLaunchImprovementsGuideGateState
   Widget build(BuildContext context) => widget.child;
 }
 
-abstract final class FirstLaunchImprovementsGuideService {
+abstract final class FirstLaunchOssNoticeService {
   static bool _isRunning = false;
   static bool _isRetryScheduled = false;
 
   static bool get hasSeen {
     return GStorage.setting.get(
-      SettingBoxKey.firstLaunchImprovementsGuideSeen,
+      SettingBoxKey.firstLaunchOssNoticeSeen,
       defaultValue: false,
     );
   }
 
   static Future<void> markSeen() {
     return GStorage.setting.put(
-      SettingBoxKey.firstLaunchImprovementsGuideSeen,
+      SettingBoxKey.firstLaunchOssNoticeSeen,
       true,
     );
   }
 
   static Future<void> _markSeenAndContinueStartup() async {
     await markSeen();
-    if (Platform.isAndroid) {
-      // Kick the permission flow after the guide is dismissed.
-      await AndroidFirstLaunchPermissionService.requestMissingPermissions();
-    }
+    // Next first-launch step: branch improvements guide (then permissions).
+    await FirstLaunchImprovementsGuideService.maybeShow();
   }
 
-  /// Show only when the first-launch flag is unset.
   static Future<void> maybeShow() async {
     if (_isRunning || hasSeen) {
-      return;
-    }
-
-    // Wait for the open-source notice to finish first.
-    final ossSeen = GStorage.setting.get(
-      SettingBoxKey.firstLaunchOssNoticeSeen,
-      defaultValue: false,
-    );
-    if (ossSeen != true) {
+      // Already acknowledged; still allow later first-launch steps.
+      if (hasSeen) {
+        await FirstLaunchImprovementsGuideService.maybeShow();
+      }
       return;
     }
 
@@ -88,13 +77,12 @@ abstract final class FirstLaunchImprovementsGuideService {
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
-          builder: (_) => ImprovementsGuidePage(
+          builder: (_) => OssNoticePage(
             markSeenOnClose: true,
             onFinished: _markSeenAndContinueStartup,
           ),
         ),
       );
-      // If the route was dismissed without onFinished, still mark once shown.
       if (!hasSeen) {
         await _markSeenAndContinueStartup();
       }
@@ -103,8 +91,6 @@ abstract final class FirstLaunchImprovementsGuideService {
     }
   }
 
-  /// Always open the guide (from About), without changing first-launch semantics
-  /// unless [markAsSeen] is true.
   static Future<void> openManual({bool markAsSeen = true}) async {
     final navigator = _currentNavigator();
     if (navigator == null) {
@@ -113,7 +99,7 @@ abstract final class FirstLaunchImprovementsGuideService {
     await navigator.push<void>(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => ImprovementsGuidePage(
+        builder: (_) => OssNoticePage(
           markSeenOnClose: markAsSeen,
           onFinished: markAsSeen ? markSeen : null,
         ),

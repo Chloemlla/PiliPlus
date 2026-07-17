@@ -23,6 +23,7 @@ import 'package:pili_plus/services/crash/crash_report_handler.dart';
 import 'package:pili_plus/services/crash/crash_reporter.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
+import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
@@ -380,6 +381,7 @@ class MyApp extends StatelessWidget {
       );
     }
     child = InAppMiniPlayerLayer(child: child);
+    child = FirstLaunchOssNoticeGate(child: child);
     child = FirstLaunchImprovementsGuideGate(child: child);
     if (Platform.isAndroid) {
       child = AndroidFirstLaunchPermissionGate(child: child);
