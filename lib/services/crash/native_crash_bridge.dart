@@ -35,4 +35,16 @@ abstract final class NativeCrashBridge {
     if (!Platform.isAndroid) return;
     await _channel.invokeMethod<void>('clearLumenPendingReport');
   }
+
+  /// Best-effort forward of Flutter breadcrumbs into lumen-crash native buffer.
+  static Future<void> recordBreadcrumb(String event) async {
+    if (!Platform.isAndroid) return;
+    final value = event.trim();
+    if (value.isEmpty) return;
+    try {
+      await _channel.invokeMethod<void>('recordBreadcrumb', {'event': value});
+    } catch (_) {
+      // Native breadcrumb bridge must never break product flows.
+    }
+  }
 }

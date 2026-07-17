@@ -28,11 +28,18 @@ internal class NativeCrashChannel(
                     result.success(null)
                 }
                 "getLumenPendingReport" -> {
-                    val report = runCatching { LumenCrash.loadPendingReport() }.getOrNull()
+                    val report = LumenCrash.loadPendingReportSafely()
                     result.success(report?.let(::lumenReportMap))
                 }
                 "clearLumenPendingReport" -> {
                     runCatching { LumenCrash.clearPendingReport() }
+                    result.success(null)
+                }
+                "recordBreadcrumb" -> {
+                    val event = call.argument<String>("event")?.trim().orEmpty()
+                    if (event.isNotEmpty()) {
+                        runCatching { LumenCrash.recordBreadcrumb(event) }
+                    }
                     result.success(null)
                 }
                 else -> result.notImplemented()

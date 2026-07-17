@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:collection';
 
+import 'package:pili_plus/services/crash/native_crash_bridge.dart';
 import 'package:pili_plus/utils/log_redactor.dart';
 import 'package:flutter/widgets.dart';
 
@@ -13,7 +15,11 @@ abstract final class CrashBreadcrumbs {
     if (_events.length >= _maxEvents) {
       _events.removeFirst();
     }
-    _events.addLast('${_formatTime(DateTime.now())}  ${_truncate(sanitized)}');
+    final entry = '${_formatTime(DateTime.now())}  ${_truncate(sanitized)}';
+    _events.addLast(entry);
+    // Forward raw event text; native SDK adds its own timestamp/sanitizer.
+    // Fire-and-forget: do not block UI on channel round-trips.
+    unawaited(NativeCrashBridge.recordBreadcrumb(sanitized));
   }
 
   static List<String> snapshot() => List.unmodifiable(_events);
