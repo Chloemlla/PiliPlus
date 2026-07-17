@@ -20,6 +20,14 @@ internal class NativeCrashChannel(
         try {
             when (call.method) {
                 "getPendingReports" -> result.success(NativeCrashStore.pendingReports(context))
+                "awaitExitHistoryReady" -> {
+                    val timeoutMs = (call.argument<Number>("timeoutMs")?.toLong() ?: 2_500L)
+                        .coerceIn(0L, 10_000L)
+                    val ready = runCatching {
+                        ProcessExitCollector.awaitReady(timeoutMs)
+                    }.getOrDefault(true)
+                    result.success(ready)
+                }
                 "acknowledgeReports" -> {
                     val recordIds = call.argument<List<*>>("recordIds")
                         ?.filterIsInstance<String>()

@@ -6,6 +6,8 @@ import android.content.Context
 import android.os.Build
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 internal object ProcessExitCollector {
     private const val PREFERENCES_NAME = "native_crash_exit_state"
@@ -13,11 +15,36 @@ internal object ProcessExitCollector {
     private const val LAST_EXIT_KEYS = "last_exit_keys"
     private const val MAX_TRACE_BYTES = 131_072
     private const val FIRST_COLLECTION_WINDOW_MS = 10 * 60 * 1000L
+    private const val READY_TIMEOUT_MS = 2_500L
+
+    private val readyLatch = CountDownLatch(1)
+
+    /**
+     * Wait until cold-start exit-history collection has finished (or timed out).
+     * Prevents Flutter from importing an empty pending set while collection is still writing.
+     */
+    fun awaitReady(timeoutMs: Long = READY_TIMEOUT_MS): Boolean {
+        if (Build.VERSION.SDK_INT < 30) {
+            return true
+        }
+        return try {
+            readyLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
+    }
 
     fun collect(context: Context) {
-        if (Build.VERSION.SDK_INT < 30) return
+        if (Build.VERSION.SDK_INT < 30) {
+            markReady()
+            return
+        }
         try {
-            val activityManager = context.getSystemService(ActivityManager::class.java) ?: return
+            val activityManager = context.getSystemService(ActivityManager::class.java)
+            if (activityManager == null) {
+                return
+            }
             val exits = activityManager.getHistoricalProcessExitReasons(
                 context.packageName,
                 0,
@@ -73,6 +100,14 @@ internal object ProcessExitCollector {
             // Exit history is best-effort and varies across OEM implementations.
         } catch (_: LinkageError) {
             // Older or modified frameworks may not expose the expected API surface.
+        } finally {
+            markReady()
+        }
+    }
+
+    private fun markReady() {
+        while (readyLatch.count > 0L) {
+            readyLatch.countDown()
         }
     }
 

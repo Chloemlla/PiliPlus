@@ -36,6 +36,20 @@ abstract final class NativeCrashBridge {
     await _channel.invokeMethod<void>('clearLumenPendingReport');
   }
 
+  /// Wait briefly for Android exit-history staging to finish writing.
+  static Future<bool> awaitExitHistoryReady({int timeoutMs = 2500}) async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final ready = await _channel.invokeMethod<bool>('awaitExitHistoryReady', {
+        'timeoutMs': timeoutMs,
+      });
+      return ready ?? true;
+    } catch (_) {
+      // If the method is unavailable, continue import immediately.
+      return true;
+    }
+  }
+
   /// Best-effort forward of Flutter breadcrumbs into lumen-crash native buffer.
   static Future<void> recordBreadcrumb(String event) async {
     if (!Platform.isAndroid) return;

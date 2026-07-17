@@ -203,6 +203,9 @@ abstract final class CrashReporter {
 
   static Future<void> _importNativeReports() async {
     try {
+      // Exit-history collection runs on a background Application thread. Wait a
+      // short bounded time so ANR/native staging is visible to this cold start.
+      await NativeCrashBridge.awaitExitHistoryReady();
       await _importLumenPendingReport();
       final reports = await NativeCrashBridge.getPendingReports();
       final acknowledged = <String>[];
