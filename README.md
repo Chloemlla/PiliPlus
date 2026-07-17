@@ -41,135 +41,251 @@
 
 > 仓库：[Chloemlla/PiliPlus](https://github.com/Chloemlla/PiliPlus)  
 > 上游参考：[bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) · 更早：[orz12/PiliPalaX](https://github.com/orz12/PiliPalaX) / [guozhigq/pilipala](https://github.com/guozhigq/pilipala)  
-> 对比基线：`upstream/main`（当前对齐 `c1aeaca09` · Release 2.1.0） → 本仓库 `main`  
-> 下列条目按主题汇总本分支相对上游的持续增量，覆盖用户可见能力与工程侧改动；不是完整 commit 列表。
+> 对比基线：`upstream/main`（当前对齐 `c1aeaca09` · Release 2.1.0） → 本仓库 `main`（约 98 个本分支增量提交）  
+> 本文按**功能模块**汇总本分支相对上游的主要改进：用户可见行为、关键实现入口、平台范围与工程保障。  
+> **不是**完整 changelog / 提交列表；上游已有的通用能力见下文 `feat` / `功能` 清单。
+
+### 0. 总览
+
+| 模块 | 平台 | 用户侧收益 | 关键入口 |
+|------|------|------------|----------|
+| Seal 外部下载委托 | Android | 详情页下载走 Seal 队列，可回传完成/失败状态 | `SealDownloadUtils` / `SealDownloadChannel` |
+| B 站网页二维码授权 | Android | 扫网页登录码授权本机账号 | `WebQrAuthPage` / `WebQrAuthHttp` / `QrScannerActivity` |
+| 崩溃捕获与历史 | Android + Flutter | 可过滤噪声、本地查看/分享崩溃 | `CrashReporter` / `lumen-crash` |
+| MMKV 热存储 | Android | 设置/进度/缓存更快，大箱懒加载 | `AndroidMmkvBackedBox` |
+| 密钥旁路与隐私 | 全平台（部分 Android） | Cookie/密钥不再明文落库；复制 Cookie 需系统验证 | `AccountSecretStore` / `AndroidCredentialAuth` |
+| 媒体导出 / 系统媒体控件 | 多平台 / Android | 内置导出 + 系统通知/MediaSession | `MediaExportUtils` / `NativeMediaService` |
+| 剪贴板视频链接 | 移动端 | 识别 bilibili / b23 链接并可选自动打开 | `ClipboardVideoLinkHandler` |
+| 首启权限 / 包标识 / 更新源 | Android | 首启权限引导；包名与更新源指向本仓库 | `AndroidFirstLaunchPermissionGate` / `Constants` |
+| CI / Baseline Profile | 工程 | 冷启 profile 生成、校验与发布流硬化 | `:baselineprofile` / `.github/workflows/build.yml` |
+
+---
 
 ### 1. 视频下载委托 Seal（Android）
 
-将详情页三点菜单中的 **「下载视频 / 下载音频」** 从应用内直链导出，改为委托给 [Seal](https://github.com/Chloemlla/Seal)（yt-dlp 下载器）处理队列与落盘。
+#### 问题与目标
+上游详情页「下载视频 / 下载音频」更偏应用内直链导出；复杂清晰度、音视频分离与队列管理成本高。本分支将 **菜单下载** 委托给 [Seal](https://github.com/Chloemlla/Seal)（yt-dlp 前端），由 Seal 负责解析、队列与落盘，PiliPlus 负责发起与状态呈现。
 
-| 项目 | 说明 |
-|------|------|
-| 入口 | 视频详情三点菜单：下载视频 / 下载音频 |
-| 不变 | **离线缓存** 仍走应用内下载服务 |
-| 协议 | Seal L2/L3：`com.chloemlla.seal.action.DOWNLOAD` + `DOWNLOAD_STATUS` |
-| 链接 | UGC：`https://www.bilibili.com/video/{bvid}`；PGC：`.../bangumi/play/ep{epId}` |
-| 音频 | 走 Seal QuickDownload，并传 `extract_audio=true` |
-| 未安装 | Toast「请先安装 Seal」并打开 [Seal Releases](https://github.com/Chloemlla/Seal/releases) |
-| 设置 | **委托 Seal 时自动开始下载**（默认关；需 Seal 开启 Allow external auto-start） |
-| 面板 | 自有动画状态机：等待确认 → 进行中 → 完成 / 失败 / 取消（跳过「正在启动 Seal」） |
+#### 用户可见行为
+- 视频详情三点菜单：**下载视频 / 下载音频**
+- **离线缓存** 仍走应用内 `DownloadService`，与 Seal 委托互不替代
+- 未安装 Seal：Toast「请先安装 Seal」并打开 [Seal Releases](https://github.com/Chloemlla/Seal/releases)
+- 已安装：拉起 Seal，并显示 PiliPlus 自有动画状态面板  
+  `等待确认 / 自动入队 → 进行中 → 完成 / 失败 / 取消`  
+  （**跳过**「正在启动 Seal」中间态，减少闪屏感）
+- 设置项：**委托 Seal 时自动开始下载**（默认关；需 Seal 开启 Allow external auto-start）
+- 完成态可打开 / 分享 `content_uri`；关闭「后台等待」后仍可在终态广播到达时再弹出完成面板
 
-实现要点：
+#### 协议与链接
+| 项 | 说明 |
+|----|------|
+| 动作 | L2/L3：`com.chloemlla.seal.action.DOWNLOAD` + 状态广播 `DOWNLOAD_STATUS` |
+| UGC | `https://www.bilibili.com/video/{bvid}` |
+| PGC | `https://www.bilibili.com/bangumi/play/ep{epId}` |
+| 音频 | Seal QuickDownload + `extract_audio=true` |
+| 会话 | 每次委托生成 `requestId`，Dart session map 跟踪生命周期 |
 
-- `SealDownloadChannel`：安装检测、`startActivityForResult` 启动、打开/分享 `content_uri`
-- `SealDownloadStatusBridge`（Application 级）：接收定向状态广播，Dart 未就绪时排队，避免退后台丢终态
-- `SealDownloadUtils`：自有动画状态面板覆盖 等待确认 → 进行中 → 完成/失败（跳过「正在启动 Seal」阶段）
-- 状态机防护：晚到的 Activity Result `needs_ui` / 空会话 `canceled` **不会回退**已进入 accepted 或完成态的面板
-- 「后台等待」关闭后仍保留 session 映射，终态广播可再次弹出完成面板
-- 启动时 `ensureListening` + `readyForStatus` 握手，引擎重连后可冲刷缓存事件
-- 非 Android 平台仍走原 `MediaExportUtils` 内置导出
+#### 实现结构
+- `SealDownloadUtils`：Dart 侧门面；`ensureListening` / `readyForStatus` 握手；面板状态机；防回退逻辑
+- `SealDownloadChannel`：安装检测、`startActivityForResult`、打开/分享结果文件
+- `SealDownloadStatusBridge`（`PiliPlusApplication` 安装）：Application 级接收定向状态广播；Dart 引擎未就绪时排队，避免退后台丢终态
+- 状态机防护：晚到的 Activity Result `needs_ui` / 空会话 `canceled` **不会回退**已进入 `accepted` 或终态的面板
+- 非 Android：仍走 `MediaExportUtils` 内置导出
 
-相关提交示例：`edb5ec38a`、`6512bd796`、`938ddbebe`、`7c350f2c4`、`6f8dfff08`、`a253eb378`。  
-Seal 侧联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-call-guide.md)、[UI 路径终态](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-ui-path-status-callback.md)。
+#### 相关提交方向
+`edb5ec38a` 委托入口 · `6512bd796` L3 状态接收加固 · `938ddbebe` 自有动画面板 · `7c350f2c4` 跳过 launching 阶段 · `6f8dfff08` 音频 QuickDownload · `a253eb378` 面板 UX 收紧。
+
+Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-call-guide.md)、[UI 路径终态](https://github.com/Chloemlla/Seal/blob/main/docs/third-party-ui-path-status-callback.md)。
+
+---
 
 ### 2. B 站网页二维码授权（Android）
 
-支持扫描 / 识别 B 站官方网页登录二维码并完成授权，替代不稳定链路、补齐重试与会话完整性。
+#### 问题与目标
+支持扫描 / 识别 **B 站官方网页登录二维码**，用本机已登录账号完成网页端授权；补齐 URL 校验、会话完整性、重试与扫码链路稳定性。
 
-能力概览：
+#### 用户可见行为
+- 入口页：`扫描网页登录`（`WebQrAuthPage`）
+- 输入方式：相机实时扫码 / 相册识别 / 手动粘贴二维码链接
+- 解析成功后展示场景信息（环境、是否临时登录、短信二次验证等）
+- 可确认授权；失败可重试；权限被永久拒绝时引导打开系统设置
+- 授权成功后与现有账号体系打通，登录态接口可继续使用
 
-- 入口：Web QR 授权页（相机实时扫码 / 相册识别）
-- URL 解析与场景模型：`WebQrAuthHttp` + `models_new/web_qr_auth`（host / 显式端口 / 场景参数）
-- 扫码链路：Android `QrScannerActivity` + `qr_scanner.dart`；延后初始化 ML Kit，替换不稳定解码路径
-- 会话：失败可重试，授权时附着账号 Cookie；启动扫码时加固权限与 native 崩溃防护
-- 安全：日志脱敏（`LogRedactor`），降低 Cookie / 凭据泄露风险
-- 结果：授权后与现有账号体系打通，可正常访问登录态接口
+#### 实现结构
+| 层 | 组件 | 职责 |
+|----|------|------|
+| UI | `lib/pages/web_qr_auth/*` | 阶段机 `idle/loading/ready/confirming/success/error`、场景面板、扫码源面板 |
+| HTTP | `WebQrAuthHttp` | passport 场景查询 / 确认 / 短信与极验相关接口；请求附着账号 Cookie |
+| 模型 | `models_new/web_qr_auth` | 二维码 key、场景、环境参数；host / 显式默认端口校验 |
+| Native 扫码 | `QrScannerActivity` + CameraX / ZXing 等 | 延后初始化、替换不稳定 ML Kit 解码路径，降低启动扫码 native 崩溃 |
+| Dart 通道 | `AndroidQrScanner` | 相机权限、错误码映射、相册解码 |
 
-相关方向：`web_qr_auth` / `fix(qr): ...` 系列。
+#### 安全与可观测
+- 授权链路 cookie / verify code 经 `LogRedactor` 脱敏
+- `CrashBreadcrumbs` 记录扫码阶段（start / decoded / cancelled / error），便于对照崩溃历史
+
+#### 相关提交方向
+`8bc531050` 场景模型 · `437f741fd` 解码路径替换 · `ec8ac7588` 延后初始化 · `3ce6a1278` 附着 Cookie · 以及多轮 `fix(qr)` 重试 / 端口 / 权限加固。
+
+---
 
 ### 3. 崩溃捕获、过滤与历史
 
-跨 Flutter / Android 的故障可观测性，避免噪声诊断冲刷真实问题。
+#### 问题与目标
+播放器与网络层会产生大量**不可操作**诊断噪声；同时需要跨 Flutter / Android 保留可复盘的真实故障，并在启动时提示最近严重崩溃。
 
+#### 用户可见行为
+- 本地崩溃历史：列表、详情（系统信息、堆栈、近期事件）、分享
+- 启动阶段若存在上一会话严重崩溃，可提示查看
+- 常见 media-kit / TCP / SSL seek 等诊断默认过滤，避免误报淹没真实问题
+
+#### 模块分工
 | 模块 | 作用 |
 |------|------|
-| `CrashReporter` / `CrashReportHandler` | 统一接入 Flutter 未处理异常与部分启动失败 |
-| `CrashReportFilter` | 过滤非可操作的播放器诊断，减少误报 |
+| `CrashReporter` / `CrashReportHandler` | 安装 FlutterError / PlatformDispatcher 钩子；同步/异步记录 |
+| `CrashReportFilter` | 过滤 SSL seek、TCP 断流、AMediaCodec 等非可操作诊断 |
 | `CrashReportStore` / `CrashReportArchive` | 有界本地历史、合并归档语义 |
-| Crash report UI | 列表查看、分享详情（系统信息、堆栈、近期事件） |
-| `lumen-crash` | Android native 捕获桥：`PiliPlusApplication` 安装 SDK，`NativeCrashChannel` 导入 pending report |
+| `CrashBreadcrumbs` / `CrashModuleResolver` | 导航与业务面包屑、模块定位 |
+| `lumen-crash` | Android native 捕获桥 |
+| `NativeCrashBridge` / `NativeCrashChannel` | 导入 pending report / lumen report 并 acknowledge |
+| `ProcessExitCollector` | 后台线程采集进程退出历史 |
 
-实现要点：
+#### lumen-crash 接入要点
+- 依赖：`com.chloemlla.lumen:lumen-crash`（Compose BOM 对齐 api 依赖）
+- 安装点：`PiliPlusApplication.attachBaseContext` / `onCreate`（幂等；失败安装 **不阻断** 冷启动，适配 Baseline Profile / CI）
+- Dart 侧：`CrashReporter.ensureInitialized()` 导入 native / lumen pending report
+- `minSdk` 抬升至 ≥ 26（与 lumen-crash 对齐）
 
-- Flutter 与 Android 双侧捕获；启动阶段可提示最近严重崩溃
-- **lumen-crash**（`com.chloemlla.lumen:lumen-crash`）作为 Android 进程内捕获桥，失败安装不阻断冷启动（对 Baseline Profile / CI 冷启友好）
-- 进程退出采集（`ProcessExitCollector`）与 breadcrumb / module 解析，便于定位业务面
-- 相关单测：`crash_report_*`、归档合并语义
+#### 相关提交方向
+`a85ea371b` 双侧捕获 · `fb82add62` 过滤历史 · `cff4affcb` 崩溃 UI · `6c179a79b` lumen-crash · `15b490691` Compose BOM · 相关单测 `test/services/crash/*`。
 
-相关方向：`feat(crash)` / `fix(crash)` / `6c179a79b` lumen-crash 接入。
+---
 
 ### 4. Android 存储：MMKV 热路径
 
-Android 热数据从纯 Hive 读写迁移为 **MMKV 后端**，非 Android 或 MMKV 不可用时仍回落 Hive。
+#### 问题与目标
+将 Android 热读写从纯 Hive 迁移为 **MMKV 后端**，降低设置、缓存、观看进度等路径延迟；大箱支持懒加载与 LRU 上限，避免启动期全量解码。
 
-- 覆盖 box：`userInfo`、`localCache`、`setting`、`historyWord`、`video`、`watchProgress`、`reply` 等
-- `AndroidMmkvBackedBox` + Java bridge（`AndroidMmkv`）：迁移 marker、codec 编解码、批量写
-- **lazy open / staged open / lighter close**，观看进度与 reply 等大箱可懒加载
-- 批量写与 LRU 上限优化，降低启动与热路径开销
-- 解码失败时避免误用过期 Hive 快照覆盖新 MMKV 数据
-- 设置导入校验、账号导入一致性、WebDAV 备份安全性增强
-- 单测：`test/utils/android_mmkv_box_test.dart` 等
+#### 覆盖范围
+- 典型 box：`userInfo`、`localCache`、`setting`、`historyWord`、`video`
+- 大箱懒加载：`watchProgress`、`reply`（`AndroidMmkvLoadMode.lazy`）
+- 非 Android / MMKV 不可用：透明回落 Hive
 
-相关方向：`a70f5d90e`、`298b811a7`、`7d7c1bd96`、`655aa5c24` 及后续 fix。
+#### 实现要点
+- `openAndroidMmkvBackedBox` + `AndroidMmkvBackedBox`：迁移 marker、codec 编解码、批量写、lazy key 集合
+- 迁移失败 / 解码失败时 **不** 用过期 Hive 快照覆盖已迁移 MMKV 数据
+- `BoundedStringKeyLru` + `WatchProgressStore` / `ReplyCacheStore`：写序近似 LRU，控制大箱膨胀
+- staged open / lighter close，减少启动与退出开销
+- 设置导入校验、账号导入一致性、WebDAV 备份安全性同步增强
+
+#### 相关提交方向
+`a70f5d90e` 热存储 · `298b811a7` 完整迁移 · `7d7c1bd96` 批量写/LRU · `655aa5c24` lazy/staged open · 单测 `test/utils/android_mmkv_box_test.dart`、`bounded_string_key_lru_test.dart`。
+
+---
 
 ### 5. 密钥、隐私与日志安全
 
-- `AccountSecretStore` / `SettingSecretStore`：账号 access key、WebDAV 密码等敏感字段迁出普通 Hive 明文，改为独立加密 sidecar
-- 设置导出 / 备份路径排除或校验敏感字段，降低明文外泄面
-- Android **复制登录 Cookie** 需通过系统锁屏 / PIN 验证（`AndroidCredentialAuth`）
-- `LogRedactor`：日志与崩溃上下文中的敏感字段脱敏
-- 相关单测：`account_secret_store_test`、`setting_secret_store_test`、`log_redactor_test`、`settings_backup_validator_test`
+#### 敏感字段旁路存储
+- `AccountSecretStore`：账号 cookies / accessKey / refresh 独立 AES-GCM 加密文件（`account_secrets.json.enc` + key 文件）
+- `SettingSecretStore`：设置侧敏感串（如 WebDAV 密码）同样旁路加密
+- 账号 adapter 读写时组合公开字段 + secret sidecar；导出 / 备份路径排除或校验敏感字段
+
+#### 用户操作保护
+- Android **复制登录 Cookie**（隐私设置）：必须先过 `AndroidCredentialAuth`（系统锁屏 / PIN / 生物识别）
+- 未登录、验证失败、系统验证不可用均有明确 Toast
+
+#### 日志与崩溃脱敏
+- `LogRedactor`：Cookie / SESSDATA / access_key / refresh_token / 验证码 / 本地路径 / content URI 等统一替换为 `[REDACTED]` 或占位符
+- 崩溃报告与日志页面共享脱敏规则，降低分享报告时的凭据泄露面
+
+#### 相关单测
+`account_secret_store_test`、`setting_secret_store_test`、`log_redactor_test`、`settings_backup_validator_test`。
+
+---
 
 ### 6. 媒体导出与播放体验
 
-- 内置 `MediaExportUtils`：视频 MP4 直链导出 / 音频 DASH → `.m4a`（多分段等场景有明确失败提示）
-- **Android 视频菜单优先委托 Seal**；非 Android 或未走菜单委托时仍可用内置导出
-- 播放器网络流错误分类与中断重试（`stream_error` 相关契约与单测）
-- 音频心跳 / seek / 切轨时重置时长，减少异常上报
-- Android **NativeMediaService**：`MediaSession` + 前台媒体通知通道，补齐系统媒体控件
-- 下载服务：分段下载并发管理等稳定性调整
+#### 内置媒体导出（多平台）
+`MediaExportUtils`：
+- 视频：MP4 直链（durl，音视频合一；多分段明确失败提示）
+- 音频：当前 DASH 音频流导出为 `.m4a`
+- Android 详情菜单 **优先委托 Seal**；非 Android 或未走委托路径时仍可用内置导出
+
+#### 播放器稳定性
+- `PlPlayerStreamError`：区分网络打开失败 vs 中断断流，支撑中断重试
+- 音频心跳 / seek / 切轨时重置时长，减少异常时长上报
+- 下载服务分段并发管理等稳定性调整
+
+#### Android 系统媒体控件
+- `NativeMediaService`：`MediaSession` + 前台通知通道
+- `NativeMediaNotificationService`：Flutter ↔ native 动作桥（播放/暂停/上下首/快进退/倍速/弹幕/循环/睡眠定时等）
+- 系统媒体中心 / 通知栏可控制正在播放内容
+
+---
 
 ### 7. 剪贴板视频链接
 
-- `ClipboardVideoLinkHandler`：识别剪贴板 B 站视频链接（含 **b23 短链**）
-- 设置项 **自动打开剪贴板视频**（默认关）：回前台时检测并提示
-- 搜索提交、活动页打开前可识别链接，避免重复弹窗
-- 正在看视频时再打开剪贴板链接前二次确认
+#### 用户可见行为
+- 设置：**自动打开剪贴板视频**（默认关）
+- 回前台时检测剪贴板中的 B 站视频链接（含 **b23.tv 短链**，会解析跳转）
+- 搜索提交 / 活动页打开前可识别链接，避免重复弹窗
+- 当前已在视频页（`/videoV`）时再次打开剪贴板链接会二次确认
+- 同链 3 秒节流 + 会话内 link/videoKey 去重，防止连弹
+
+#### 实现
+- `ClipboardVideoLinkHandler` + 生命周期 observer
+- `IdUtils` 归一化 aid/bvid；`UrlUtils.parseRedirectUrl` 解析 b23
+
+---
 
 ### 8. 首启权限与 Android 包标识
 
-- `AndroidFirstLaunchPermissionGate`：首次启动权限引导（通知、相册/媒体、存储、亮度等，按系统版本适配）
-- 权限对话框等待 Navigator 就绪，避免无 context 崩溃
-- 应用包名 / namespace：`com.chloemlla.piliplus`（debug / dev 使用 applicationIdSuffix）
-- 更新检查与源码地址指向本仓库 `Chloemlla/PiliPlus`（`Constants.sourceCodeRepository` / GitHub Releases）
-- `minSdk` 抬升以适配 lumen-crash（≥ 26），target SDK 与 CI 依赖同步调整
+#### 首启权限引导
+- `AndroidFirstLaunchPermissionGate` / `AndroidFirstLaunchPermissionService`
+- 首次启动按系统版本请求通知、相册/媒体、存储、亮度等相关权限
+- 每项先说明原因；永久拒绝可引导应用设置
+- **必须等 Navigator 就绪**再弹窗，避免冷启无 context 崩溃；未完成则下次重试
+
+#### 包名、更新源与 SDK
+| 项 | 本分支 |
+|----|--------|
+| `applicationId` / `namespace` | `com.chloemlla.piliplus` |
+| debug / dev | `.debug` / `.dev` suffix |
+| 源码与更新 | `Constants.sourceCodeRepository = Chloemlla/PiliPlus`；检查更新走本仓库 Releases |
+| `minSdk` | `max(flutter.minSdk, 26)`（lumen-crash） |
+| 依赖 | MMKV、CameraX、ZXing、lumen-crash、ProfileInstaller 等 |
+
+---
 
 ### 9. CI / Baseline Profile / 发布工程
 
-- 增加 Android **Baseline Profile** 生成模块与 workflow 任务
-- 模拟器冷启 / ATD / AOSP 镜像选择、磁盘清理、产物归档与校验拆分
-- Baseline Profile 启动路径持续硬化（Flutter 模拟器与 ATD 上的启动崩溃规避）
-- Release APK 构建：磁盘空间清理、APK 重命名稳健化、workflow 英文命名、签名 / 私钥检测正则增强
-- 构建补丁：strip pub-cache manifest packages 等
-- 检查更新动作 pin、workflow dispatch 密钥写入条件修正
+#### Baseline Profile
+- 模块：`android/baselineprofile`（`BaselineProfileGenerator`）
+- workflow：Generate → Validate（`baseline-prof.txt` / `startup-prof.txt` 非空）→ Upload artifact
+- 合并策略：`mergeIntoMain = true`，构建期不自动生成，CI 显式任务生成
 
-### 10. 测试、质量与协作
+#### 冷启与模拟器硬化（近期重点）
+- Flutter 模拟器 / ATD / AOSP 默认镜像选择修正
+- 启动路径规避 lumen-crash 安装失败拖垮冷启
+- 磁盘清理、emulator boot 可靠化、产物归档拆分
+
+#### 发布与安全流水线
+- Release APK 重命名稳健化、workflow 英文命名
+- 签名 / 私钥检测正则增强；workflow dispatch 写密钥条件修正
+- strip pub-cache manifest packages 等 Android 补丁
+- 检查更新 action pin，降低供应链漂移
+
+---
+
+### 10. 测试、质量与协作工程
 
 - 持续 **merge upstream**，在保留本分支特性的前提下吸收上游修复
-- 新增 / 扩展单测：MMKV、密钥 store、崩溃归档过滤、Web QR 场景、网络策略、播放器 stream error、settings backup 等
+- 单测扩展：MMKV、密钥 store、崩溃归档/过滤、Web QR 场景、网络策略、播放器 stream error、settings backup、bounded task queue 等
 - `tool/check_import_boundaries.py`：导入边界检查
-- Trellis 任务流 / 规格文档（仓库内 `.trellis/`，默认本地）支撑 AI 协作开发
-- 分析器警告清理、局部 UI 一致性与数据安全修缮
+- 仓库内 Trellis 任务流 / 规格（`.trellis/`，默认本地）支撑 AI 协作开发
+- 分析器警告清理、局部 UI 与数据安全修缮
+
+---
 
 ### 使用提示（Seal 下载）
 
@@ -181,11 +297,12 @@ Android 热数据从纯 Hive 读写迁移为 **MMKV 后端**，非 Android 或 M
 
 ### 说明
 
-- 本列表**不是**完整 changelog，而是本分支相对上游的主要增量说明（约覆盖 `upstream/main..main` 的主题面）。
+- 本列表**不是**完整 changelog，而是本分支相对上游的**功能模块级**增量说明（覆盖 `upstream/main..main` 主要主题面）。
 - 上游已有的通用功能（推荐流、弹幕、动态、私信等）见下文 `feat` / `功能` 清单。
-- 若与上游行为冲突，以本仓库 `main` 与对应 commit 为准。
+- 若与上游行为冲突，以本仓库 `main` 与对应实现/commit 为准。
 
 ---
+
 ## refactor
 
 - [ ] gRPC [wip]
