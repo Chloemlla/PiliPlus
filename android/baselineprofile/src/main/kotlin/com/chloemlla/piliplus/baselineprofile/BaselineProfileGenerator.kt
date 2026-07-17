@@ -71,6 +71,9 @@ class BaselineProfileGenerator {
                 pressHome()
             }
 
+            // Drop prior noise so a failed attempt dumps only the newest evidence.
+            runCatching { device.executeShellCommand("logcat -c") }
+
             // Prefer startActivityAndWait when framestats work. On flaky GHA emulators
             // (especially Flutter first-frame), fall back to package visibility + pid checks.
             runCatching {
@@ -78,11 +81,17 @@ class BaselineProfileGenerator {
             }.onFailure { error ->
                 lastError = error.message
                 runCatching {
-                    device.executeShellCommand(
-                        "am start -W -n ${launchIntent.component?.flattenToShortString() ?: ""} " +
+                    val component = launchIntent.component?.flattenToShortString()
+                    val shellStart = if (!component.isNullOrBlank()) {
+                        "am start -W -n $component " +
                             "-a android.intent.action.MAIN " +
-                            "-c android.intent.category.LAUNCHER",
-                    )
+                            "-c android.intent.category.LAUNCHER"
+                    } else {
+                        "am start -W -p $TARGET_PACKAGE " +
+                            "-a android.intent.action.MAIN " +
+                            "-c android.intent.category.LAUNCHER"
+                    }
+                    device.executeShellCommand(shellStart)
                 }.onFailure { shellError ->
                     lastError = "${error.message}; am start failed: ${shellError.message}"
                 }
@@ -91,12 +100,28 @@ class BaselineProfileGenerator {
             val deadlineMillis = System.currentTimeMillis() + APP_VISIBLE_TIMEOUT_MILLIS
             var becameVisible = false
             var processStillRunning = false
+            var processSeenRunning = false
+            var processStableSinceMillis = 0L
             while (System.currentTimeMillis() < deadlineMillis) {
                 becameVisible = device.hasObject(By.pkg(TARGET_PACKAGE).depth(0))
                 processStillRunning = isTargetProcessRunning()
-                if (becameVisible && processStillRunning) {
-                    device.waitForIdle(IDLE_TIMEOUT_MILLIS)
-                    return
+                if (processStillRunning) {
+                    if (!processSeenRunning) {
+                        processSeenRunning = true
+                        processStableSinceMillis = System.currentTimeMillis()
+                    }
+                    val stableLongEnough =
+                        System.currentTimeMillis() - processStableSinceMillis >= PROCESS_STABLE_MILLIS
+                    // ATD/GHA images often miss package-depth UI and framestats even when
+                    // the process is alive and profileable. Prefer visibility, but accept a
+                    // settled process so macrobenchmark can still collect rules.
+                    if (stableLongEnough && (becameVisible || processSeenRunning)) {
+                        device.waitForIdle(IDLE_TIMEOUT_MILLIS)
+                        return
+                    }
+                } else {
+                    processSeenRunning = false
+                    processStableSinceMillis = 0L
                 }
                 device.waitForIdle(PROCESS_POLL_INTERVAL_MILLIS)
             }
@@ -105,7 +130,9 @@ class BaselineProfileGenerator {
 
         val logSnippet = runCatching {
             device.executeShellCommand(
-                "logcat -d -t 120 AndroidRuntime:E flutter:E FlutterJNI:E ActivityManager:I *:S",
+                "logcat -d -t 200 " +
+                    "AndroidRuntime:E DEBUG:E libc:E flutter:E FlutterJNI:E " +
+                    "ActivityManager:I WindowManager:I System.err:W *:S",
             ).trim()
         }.getOrDefault("")
 
@@ -147,6 +174,7 @@ class BaselineProfileGenerator {
         const val TARGET_PACKAGE = "com.chloemlla.piliplus"
         private const val LAUNCH_ATTEMPTS = 3
         private const val APP_VISIBLE_TIMEOUT_MILLIS = 45_000L
+        private const val PROCESS_STABLE_MILLIS = 5_000L
         private const val FIND_UI_TIMEOUT_MILLIS = 2_500L
         private const val IDLE_TIMEOUT_MILLIS = 2_000L
         private const val PROCESS_POLL_INTERVAL_MILLIS = 500L

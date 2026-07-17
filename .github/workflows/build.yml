@@ -241,12 +241,12 @@ jobs:
       - name: Generate Baseline Profile
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          # API 34 default is the plain AOSP image (system-images;android-34;default;x86_64).
-          # It is lighter than google_apis and more graphics-capable than aosp_atd.
-          # Do not use target: aosp — that package id is invalid and fails during SDK install.
-          # aosp_atd can boot, but Flutter first-frame framestats confirmation is flaky.
+          # API 34 aosp_atd boots more reliably on GHA than google_apis/default.
+          # plain default/AOSP can install but still hits ColorBuffer/process death under
+          # SwiftShader. ATD may miss framestats/UI depth signals, so the generator accepts
+          # a stable process as launch success. Never invent target names like `aosp`.
           api-level: 34
-          target: default
+          target: aosp_atd
           arch: x86_64
           profile: pixel_6
           disable-animations: true

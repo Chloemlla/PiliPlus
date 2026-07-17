@@ -30,28 +30,33 @@ class PiliPlusApplication : Application() {
 
     private fun installLumenCrashSdk() {
         if (LumenCrash.isInstalled()) return
-        val packageInfo = runCatching {
-            packageManager.getPackageInfo(packageName, 0)
-        }.getOrNull()
-        val versionName = packageInfo?.versionName?.takeIf { it.isNotBlank() } ?: "unknown"
-        val versionCode = packageInfo?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                it.longVersionCode.toInt()
-            } else {
-                @Suppress("DEPRECATION")
-                it.versionCode
-            }
-        } ?: 0
-        val appName = runCatching { getString(R.string.app_name) }.getOrDefault("PiliPlus")
-        LumenCrash.install(
-            this,
-            LumenCrashConfig(
-                appDisplayName = appName,
-                versionName = versionName,
-                versionCode = versionCode,
-                commitHash = "unknown",
-            ),
-        )
+        runCatching {
+            val packageInfo = runCatching {
+                packageManager.getPackageInfo(packageName, 0)
+            }.getOrNull()
+            val versionName = packageInfo?.versionName?.takeIf { it.isNotBlank() } ?: "unknown"
+            val versionCode = packageInfo?.let {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    it.longVersionCode.toInt()
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.versionCode
+                }
+            } ?: 0
+            val appName = runCatching { getString(R.string.app_name) }.getOrDefault("PiliPlus")
+            LumenCrash.install(
+                this,
+                LumenCrashConfig(
+                    appDisplayName = appName,
+                    versionName = versionName,
+                    versionCode = versionCode,
+                    commitHash = "unknown",
+                ),
+            )
+        }.onFailure {
+            // Crash capture is best-effort. A failed install must not abort process start,
+            // especially on cold CI baseline-profile launches.
+        }
     }
 
     private companion object {
