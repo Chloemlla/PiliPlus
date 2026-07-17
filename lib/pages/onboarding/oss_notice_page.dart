@@ -30,7 +30,8 @@ class _OssNoticePageState extends State<OssNoticePage> {
       await widget.onFinished?.call();
     } finally {
       if (mounted) {
-        Navigator.of(context).maybePop();
+        // Force-pop: first-launch uses PopScope(canPop: false), so maybePop is a no-op.
+        Navigator.of(context).pop();
       }
     }
   }

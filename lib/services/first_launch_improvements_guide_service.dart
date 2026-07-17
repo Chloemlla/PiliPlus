@@ -54,14 +54,6 @@ abstract final class FirstLaunchImprovementsGuideService {
     );
   }
 
-  static Future<void> _markSeenAndContinueStartup() async {
-    await markSeen();
-    if (Platform.isAndroid) {
-      // Kick the permission flow after the guide is dismissed.
-      await AndroidFirstLaunchPermissionService.requestMissingPermissions();
-    }
-  }
-
   /// Show only when the first-launch flag is unset.
   static Future<void> maybeShow() async {
     if (_isRunning || hasSeen) {
@@ -90,13 +82,16 @@ abstract final class FirstLaunchImprovementsGuideService {
           fullscreenDialog: true,
           builder: (_) => const ImprovementsGuidePage(
             markSeenOnClose: true,
-            onFinished: _markSeenAndContinueStartup,
+            onFinished: markSeen,
           ),
         ),
       );
-      // If the route was dismissed without onFinished, still mark once shown.
+      // Continue only after the guide route has been popped.
       if (!hasSeen) {
-        await _markSeenAndContinueStartup();
+        await markSeen();
+      }
+      if (Platform.isAndroid) {
+        await AndroidFirstLaunchPermissionService.requestMissingPermissions();
       }
     } finally {
       _isRunning = false;

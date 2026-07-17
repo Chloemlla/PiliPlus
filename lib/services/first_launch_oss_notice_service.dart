@@ -51,12 +51,6 @@ abstract final class FirstLaunchOssNoticeService {
     );
   }
 
-  static Future<void> _markSeenAndContinueStartup() async {
-    await markSeen();
-    // Next first-launch step: branch improvements guide (then permissions).
-    await FirstLaunchImprovementsGuideService.maybeShow();
-  }
-
   static Future<void> maybeShow() async {
     if (_isRunning || hasSeen) {
       // Already acknowledged; still allow later first-launch steps.
@@ -79,13 +73,15 @@ abstract final class FirstLaunchOssNoticeService {
           fullscreenDialog: true,
           builder: (_) => const OssNoticePage(
             markSeenOnClose: true,
-            onFinished: _markSeenAndContinueStartup,
+            onFinished: markSeen,
           ),
         ),
       );
+      // Continue only after the notice route has been popped.
       if (!hasSeen) {
-        await _markSeenAndContinueStartup();
+        await markSeen();
       }
+      await FirstLaunchImprovementsGuideService.maybeShow();
     } finally {
       _isRunning = false;
     }
