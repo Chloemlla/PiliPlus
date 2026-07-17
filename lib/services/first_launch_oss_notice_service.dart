@@ -77,7 +77,7 @@ abstract final class FirstLaunchOssNoticeService {
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
-          builder: (_) => OssNoticePage(
+          builder: (_) => const OssNoticePage(
             markSeenOnClose: true,
             onFinished: _markSeenAndContinueStartup,
           ),

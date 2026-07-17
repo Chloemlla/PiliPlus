@@ -176,7 +176,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
           ),
           ListTile(
-            onTap: () => FirstLaunchOssNoticeService.openManual(),
+            onTap: FirstLaunchOssNoticeService.openManual,
             leading: const Icon(Icons.balance_outlined),
             title: const Text('开源声明与第三方鸣谢'),
             subtitle: Text(
@@ -186,7 +186,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
             trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
           ),
           ListTile(
-            onTap: () => FirstLaunchImprovementsGuideService.openManual(),
+            onTap: FirstLaunchImprovementsGuideService.openManual,
             leading: const Icon(Icons.auto_stories_outlined),
             title: const Text('本分支改进说明'),
             subtitle: Text(

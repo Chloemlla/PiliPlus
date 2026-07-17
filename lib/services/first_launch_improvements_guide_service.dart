@@ -88,7 +88,7 @@ abstract final class FirstLaunchImprovementsGuideService {
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
-          builder: (_) => ImprovementsGuidePage(
+          builder: (_) => const ImprovementsGuidePage(
             markSeenOnClose: true,
             onFinished: _markSeenAndContinueStartup,
           ),
