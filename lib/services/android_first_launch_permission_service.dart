@@ -55,6 +55,16 @@ abstract final class AndroidFirstLaunchPermissionService {
       return;
     }
 
+    // Prefer the branch improvements guide before permission dialogs.
+    // Guide completion will re-enter this method; do not busy-retry each frame.
+    final guideSeen = GStorage.setting.get(
+      SettingBoxKey.firstLaunchImprovementsGuideSeen,
+      defaultValue: false,
+    );
+    if (guideSeen != true) {
+      return;
+    }
+
     if (_currentNavigator() == null) {
       _scheduleRetry();
       return;

@@ -13,6 +13,7 @@ abstract final class SettingBoxKey {
       defaultPicQa = 'defaultPicQa',
       androidFirstLaunchPermissionsRequested =
           'androidFirstLaunchPermissionsRequested',
+      firstLaunchImprovementsGuideSeen = 'firstLaunchImprovementsGuideSeen',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',

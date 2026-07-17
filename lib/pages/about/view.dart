@@ -10,6 +10,7 @@ import 'package:pili_plus/common/widgets/dialog/export_import.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
@@ -172,6 +173,16 @@ Commit Hash: ${BuildConfig.commitHash}''',
             leading: const Icon(Icons.code),
             title: const Text('Source Code'),
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
+          ),
+          ListTile(
+            onTap: () => FirstLaunchImprovementsGuideService.openManual(),
+            leading: const Icon(Icons.auto_stories_outlined),
+            title: const Text('本分支改进说明'),
+            subtitle: Text(
+              '查看 Chloemlla/main 相对上游的主要改进',
+              style: subTitleStyle,
+            ),
+            trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
           ),
           if (Platform.isAndroid)
             ListTile(
