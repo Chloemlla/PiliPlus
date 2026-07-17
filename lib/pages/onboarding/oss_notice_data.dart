@@ -153,8 +153,8 @@ abstract final class OssNoticeData {
     OssCredit(
       name: 'lumen-crash',
       author: 'Chloemlla / Project Lumen',
-      description: 'Android native 崩溃捕获桥。',
-      license: '仓库声明',
+      description: 'Android native 崩溃捕获桥（Project Lumen / lumen-crash）。',
+      license: '见 Project-Lumen 仓库声明',
       url: 'https://github.com/Chloemlla/Project-Lumen',
     ),
     OssCredit(

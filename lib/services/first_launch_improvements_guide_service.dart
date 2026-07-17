@@ -1,9 +1,10 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pili_plus/pages/onboarding/improvements_guide_page.dart';
 import 'package:pili_plus/services/android_first_launch_permission_service.dart';
+import 'package:pili_plus/services/first_launch_migration.dart';
+import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 
@@ -38,7 +39,6 @@ class _FirstLaunchImprovementsGuideGateState
 
 abstract final class FirstLaunchImprovementsGuideService {
   static bool _isRunning = false;
-  static bool _isRetryScheduled = false;
 
   static bool get hasSeen {
     return GStorage.setting.get(
@@ -56,27 +56,45 @@ abstract final class FirstLaunchImprovementsGuideService {
 
   /// Show only when the first-launch flag is unset.
   static Future<void> maybeShow() async {
-    if (_isRunning || hasSeen) {
+    if (_isRunning) {
       return;
     }
-
-    // Wait for the open-source notice to finish first.
-    final ossSeen = GStorage.setting.get(
-      SettingBoxKey.firstLaunchOssNoticeSeen,
-      defaultValue: false,
-    );
-    if (ossSeen != true) {
-      return;
-    }
-
-    final navigator = _currentNavigator();
-    if (navigator == null) {
-      _scheduleRetry();
-      return;
-    }
-
     _isRunning = true;
     try {
+      await FirstLaunchMigration.ensureSeenFlagsForReturningUsers();
+      await StartupOverlayCoordinator.waitUntilCrashIdle();
+
+      if (hasSeen) {
+        if (Platform.isAndroid) {
+          await AndroidFirstLaunchPermissionService.requestMissingPermissions();
+        }
+        return;
+      }
+
+      // Wait for the open-source notice to finish first.
+      final ossSeen = GStorage.setting.get(
+        SettingBoxKey.firstLaunchOssNoticeSeen,
+        defaultValue: false,
+      );
+      if (ossSeen != true) {
+        return;
+      }
+
+      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+        debugLabel: 'improvements-guide',
+      );
+      if (navigator == null) {
+        return;
+      }
+
+      await StartupOverlayCoordinator.waitUntilCrashIdle();
+      if (hasSeen) {
+        if (Platform.isAndroid) {
+          await AndroidFirstLaunchPermissionService.requestMissingPermissions();
+        }
+        return;
+      }
+
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
@@ -100,8 +118,10 @@ abstract final class FirstLaunchImprovementsGuideService {
 
   /// Always open the guide (from About), without changing first-launch semantics
   /// unless [markAsSeen] is true.
-  static Future<void> openManual({bool markAsSeen = true}) async {
-    final navigator = _currentNavigator();
+  static Future<void> openManual({bool markAsSeen = false}) async {
+    final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      debugLabel: 'improvements-guide-manual',
+    );
     if (navigator == null) {
       return;
     }
@@ -114,24 +134,5 @@ abstract final class FirstLaunchImprovementsGuideService {
         ),
       ),
     );
-  }
-
-  static NavigatorState? _currentNavigator() {
-    final navigator = Get.key.currentState;
-    if (navigator == null || !navigator.mounted) {
-      return null;
-    }
-    return navigator;
-  }
-
-  static void _scheduleRetry() {
-    if (_isRetryScheduled) {
-      return;
-    }
-    _isRetryScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isRetryScheduled = false;
-      maybeShow();
-    });
   }
 }

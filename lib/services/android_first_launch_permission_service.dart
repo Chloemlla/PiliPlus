@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:pili_plus/services/first_launch_migration.dart';
+import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/permission_handler.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -40,12 +41,14 @@ class _AndroidFirstLaunchPermissionGateState
 
 abstract final class AndroidFirstLaunchPermissionService {
   static bool _isRunning = false;
-  static bool _isRetryScheduled = false;
 
   static Future<void> requestMissingPermissions() async {
     if (!Platform.isAndroid || _isRunning) {
       return;
     }
+
+    await FirstLaunchMigration.ensureSeenFlagsForReturningUsers();
+    await StartupOverlayCoordinator.waitUntilCrashIdle();
 
     final hasRequested = GStorage.setting.get(
       SettingBoxKey.androidFirstLaunchPermissionsRequested,
@@ -65,8 +68,10 @@ abstract final class AndroidFirstLaunchPermissionService {
       return;
     }
 
-    if (_currentNavigator() == null) {
-      _scheduleRetry();
+    final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      debugLabel: 'android-permissions',
+    );
+    if (navigator == null) {
       return;
     }
 
@@ -75,7 +80,7 @@ abstract final class AndroidFirstLaunchPermissionService {
     try {
       for (final item in _permissionItems()) {
         final isMissing = await item.isMissing();
-        if (_currentNavigator() == null) {
+        if (StartupOverlayCoordinator.currentNavigator() == null) {
           return;
         }
         if (!isMissing) {
@@ -91,7 +96,7 @@ abstract final class AndroidFirstLaunchPermissionService {
         }
 
         final status = await item.request();
-        if (_currentNavigator() == null) {
+        if (StartupOverlayCoordinator.currentNavigator() == null) {
           return;
         }
         if (item.continueContent != null) {
@@ -123,25 +128,6 @@ abstract final class AndroidFirstLaunchPermissionService {
         );
       }
     }
-  }
-
-  static NavigatorState? _currentNavigator() {
-    final navigator = Get.key.currentState;
-    if (navigator == null || !navigator.mounted) {
-      return null;
-    }
-    return navigator;
-  }
-
-  static void _scheduleRetry() {
-    if (_isRetryScheduled) {
-      return;
-    }
-    _isRetryScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isRetryScheduled = false;
-      requestMissingPermissions();
-    });
   }
 
   static List<_PermissionItem> _permissionItems() {
@@ -215,7 +201,7 @@ abstract final class AndroidFirstLaunchPermissionService {
   static Future<bool?> _showReasonDialog(
     _PermissionItem item,
   ) async {
-    final navigator = _currentNavigator();
+    final navigator = StartupOverlayCoordinator.currentNavigator();
     if (navigator == null) {
       return null;
     }
@@ -244,7 +230,7 @@ abstract final class AndroidFirstLaunchPermissionService {
   static Future<bool> _showOpenAppSettingsDialog(
     String title,
   ) async {
-    final navigator = _currentNavigator();
+    final navigator = StartupOverlayCoordinator.currentNavigator();
     if (navigator == null) {
       return false;
     }
@@ -283,7 +269,7 @@ abstract final class AndroidFirstLaunchPermissionService {
     required String title,
     required String content,
   }) async {
-    final navigator = _currentNavigator();
+    final navigator = StartupOverlayCoordinator.currentNavigator();
     if (navigator == null) {
       return false;
     }

@@ -1,10 +1,9 @@
 import 'package:pili_plus/common/assets.dart';
-import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/pages/onboarding/oss_notice_data.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart' hide PopScope;
+import 'package:flutter/material.dart';
 
 class OssNoticePage extends StatefulWidget {
   const OssNoticePage({
@@ -40,9 +39,10 @@ class _OssNoticePageState extends State<OssNoticePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final padding = MediaQuery.viewPaddingOf(context);
 
-    return popScope(
+    // Material PopScope binds to this MaterialPageRoute, unlike the Get-route
+    // helper used by in-app pages.
+    return PopScope(
       canPop: !widget.markSeenOnClose,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || !widget.markSeenOnClose) return;
@@ -54,12 +54,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
             children: [
               Expanded(
                 child: ListView(
-                  padding: EdgeInsets.fromLTRB(
-                    20 + padding.left,
-                    12,
-                    20 + padding.right,
-                    12,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                   children: [
                     Center(
                       child: Image.asset(
@@ -201,12 +196,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20 + padding.left,
-                  8,
-                  20 + padding.right,
-                  16 + padding.bottom,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(

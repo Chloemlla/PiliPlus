@@ -1,10 +1,9 @@
 import 'package:pili_plus/common/assets.dart';
 import 'package:pili_plus/common/constants.dart';
-import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/pages/onboarding/improvements_guide_data.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
-import 'package:flutter/material.dart' hide PopScope;
+import 'package:flutter/material.dart';
 
 class ImprovementsGuidePage extends StatefulWidget {
   const ImprovementsGuidePage({
@@ -66,9 +65,10 @@ class _ImprovementsGuidePageState extends State<ImprovementsGuidePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final padding = MediaQuery.viewPaddingOf(context);
 
-    return popScope(
+    // Material PopScope binds to this MaterialPageRoute, unlike the Get-route
+    // helper used by in-app pages.
+    return PopScope(
       canPop: !widget.markSeenOnClose,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop || !widget.markSeenOnClose) return;
@@ -79,12 +79,7 @@ class _ImprovementsGuidePageState extends State<ImprovementsGuidePage> {
           child: Column(
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  8 + padding.left,
-                  4,
-                  8 + padding.right,
-                  0,
-                ),
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
                 child: Row(
                   children: [
                     Text(
@@ -113,12 +108,7 @@ class _ImprovementsGuidePageState extends State<ImprovementsGuidePage> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20 + padding.left,
-                  8,
-                  20 + padding.right,
-                  16 + padding.bottom,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: Column(
                   children: [
                     _PageDots(
@@ -170,15 +160,8 @@ class _GuideSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final padding = MediaQuery.viewPaddingOf(context);
-
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        24 + padding.left,
-        8,
-        24 + padding.right,
-        12,
-      ),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
       children: [
         if (isFirst) ...[
           Center(

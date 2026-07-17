@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pili_plus/pages/onboarding/oss_notice_page.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
+import 'package:pili_plus/services/first_launch_migration.dart';
+import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 
@@ -35,7 +36,6 @@ class _FirstLaunchOssNoticeGateState extends State<FirstLaunchOssNoticeGate> {
 
 abstract final class FirstLaunchOssNoticeService {
   static bool _isRunning = false;
-  static bool _isRetryScheduled = false;
 
   static bool get hasSeen {
     return GStorage.setting.get(
@@ -52,22 +52,34 @@ abstract final class FirstLaunchOssNoticeService {
   }
 
   static Future<void> maybeShow() async {
-    if (_isRunning || hasSeen) {
-      // Already acknowledged; still allow later first-launch steps.
-      if (hasSeen) {
-        await FirstLaunchImprovementsGuideService.maybeShow();
-      }
+    if (_isRunning) {
       return;
     }
-
-    final navigator = _currentNavigator();
-    if (navigator == null) {
-      _scheduleRetry();
-      return;
-    }
-
     _isRunning = true;
     try {
+      await FirstLaunchMigration.ensureSeenFlagsForReturningUsers();
+      await StartupOverlayCoordinator.waitUntilCrashIdle();
+
+      if (hasSeen) {
+        // Already acknowledged; still allow later first-launch steps.
+        await FirstLaunchImprovementsGuideService.maybeShow();
+        return;
+      }
+
+      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+        debugLabel: 'oss-notice',
+      );
+      if (navigator == null) {
+        return;
+      }
+
+      // Crash overlay may have started while waiting for navigator.
+      await StartupOverlayCoordinator.waitUntilCrashIdle();
+      if (hasSeen) {
+        await FirstLaunchImprovementsGuideService.maybeShow();
+        return;
+      }
+
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
@@ -87,8 +99,10 @@ abstract final class FirstLaunchOssNoticeService {
     }
   }
 
-  static Future<void> openManual({bool markAsSeen = true}) async {
-    final navigator = _currentNavigator();
+  static Future<void> openManual({bool markAsSeen = false}) async {
+    final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      debugLabel: 'oss-notice-manual',
+    );
     if (navigator == null) {
       return;
     }
@@ -101,24 +115,5 @@ abstract final class FirstLaunchOssNoticeService {
         ),
       ),
     );
-  }
-
-  static NavigatorState? _currentNavigator() {
-    final navigator = Get.key.currentState;
-    if (navigator == null || !navigator.mounted) {
-      return null;
-    }
-    return navigator;
-  }
-
-  static void _scheduleRetry() {
-    if (_isRetryScheduled) {
-      return;
-    }
-    _isRetryScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _isRetryScheduled = false;
-      maybeShow();
-    });
   }
 }

@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_store.dart';
+import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -28,11 +29,21 @@ class CrashReportStartupGate extends StatefulWidget {
 
 class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
   bool _shown = false;
+  bool _showing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Claim before child first-launch gates' post-frame callbacks run.
+    if (widget.initialReport != null) {
+      StartupOverlayCoordinator.beginCrashOverlay();
+    }
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _showReportOnce();
+    unawaited(_showReportOnce());
   }
 
   @override
@@ -40,23 +51,29 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialReport?.reportId != oldWidget.initialReport?.reportId) {
       _shown = false;
-      _showReportOnce();
+      if (widget.initialReport != null) {
+        StartupOverlayCoordinator.beginCrashOverlay();
+      }
+      unawaited(_showReportOnce());
     }
   }
 
-  void _showReportOnce() {
+  Future<void> _showReportOnce() async {
     final report = widget.initialReport;
-    if (_shown || report == null) return;
-    _shown = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final navigator = Get.key.currentState;
-      if (navigator == null) {
-        _shown = false;
-        _showReportOnce();
+    if (_shown || _showing || report == null) {
+      return;
+    }
+    _showing = true;
+    StartupOverlayCoordinator.beginCrashOverlay();
+    try {
+      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+        debugLabel: 'crash-report',
+      );
+      if (!mounted || navigator == null) {
         return;
       }
-      navigator.push(
+      _shown = true;
+      await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
           builder: (_) => CrashReportPage(
@@ -65,7 +82,20 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
           ),
         ),
       );
-    });
+    } finally {
+      _showing = false;
+      StartupOverlayCoordinator.endCrashOverlay();
+    }
+  }
+
+  @override
+  void dispose() {
+    // If the gate is torn down mid-flight, release waiters.
+    if (_showing || (widget.initialReport != null && !_shown)) {
+      _showing = false;
+      StartupOverlayCoordinator.endCrashOverlay();
+    }
+    super.dispose();
   }
 
   @override
