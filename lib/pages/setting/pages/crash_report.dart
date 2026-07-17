@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_store.dart';
+import 'package:pili_plus/services/crash/crash_reporter.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -31,20 +32,29 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
   bool _shown = false;
   bool _showing = false;
   int _navigatorAttempts = 0;
+  CrashReport? _resolvedReport;
+  bool _nativeImportStarted = false;
+  int _nativeImportAttempts = 0;
 
   @override
   void initState() {
     super.initState();
-    // Claim before child first-launch gates' post-frame callbacks run.
-    if (widget.initialReport != null) {
+    _resolvedReport = widget.initialReport;
+    // Claim early so first-launch flows wait while we import/show crash UI.
+    // On Android, native pending reports are imported only after the engine channel
+    // is ready, so claim even when initialReport is null.
+    if (_resolvedReport != null || Platform.isAndroid) {
       StartupOverlayCoordinator.beginCrashOverlay();
     }
+    unawaited(_bootstrap());
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    unawaited(_showReportOnce());
+    if (_resolvedReport != null) {
+      unawaited(_showReportOnce());
+    }
   }
 
   @override
@@ -53,15 +63,47 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
     if (widget.initialReport?.reportId != oldWidget.initialReport?.reportId) {
       _shown = false;
       _navigatorAttempts = 0;
-      if (widget.initialReport != null) {
+      _resolvedReport = widget.initialReport;
+      if (_resolvedReport != null || Platform.isAndroid) {
         StartupOverlayCoordinator.beginCrashOverlay();
       }
-      unawaited(_showReportOnce());
+      unawaited(_bootstrap());
     }
   }
 
+  Future<void> _bootstrap() async {
+    if (Platform.isAndroid && !_nativeImportStarted) {
+      try {
+        final imported = await CrashReporter.importNativeAndResolvePending();
+        if (!mounted) return;
+        _nativeImportStarted = true;
+        if (imported != null) {
+          _resolvedReport = imported;
+        }
+      } catch (_) {
+        // Channel may not be registered on the very first frame after runApp.
+        _nativeImportAttempts += 1;
+        if (_nativeImportAttempts < 5 && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(_bootstrap());
+          });
+          return;
+        }
+        // Give up for this cold start; pending native files remain for retry.
+      }
+    }
+
+    if (!mounted) return;
+    if (_resolvedReport == null) {
+      StartupOverlayCoordinator.endCrashOverlay();
+      return;
+    }
+    await _showReportOnce();
+  }
+
   Future<void> _showReportOnce() async {
-    final report = widget.initialReport;
+    final report = _resolvedReport;
     if (_shown || _showing || report == null) {
       return;
     }
@@ -115,7 +157,7 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
   @override
   void dispose() {
     // If the gate is torn down mid-flight, release waiters.
-    if (_showing || (widget.initialReport != null && !_shown)) {
+    if (_showing || (!_shown && (_resolvedReport != null || Platform.isAndroid))) {
       _showing = false;
       StartupOverlayCoordinator.endCrashOverlay();
     }

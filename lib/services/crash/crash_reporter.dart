@@ -10,12 +10,14 @@ import 'package:pili_plus/services/crash/crash_report_store.dart';
 import 'package:pili_plus/services/crash/native_crash_bridge.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 abstract final class CrashReporter {
   static bool _installed = false;
   static FlutterExceptionHandler? _installedFlutterErrorHandler;
   static ErrorCallback? _installedPlatformErrorHandler;
   static final List<CrashReport> _bufferedReports = [];
+  static bool _nativeImportCompleted = false;
   static final String sessionId =
       '$pid-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
 
@@ -33,7 +35,26 @@ abstract final class CrashReporter {
       );
       if (kDebugMode) debugPrint('Crash system info collection failed: $error');
     }
-    await _importNativeReports();
+    // Native MethodChannel handlers are registered in MainActivity after runApp.
+    // Only resolve Flutter-persisted pending reports here; native import is deferred.
+    return resolvePendingForStartup();
+  }
+
+  /// Import lumen-crash / exit-history staging after the Android engine channel is ready.
+  static Future<CrashReport?> importNativeAndResolvePending() async {
+    if (!_nativeImportCompleted) {
+      try {
+        await _importNativeReports();
+        _nativeImportCompleted = true;
+      } on MissingPluginException {
+        // Channel not registered yet (before MainActivity.configureFlutterEngine).
+        rethrow;
+      }
+    }
+    return resolvePendingForStartup();
+  }
+
+  static Future<CrashReport?> resolvePendingForStartup() async {
     final pending = CrashReportStore.load();
     if (pending == null) return null;
     if (!pending.isFatalCandidate || pending.sessionId == sessionId) {
@@ -201,19 +222,33 @@ abstract final class CrashReporter {
         }
       }
       await NativeCrashBridge.acknowledgeReports(acknowledged);
-    } catch (_) {
+    } on MissingPluginException {
+      rethrow;
+    } catch (error) {
       // Native crash import is best-effort; pending files remain for next launch.
+      if (kDebugMode) {
+        debugPrint('Native crash import failed: $error');
+      }
     }
   }
 
   static Future<void> _importLumenPendingReport() async {
     final json = await NativeCrashBridge.getLumenPendingReport();
     if (json == null) return;
-    final report = CrashReport.fromNative(
-      json,
-      systemInfo: CrashReportSystemInfo.cached,
-    );
-    CrashReportStore.saveSync(report, makePending: true);
+    try {
+      final report = CrashReport.fromNative(
+        json,
+        systemInfo: CrashReportSystemInfo.cached,
+      );
+      CrashReportStore.saveSync(report, makePending: true);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Lumen pending report import failed: $error');
+      }
+      // Keep SDK pending so the next launch can retry after a store write failure.
+      return;
+    }
+    // Clear only after Flutter persistence succeeds.
     await NativeCrashBridge.clearLumenPendingReport();
   }
 
