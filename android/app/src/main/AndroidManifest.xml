@@ -47,10 +47,12 @@
     <application xmlns:tools="http://schemas.android.com/tools"
         android:name=".PiliPlusApplication"
         android:allowBackup="false"
-        android:enableOnBackInvokedCallback="false"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:intentMatchingFlags="enforceIntentFilter"
         tools:replace="android:allowBackup">
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
@@ -237,6 +239,7 @@
 
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
+            android:exported="false"
             android:theme="@style/Ucrop.CropTheme" />
 
         <receiver

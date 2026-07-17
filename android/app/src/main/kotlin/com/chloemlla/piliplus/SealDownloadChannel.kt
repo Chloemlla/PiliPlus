@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.ClipData
 import android.net.Uri
 import android.os.Build
 import io.flutter.plugin.common.BinaryMessenger
@@ -131,7 +132,11 @@ internal class SealDownloadChannel(
         val mimeType = call.argument<String>("mimeType")
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.parse(uriString), mimeType?.ifEmpty { null } ?: "*/*")
+                val uri = Uri.parse(uriString)
+                val resolvedMime = mimeType?.ifEmpty { null } ?: "*/*"
+                setDataAndType(uri, resolvedMime)
+                // Explicit URI grant surface for Android 17+ share/open hardening.
+                clipData = ClipData.newUri(activity.contentResolver, "open", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -155,6 +160,8 @@ internal class SealDownloadChannel(
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
+                // Do not rely on implicit URI grants for ACTION_SEND.
+                clipData = ClipData.newUri(activity.contentResolver, displayName ?: "share", uri)
                 if (!displayName.isNullOrEmpty()) {
                     putExtra(Intent.EXTRA_SUBJECT, displayName)
                     putExtra(Intent.EXTRA_TEXT, displayName)

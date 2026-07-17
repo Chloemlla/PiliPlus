@@ -14,6 +14,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -40,6 +41,14 @@ class QrScannerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    cancelScan()
+                }
+            },
+        )
         try {
             setContentView(buildContentView())
         } catch (exception: Exception) {
@@ -67,11 +76,6 @@ class QrScannerActivity : ComponentActivity() {
         frameAnalyzer = null
         analyzerExecutor.shutdownNow()
         super.onDestroy()
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        cancelScan()
     }
 
     private fun buildContentView(): FrameLayout {
