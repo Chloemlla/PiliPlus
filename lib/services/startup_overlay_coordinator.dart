@@ -85,4 +85,33 @@ abstract final class StartupOverlayCoordinator {
     }
     return null;
   }
+
+  /// Run [action] after a navigator is available, with bounded outer rounds.
+  ///
+  /// Each round uses [waitForNavigator]. Used by first-launch steps so a single
+  /// late navigator readiness window does not permanently skip onboarding.
+  static Future<void> runWhenNavigatorReady(
+    Future<void> Function(NavigatorState navigator) action, {
+    int rounds = 3,
+    int maxFrames = maxNavigatorRetries,
+    String? debugLabel,
+  }) async {
+    for (var round = 0; round < rounds; round++) {
+      final navigator = await waitForNavigator(
+        maxFrames: maxFrames,
+        debugLabel: debugLabel == null ? null : '$debugLabel#$round',
+      );
+      if (navigator != null) {
+        await action(navigator);
+        return;
+      }
+    }
+    if (kDebugMode) {
+      debugPrint(
+        'StartupOverlayCoordinator: giving up'
+        '${debugLabel == null ? '' : ' ($debugLabel)'}'
+        ' after $rounds navigator rounds',
+      );
+    }
+  }
 }

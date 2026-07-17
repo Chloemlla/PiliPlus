@@ -71,54 +71,52 @@ abstract final class AndroidFirstLaunchPermissionService {
         return;
       }
 
-      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      await StartupOverlayCoordinator.runWhenNavigatorReady(
+        (_) async {
+          for (final item in _permissionItems()) {
+            final isMissing = await item.isMissing();
+            if (StartupOverlayCoordinator.currentNavigator() == null) {
+              return;
+            }
+            if (!isMissing) {
+              continue;
+            }
+
+            final shouldRequest = await _showReasonDialog(item);
+            if (shouldRequest == null) {
+              return;
+            }
+            if (!shouldRequest) {
+              continue;
+            }
+
+            final status = await item.request();
+            if (StartupOverlayCoordinator.currentNavigator() == null) {
+              return;
+            }
+            if (item.continueContent != null) {
+              final didContinue = await _showContinueDialog(
+                title: item.title,
+                content: item.continueContent!,
+              );
+              if (!didContinue) {
+                return;
+              }
+            }
+            if (status == PermissionStatus.permanentlyDenied) {
+              final didHandleSettings = await _showOpenAppSettingsDialog(
+                item.title,
+              );
+              if (!didHandleSettings) {
+                return;
+              }
+            }
+          }
+
+          completed = true;
+        },
         debugLabel: 'android-permissions',
       );
-      if (navigator == null) {
-        return;
-      }
-
-      for (final item in _permissionItems()) {
-        final isMissing = await item.isMissing();
-        if (StartupOverlayCoordinator.currentNavigator() == null) {
-          return;
-        }
-        if (!isMissing) {
-          continue;
-        }
-
-        final shouldRequest = await _showReasonDialog(item);
-        if (shouldRequest == null) {
-          return;
-        }
-        if (!shouldRequest) {
-          continue;
-        }
-
-        final status = await item.request();
-        if (StartupOverlayCoordinator.currentNavigator() == null) {
-          return;
-        }
-        if (item.continueContent != null) {
-          final didContinue = await _showContinueDialog(
-            title: item.title,
-            content: item.continueContent!,
-          );
-          if (!didContinue) {
-            return;
-          }
-        }
-        if (status == PermissionStatus.permanentlyDenied) {
-          final didHandleSettings = await _showOpenAppSettingsDialog(
-            item.title,
-          );
-          if (!didHandleSettings) {
-            return;
-          }
-        }
-      }
-
-      completed = true;
     } finally {
       _isRunning = false;
       if (completed) {

@@ -80,34 +80,30 @@ abstract final class FirstLaunchImprovementsGuideService {
         return;
       }
 
-      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      await StartupOverlayCoordinator.runWhenNavigatorReady(
+        (navigator) async {
+          await StartupOverlayCoordinator.waitUntilCrashIdle();
+          if (hasSeen) {
+            return;
+          }
+
+          await navigator.push<void>(
+            MaterialPageRoute<void>(
+              fullscreenDialog: true,
+              builder: (_) => const ImprovementsGuidePage(
+                markSeenOnClose: true,
+                onFinished: markSeen,
+              ),
+            ),
+          );
+          // Continue only after the guide route has been popped.
+          if (!hasSeen) {
+            await markSeen();
+          }
+        },
         debugLabel: 'improvements-guide',
       );
-      if (navigator == null) {
-        return;
-      }
 
-      await StartupOverlayCoordinator.waitUntilCrashIdle();
-      if (hasSeen) {
-        if (Platform.isAndroid) {
-          await AndroidFirstLaunchPermissionService.requestMissingPermissions();
-        }
-        return;
-      }
-
-      await navigator.push<void>(
-        MaterialPageRoute<void>(
-          fullscreenDialog: true,
-          builder: (_) => const ImprovementsGuidePage(
-            markSeenOnClose: true,
-            onFinished: markSeen,
-          ),
-        ),
-      );
-      // Continue only after the guide route has been popped.
-      if (!hasSeen) {
-        await markSeen();
-      }
       if (Platform.isAndroid) {
         await AndroidFirstLaunchPermissionService.requestMissingPermissions();
       }

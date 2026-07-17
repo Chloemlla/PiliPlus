@@ -66,33 +66,31 @@ abstract final class FirstLaunchOssNoticeService {
         return;
       }
 
-      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+      await StartupOverlayCoordinator.runWhenNavigatorReady(
+        (navigator) async {
+          // Crash overlay may have started while waiting for navigator.
+          await StartupOverlayCoordinator.waitUntilCrashIdle();
+          if (hasSeen) {
+            return;
+          }
+
+          await navigator.push<void>(
+            MaterialPageRoute<void>(
+              fullscreenDialog: true,
+              builder: (_) => const OssNoticePage(
+                markSeenOnClose: true,
+                onFinished: markSeen,
+              ),
+            ),
+          );
+          // Continue only after the notice route has been popped.
+          if (!hasSeen) {
+            await markSeen();
+          }
+        },
         debugLabel: 'oss-notice',
       );
-      if (navigator == null) {
-        return;
-      }
 
-      // Crash overlay may have started while waiting for navigator.
-      await StartupOverlayCoordinator.waitUntilCrashIdle();
-      if (hasSeen) {
-        await FirstLaunchImprovementsGuideService.maybeShow();
-        return;
-      }
-
-      await navigator.push<void>(
-        MaterialPageRoute<void>(
-          fullscreenDialog: true,
-          builder: (_) => const OssNoticePage(
-            markSeenOnClose: true,
-            onFinished: markSeen,
-          ),
-        ),
-      );
-      // Continue only after the notice route has been popped.
-      if (!hasSeen) {
-        await markSeen();
-      }
       await FirstLaunchImprovementsGuideService.maybeShow();
     } finally {
       _isRunning = false;
