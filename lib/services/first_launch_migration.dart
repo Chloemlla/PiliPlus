@@ -18,6 +18,22 @@ abstract final class FirstLaunchMigration {
     LocalCacheKey.buvid,
     LocalCacheKey.timeStamp,
     LocalCacheKey.mixinKey,
+    LocalCacheKey.watchProgressWriteOrder,
+    LocalCacheKey.replyWriteOrder,
+  };
+
+  /// Auto-seeded by cold start / capability probes. Presence alone must not
+  /// silence first-install onboarding.
+  ///
+  /// Critical: `Pref.horizontalScreen` writes on every mobile cold start before
+  /// first-launch gates run (`main` orientation setup). Treating any non-
+  /// first-launch setting key as "returning" incorrectly skips OSS for true
+  /// first installs.
+  static const _bootstrapSettingKeys = <String>{
+    SettingBoxKey.horizontalScreen,
+    SettingBoxKey.fullScreenMode,
+    SettingBoxKey.dynamicColor,
+    SettingBoxKey.displayMode,
   };
 
   /// Idempotent. Safe to call from multiple first-launch entrypoints.
@@ -90,6 +106,14 @@ abstract final class FirstLaunchMigration {
       // watchProgress is opened after critical prefs; ignore if still closed.
     }
 
+    try {
+      if (GStorage.video.isNotEmpty) {
+        return true;
+      }
+    } catch (_) {
+      // video box should already be open; ignore defensive failures.
+    }
+
     // localCache often only has cold-start buvid/wbi keys on a true first install.
     for (final key in GStorage.localCache.keys) {
       if (key is! String || _bootstrapLocalCacheKeys.contains(key)) {
@@ -99,9 +123,13 @@ abstract final class FirstLaunchMigration {
     }
 
     for (final key in GStorage.setting.keys) {
-      if (key is String && !_firstLaunchKeys.contains(key)) {
-        return true;
+      if (key is! String) {
+        continue;
       }
+      if (_firstLaunchKeys.contains(key) || _bootstrapSettingKeys.contains(key)) {
+        continue;
+      }
+      return true;
     }
     return false;
   }

@@ -30,6 +30,7 @@ class CrashReportStartupGate extends StatefulWidget {
 class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
   bool _shown = false;
   bool _showing = false;
+  int _navigatorAttempts = 0;
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialReport?.reportId != oldWidget.initialReport?.reportId) {
       _shown = false;
+      _navigatorAttempts = 0;
       if (widget.initialReport != null) {
         StartupOverlayCoordinator.beginCrashOverlay();
       }
@@ -69,7 +71,24 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
       final navigator = await StartupOverlayCoordinator.waitForNavigator(
         debugLabel: 'crash-report',
       );
-      if (!mounted || navigator == null) {
+      if (!mounted) {
+        return;
+      }
+      if (navigator == null) {
+        _navigatorAttempts += 1;
+        _showing = false;
+        // waitForNavigator already spent multiple frames; allow a few rounds.
+        if (_navigatorAttempts < 3) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _shown) {
+              return;
+            }
+            unawaited(_showReportOnce());
+          });
+          return;
+        }
+        // Give up: release waiters so first-launch can continue.
+        StartupOverlayCoordinator.endCrashOverlay();
         return;
       }
       _shown = true;
@@ -83,8 +102,13 @@ class _CrashReportStartupGateState extends State<CrashReportStartupGate> {
         ),
       );
     } finally {
-      _showing = false;
-      StartupOverlayCoordinator.endCrashOverlay();
+      if (_shown) {
+        _showing = false;
+        StartupOverlayCoordinator.endCrashOverlay();
+      } else if (!mounted) {
+        _showing = false;
+        StartupOverlayCoordinator.endCrashOverlay();
+      }
     }
   }
 

@@ -47,37 +47,37 @@ abstract final class AndroidFirstLaunchPermissionService {
       return;
     }
 
-    await FirstLaunchMigration.ensureSeenFlagsForReturningUsers();
-    await StartupOverlayCoordinator.waitUntilCrashIdle();
-
-    final hasRequested = GStorage.setting.get(
-      SettingBoxKey.androidFirstLaunchPermissionsRequested,
-      defaultValue: false,
-    );
-    if (hasRequested) {
-      return;
-    }
-
-    // Prefer the branch improvements guide before permission dialogs.
-    // Guide completion will re-enter this method; do not busy-retry each frame.
-    final guideSeen = GStorage.setting.get(
-      SettingBoxKey.firstLaunchImprovementsGuideSeen,
-      defaultValue: false,
-    );
-    if (guideSeen != true) {
-      return;
-    }
-
-    final navigator = await StartupOverlayCoordinator.waitForNavigator(
-      debugLabel: 'android-permissions',
-    );
-    if (navigator == null) {
-      return;
-    }
-
     _isRunning = true;
     var completed = false;
     try {
+      await FirstLaunchMigration.ensureSeenFlagsForReturningUsers();
+      await StartupOverlayCoordinator.waitUntilCrashIdle();
+
+      final hasRequested = GStorage.setting.get(
+        SettingBoxKey.androidFirstLaunchPermissionsRequested,
+        defaultValue: false,
+      );
+      if (hasRequested == true) {
+        return;
+      }
+
+      // Prefer the branch improvements guide before permission dialogs.
+      // Guide completion will re-enter this method; do not busy-retry each frame.
+      final guideSeen = GStorage.setting.get(
+        SettingBoxKey.firstLaunchImprovementsGuideSeen,
+        defaultValue: false,
+      );
+      if (guideSeen != true) {
+        return;
+      }
+
+      final navigator = await StartupOverlayCoordinator.waitForNavigator(
+        debugLabel: 'android-permissions',
+      );
+      if (navigator == null) {
+        return;
+      }
+
       for (final item in _permissionItems()) {
         final isMissing = await item.isMissing();
         if (StartupOverlayCoordinator.currentNavigator() == null) {
