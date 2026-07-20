@@ -106,7 +106,7 @@ internal class SealDownloadChannel(
             putExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION)
             putExtra(EXTRA_URL, url)
             // Seal multi-URL batch protocol (single URL still sent as EXTRA_URL for compat).
-            putStringArrayExtra(EXTRA_URLS, urls.toTypedArray())
+            putExtra(EXTRA_URLS, urls.toTypedArray())
             putExtra(EXTRA_EXTRACT_AUDIO, extractAudio)
             putExtra(EXTRA_AUTO_START, autoStart)
             putExtra(EXTRA_OPEN_UI, openUi)
