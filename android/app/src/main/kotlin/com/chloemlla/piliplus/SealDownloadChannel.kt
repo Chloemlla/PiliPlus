@@ -70,11 +70,22 @@ internal class SealDownloadChannel(
     }
 
     private fun delegateDownload(call: MethodCall, result: MethodChannel.Result) {
-        val url = call.argument<String>("url")?.trim().orEmpty()
-        if (url.isEmpty()) {
+        val rawUrls = call.argument<List<*>>("urls")
+        val urlsFromList = rawUrls
+            ?.mapNotNull { it?.toString()?.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+        val singleUrl = call.argument<String>("url")?.trim().orEmpty()
+        val urls = when {
+            urlsFromList.isNotEmpty() -> urlsFromList
+            singleUrl.isNotEmpty() -> listOf(singleUrl)
+            else -> emptyList()
+        }
+        if (urls.isEmpty()) {
             result.error("invalid_url", "下载链接为空", null)
             return
         }
+        val url = urls.first()
         val sealPackage = resolveSealPackage()
         if (sealPackage == null) {
             result.error("not_installed", "请先安装 Seal", null)
@@ -94,6 +105,8 @@ internal class SealDownloadChannel(
             type = "text/plain"
             putExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION)
             putExtra(EXTRA_URL, url)
+            // Seal multi-URL batch protocol (single URL still sent as EXTRA_URL for compat).
+            putStringArrayExtra(EXTRA_URLS, urls.toTypedArray())
             putExtra(EXTRA_EXTRACT_AUDIO, extractAudio)
             putExtra(EXTRA_AUTO_START, autoStart)
             putExtra(EXTRA_OPEN_UI, openUi)
@@ -206,6 +219,7 @@ internal class SealDownloadChannel(
         const val PROTOCOL_VERSION = 1
         const val EXTRA_PROTOCOL_VERSION = "protocol_version"
         const val EXTRA_URL = "url"
+        const val EXTRA_URLS = "urls"
         const val EXTRA_EXTRACT_AUDIO = "extract_audio"
         const val EXTRA_AUTO_START = "auto_start"
         const val EXTRA_OPEN_UI = "open_ui"

@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' show min;
 
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart';
@@ -44,20 +48,109 @@ abstract final class SealDownloadUtils {
   }
 
   static Future<void> downloadVideo(VideoDetailController ctr) {
-    return _download(ctr, extractAudio: false);
+    return promptDownload(ctr, extractAudio: false);
   }
 
   static Future<void> downloadAudio(VideoDetailController ctr) {
-    return _download(ctr, extractAudio: true);
+    return promptDownload(ctr, extractAudio: true);
+  }
+
+  /// Multi-P UGC: show 当前P / 选择分P… / 全部; otherwise delegate immediately.
+  static Future<void> promptDownload(
+    VideoDetailController ctr, {
+    required bool extractAudio,
+  }) async {
+    if (!isSupported) return;
+    final pages = _ugcMultiPages(ctr);
+    if (pages == null || pages.length <= 1) {
+      await _download(ctr, extractAudio: extractAudio);
+      return;
+    }
+
+    final choice = await _showMultiPChoiceSheet(
+      extractAudio: extractAudio,
+      pageCount: pages.length,
+    );
+    if (choice == null) return;
+
+    switch (choice) {
+      case _MultiPChoice.current:
+        // Prefer cid-resolved pageUrlOf; never fall back to pages.first (wrong P).
+        final currentIndex = pages.indexWhere((e) => e.cid == ctr.cid.value);
+        final url = currentIndex >= 0
+            ? pageUrlForPart(ctr.bvid, pages[currentIndex], currentIndex)
+            : pageUrlOf(ctr);
+        if (url == null || url.isEmpty) {
+          await _showErrorPanel(
+            title: '无法委托下载',
+            message: '无法构造视频链接',
+          );
+          return;
+        }
+        await _download(ctr, extractAudio: extractAudio, urls: [url]);
+      case _MultiPChoice.all:
+        final urls = pageUrlsForParts(ctr.bvid, pages);
+        if (urls.isEmpty) {
+          await _showErrorPanel(
+            title: '无法委托下载',
+            message: '无法构造视频链接',
+          );
+          return;
+        }
+        await _download(
+          ctr,
+          extractAudio: extractAudio,
+          urls: urls,
+          itemCount: urls.length,
+        );
+      case _MultiPChoice.select:
+        // Indices into the full `pages` list so ?p= fallback stays correct
+        // when Part.page is null on a non-contiguous subset.
+        final selectedIndices = await _pickPartIndices(
+          ctr: ctr,
+          parts: pages,
+          extractAudio: extractAudio,
+        );
+        if (selectedIndices == null || selectedIndices.isEmpty) return;
+        final urls = [
+          for (final i in selectedIndices)
+            pageUrlForPart(ctr.bvid, pages[i], i),
+        ];
+        if (urls.isEmpty) {
+          await _showErrorPanel(
+            title: '无法委托下载',
+            message: '无法构造视频链接',
+          );
+          return;
+        }
+        await _download(
+          ctr,
+          extractAudio: extractAudio,
+          urls: urls,
+          itemCount: urls.length,
+        );
+    }
   }
 
   static Future<void> _download(
     VideoDetailController ctr, {
     required bool extractAudio,
+    List<String>? urls,
+    int? itemCount,
   }) async {
     ensureListening();
-    final url = pageUrlOf(ctr);
-    if (url == null || url.isEmpty) {
+    final List<String> resolvedUrls;
+    if (urls == null || urls.isEmpty) {
+      final single = pageUrlOf(ctr);
+      resolvedUrls = (single != null && single.isNotEmpty)
+          ? <String>[single]
+          : const <String>[];
+    } else {
+      resolvedUrls = urls
+          .where((e) => e.trim().isNotEmpty)
+          .toList(growable: false);
+    }
+    if (resolvedUrls.isEmpty) {
       await _showErrorPanel(
         title: '无法委托下载',
         message: '无法构造视频链接',
@@ -65,15 +158,18 @@ abstract final class SealDownloadUtils {
       return;
     }
 
+    final primaryUrl = resolvedUrls.first;
+    final count = itemCount ?? resolvedUrls.length;
     final requestId =
         'piliplus-${extractAudio ? 'audio' : 'video'}-${DateTime.now().microsecondsSinceEpoch}';
     final title = _titleOf(ctr);
     final session = _SealSession(
       requestId: requestId,
       extractAudio: extractAudio,
-      pageUrl: url,
+      pageUrl: primaryUrl,
       mediaTitle: title,
       autoStart: Pref.sealAutoStart,
+      itemCount: count,
     );
     _sessions[requestId] = session;
     _activeRequestId = requestId;
@@ -83,15 +179,21 @@ abstract final class SealDownloadUtils {
         : SealPanelPhase.waitingUi;
     session.phase.value = initialBusy;
     session.message.value = Pref.sealAutoStart
-        ? '已委托 Seal，正在自动入队…'
-        : '已打开 Seal，请在 Seal 中确认下载';
-    await _showOrUpdatePanel(session);
+        ? (count > 1
+              ? '已委托 Seal（$count 项），正在自动入队…'
+              : '已委托 Seal，正在自动入队…')
+        : (count > 1
+              ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
+              : '已打开 Seal，请在 Seal 中确认下载');
+    // Non-blocking: must not await SmartDialog dismiss Future (R1).
+    unawaited(_showOrUpdatePanel(session));
 
     try {
       final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'delegateDownload',
         <String, dynamic>{
-          'url': url,
+          'url': primaryUrl,
+          'urls': resolvedUrls,
           'extractAudio': extractAudio,
           'autoStart': Pref.sealAutoStart,
           'openUi': true,
@@ -115,9 +217,13 @@ abstract final class SealDownloadUtils {
               ? SealPanelPhase.waitingAuto
               : SealPanelPhase.waitingUi;
           session.message.value = Pref.sealAutoStart
-              ? '已委托 Seal，正在自动入队…'
-              : '已打开 Seal，请在 Seal 中确认下载';
-          await _showOrUpdatePanel(session);
+              ? (count > 1
+                    ? '已委托 Seal（$count 项），正在自动入队…'
+                    : '已委托 Seal，正在自动入队…')
+              : (count > 1
+                    ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
+                    : '已打开 Seal，请在 Seal 中确认下载');
+          unawaited(_showOrUpdatePanel(session));
         }
       } else {
         await _applyStatusToSession(session, status);
@@ -126,7 +232,7 @@ abstract final class SealDownloadUtils {
       if (error.code == 'not_installed') {
         session.phase.value = SealPanelPhase.notInstalled;
         session.message.value = '请先安装 Seal 后再下载';
-        await _showOrUpdatePanel(session);
+        unawaited(_showOrUpdatePanel(session));
         return;
       }
       _finishSession(
@@ -143,6 +249,19 @@ abstract final class SealDownloadUtils {
     }
   }
 
+  /// Same-bvid multi-page list when UGC and pages.length > 1; bangumi/ep excluded.
+  static List<Part>? _ugcMultiPages(VideoDetailController ctr) {
+    if (ctr.isFileSource || !ctr.isUgc || ctr.epId != null) return null;
+    try {
+      final ugc = Get.find<UgcIntroController>(tag: ctr.heroTag);
+      final pages = ugc.videoDetail.value.pages;
+      if (pages == null || pages.length <= 1) return null;
+      return pages;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static String? pageUrlOf(VideoDetailController ctr) {
     if (ctr.isFileSource) return null;
     final epId = ctr.epId;
@@ -151,7 +270,127 @@ abstract final class SealDownloadUtils {
     }
     final bvid = ctr.bvid;
     if (bvid.isEmpty) return null;
+    final pageNo = _currentPageNo(ctr);
+    if (pageNo != null && pageNo > 0) {
+      return '${HttpString.baseUrl}/video/$bvid?p=$pageNo';
+    }
     return '${HttpString.baseUrl}/video/$bvid';
+  }
+
+  static int? _currentPageNo(VideoDetailController ctr) {
+    if (!ctr.isUgc || ctr.epId != null) return null;
+    try {
+      final ugc = Get.find<UgcIntroController>(tag: ctr.heroTag);
+      final pages = ugc.videoDetail.value.pages;
+      if (pages == null || pages.isEmpty) return null;
+      final currentCid = ctr.cid.value;
+      final index = pages.indexWhere((e) => e.cid == currentCid);
+      if (index >= 0) {
+        return pages[index].page ?? (index + 1);
+      }
+      if (pages.length == 1) {
+        return pages.first.page ?? 1;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static String pageUrlForPart(String bvid, Part part, int index) {
+    final page = part.page ?? (index + 1);
+    return '${HttpString.baseUrl}/video/$bvid?p=$page';
+  }
+
+  static List<String> pageUrlsForParts(String bvid, List<Part> parts) {
+    if (bvid.isEmpty || parts.isEmpty) return const [];
+    return [
+      for (var i = 0; i < parts.length; i++) pageUrlForPart(bvid, parts[i], i),
+    ];
+  }
+
+  static Future<_MultiPChoice?> _showMultiPChoiceSheet({
+    required bool extractAudio,
+    required int pageCount,
+  }) async {
+    final context = Get.context;
+    if (context == null) return null;
+    final kind = extractAudio ? '音频' : '视频';
+    return showModalBottomSheet<_MultiPChoice>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  '下载$kind · $pageCount 个分 P',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text('当前 P'),
+                onTap: () => Navigator.of(context).pop(_MultiPChoice.current),
+              ),
+              ListTile(
+                leading: const Icon(Icons.checklist_rounded),
+                title: const Text('选择分 P…'),
+                onTap: () => Navigator.of(context).pop(_MultiPChoice.select),
+              ),
+              ListTile(
+                leading: const Icon(Icons.select_all_rounded),
+                title: Text('全部（$pageCount）'),
+                onTap: () => Navigator.of(context).pop(_MultiPChoice.all),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Returns sorted indices into [parts] (original multi-P list).
+  static Future<List<int>?> _pickPartIndices({
+    required VideoDetailController ctr,
+    required List<Part> parts,
+    required bool extractAudio,
+  }) async {
+    final context = Get.context;
+    if (context == null) return null;
+    final currentCid = ctr.cid.value;
+    final initial = <int>{
+      for (var i = 0; i < parts.length; i++)
+        if (parts[i].cid == currentCid) i,
+    };
+    if (initial.isEmpty) initial.add(0);
+
+    return showModalBottomSheet<List<int>>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxHeight: context.mediaQuerySize.height * 0.75,
+      ),
+      builder: (context) {
+        return _SealPartPickerSheet(
+          parts: parts,
+          initialSelected: initial,
+          extractAudio: extractAudio,
+        );
+      },
+    );
   }
 
   static String _titleOf(VideoDetailController ctr) {
@@ -236,7 +475,7 @@ abstract final class SealDownloadUtils {
     return null;
   }
 
-    static Future<void> _applyStatusToSession(
+  static Future<void> _applyStatusToSession(
     _SealSession session,
     SealDownloadStatus status,
   ) async {
@@ -364,40 +603,44 @@ abstract final class SealDownloadUtils {
       // ValueNotifiers drive the already-open panel.
       return;
     }
-    await SmartDialog.show(
-      tag: _panelTag,
-      keepSingle: true,
-      clickMaskDismiss: false,
-      backType: SmartBackType.normal,
-      animationType: SmartAnimationType.centerFade_otherSlide,
-      animationTime: const Duration(milliseconds: 220),
-      builder: (context) {
-        return _SealStatusPanel(
-          session: session,
-          onClose: () => _closePanel(session),
-          onInstall: () async {
-            await PageUtils.launchURL(releasesUrl);
-          },
-          onOpen: () async {
-            final uri = session.contentUri;
-            if (uri == null || uri.isEmpty) return;
-            await openContentUri(uri: uri, mimeType: session.mimeType);
-          },
-          onShare: () async {
-            final uri = session.contentUri;
-            if (uri == null || uri.isEmpty) return;
-            await shareContentUri(
-              uri: uri,
-              mimeType: session.mimeType,
-              displayName: session.displayName,
-            );
-          },
-          onRetry: () async {
-            await _closePanel(session);
-            // Re-delegate with same mode; caller should re-tap menu if needed.
-          },
-        );
-      },
+    // Fire-and-forget: SmartDialog.show completes only when dismissed.
+    // Awaiting it would block delegateDownload until the user taps 后台等待 (R1).
+    unawaited(
+      SmartDialog.show(
+        tag: _panelTag,
+        keepSingle: true,
+        clickMaskDismiss: false,
+        backType: SmartBackType.normal,
+        animationType: SmartAnimationType.centerFade_otherSlide,
+        animationTime: const Duration(milliseconds: 220),
+        builder: (context) {
+          return _SealStatusPanel(
+            session: session,
+            onClose: () => _closePanel(session),
+            onInstall: () async {
+              await PageUtils.launchURL(releasesUrl);
+            },
+            onOpen: () async {
+              final uri = session.contentUri;
+              if (uri == null || uri.isEmpty) return;
+              await openContentUri(uri: uri, mimeType: session.mimeType);
+            },
+            onShare: () async {
+              final uri = session.contentUri;
+              if (uri == null || uri.isEmpty) return;
+              await shareContentUri(
+                uri: uri,
+                mimeType: session.mimeType,
+                displayName: session.displayName,
+              );
+            },
+            onRetry: () async {
+              await _closePanel(session);
+              // Re-delegate with same mode; caller should re-tap menu if needed.
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -480,6 +723,8 @@ enum SealPanelPhase {
       this == failed || this == rejected || this == notInstalled;
 }
 
+enum _MultiPChoice { current, select, all }
+
 final class _SealSession {
   _SealSession({
     required this.requestId,
@@ -487,6 +732,7 @@ final class _SealSession {
     required this.pageUrl,
     required this.mediaTitle,
     required this.autoStart,
+    this.itemCount = 1,
   });
 
   final String requestId;
@@ -494,6 +740,7 @@ final class _SealSession {
   final String pageUrl;
   final String mediaTitle;
   final bool autoStart;
+  final int itemCount;
 
   final ValueNotifier<SealPanelPhase> phase = ValueNotifier(
     SealPanelPhase.waitingUi,
@@ -506,6 +753,13 @@ final class _SealSession {
   String? mimeType;
 
   String get kindLabel => extractAudio ? '音频' : '视频';
+
+  String get metaLabel {
+    if (itemCount > 1) {
+      return '$kindLabel · $mediaTitle (${itemCount}P)';
+    }
+    return '$kindLabel · $mediaTitle';
+  }
 }
 
 final class SealDownloadStatus {
@@ -817,7 +1071,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 280),
                 child: Text(
-                  '${session.kindLabel} · ${session.mediaTitle}',
+                  session.metaLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -1144,6 +1398,132 @@ class _StepDot extends StatelessWidget {
               ),
             )
           : null,
+    );
+  }
+}
+
+class _SealPartPickerSheet extends StatefulWidget {
+  const _SealPartPickerSheet({
+    required this.parts,
+    required this.initialSelected,
+    required this.extractAudio,
+  });
+
+  final List<Part> parts;
+  final Set<int> initialSelected;
+  final bool extractAudio;
+
+  @override
+  State<_SealPartPickerSheet> createState() => _SealPartPickerSheetState();
+}
+
+class _SealPartPickerSheetState extends State<_SealPartPickerSheet> {
+  late final Set<int> _selected = {...widget.initialSelected};
+
+  bool get _allSelected => _selected.length == widget.parts.length;
+
+  void _toggleAll() {
+    setState(() {
+      if (_allSelected) {
+        _selected.clear();
+      } else {
+        _selected
+          ..clear()
+          ..addAll(List<int>.generate(widget.parts.length, (i) => i));
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final kind = widget.extractAudio ? '音频' : '视频';
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '选择分 P · 下载$kind',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _toggleAll,
+                  child: Text(_allSelected ? '取消全选' : '全选'),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: widget.parts.length,
+              itemBuilder: (context, index) {
+                final part = widget.parts[index];
+                final pageNo = part.page ?? (index + 1);
+                final title = (part.part?.trim().isNotEmpty == true)
+                    ? part.part!
+                    : 'P$pageNo';
+                final checked = _selected.contains(index);
+                return CheckboxListTile(
+                  dense: true,
+                  value: checked,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(
+                    'P$pageNo · $title',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        _selected.add(index);
+                      } else {
+                        _selected.remove(index);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('取消'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _selected.isEmpty
+                        ? null
+                        : () {
+                            // Pop original indices (not Part copies) so
+                            // pageUrlForPart can use list index as ?p= fallback.
+                            final ordered = _selected.toList()..sort();
+                            Navigator.of(context).pop(ordered);
+                          },
+                    child: Text('确认（${_selected.length}）'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
