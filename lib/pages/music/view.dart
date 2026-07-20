@@ -7,6 +7,7 @@ import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
 import 'package:pili_plus/common/widgets/marquee.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/music.dart';
@@ -553,7 +554,7 @@ class _MusicDetailPageState extends CommonDynPageState<MusicDetailPage> {
                 ],
               ),
               const SizedBox(height: 10),
-              SelectableText(
+              SelectionText(
                 [
                   if (!(item.originArtist ?? item.originArtistList)
                       .isNullOrEmpty)

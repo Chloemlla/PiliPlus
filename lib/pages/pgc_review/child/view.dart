@@ -6,6 +6,7 @@ import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_type.dart';
@@ -287,7 +288,7 @@ class _PgcReviewChildPageState extends State<PgcReviewChildPage>
                   style: const TextStyle(height: 1.75),
                 )
               else
-                SelectableText(
+                SelectionText(
                   item.content!,
                   style: const TextStyle(height: 1.75),
                 ),

@@ -1,6 +1,7 @@
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/http/dynamics.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
@@ -691,8 +692,8 @@ Widget? addWidget(
     }
   } catch (e) {
     return Padding(
-      padding: const EdgeInsets.all(12),
-      child: SelectableText(
+      padding: const .all(12),
+      child: SelectionText(
         '''
 additional panel error
 id: $idStr

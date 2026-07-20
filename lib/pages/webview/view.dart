@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/http/browser_ua.dart';
 import 'package:pili_plus/main.dart';
 import 'package:pili_plus/models/common/webview_menu_type.dart';
@@ -179,7 +180,7 @@ class _WebviewPageState extends State<WebviewPage> {
             algorithmicDarkeningAllowed: true,
             useShouldOverrideUrlLoading: true,
             userAgent: userAgent,
-            mixedContentMode: MixedContentMode.MIXED_CONTENT_NEVER_ALLOW,
+            mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
           ),
           initialUrlRequest: URLRequest(
             url: WebUri.uri(Uri.tryParse(_url) ?? Uri()),
@@ -268,7 +269,7 @@ class _WebviewPageState extends State<WebviewPage> {
                           '下载文件: $suggestedFilename ?',
                           style: const TextStyle(fontSize: 18),
                         ),
-                        content: SelectableText(request.url.toString()),
+                        content: SelectionText(request.url.toString()),
                         actions: [
                           TextButton(
                             onPressed: Get.back,

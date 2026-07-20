@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/pages/setting/pages/crash_report_history.dart';
 import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_store.dart';
@@ -422,7 +423,7 @@ class _ReportCard extends StatelessWidget {
             borderRadius: const .all(.circular(8)),
             border: .all(color: colorScheme.outline.withValues(alpha: 0.5)),
           ),
-          child: SelectableText(
+          child: SelectionText(
             report.item.error.toString(),
             style: TextStyle(
               fontFamily: 'Monospace',
@@ -449,7 +450,7 @@ class _ReportCard extends StatelessWidget {
               borderRadius: const .all(.circular(8)),
               border: .all(color: colorScheme.outline.withValues(alpha: 0.5)),
             ),
-            child: SelectableText.rich(
+            child: SelectionText.rich(
               TextSpan(
                 children: stackTrace
                     .map(

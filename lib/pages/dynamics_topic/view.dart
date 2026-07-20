@@ -5,6 +5,7 @@ import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_pinned_header.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -258,7 +259,7 @@ class _DynTopicPageState extends State<DynTopicPage>
                 ),
               ),
               const SizedBox(height: 6),
-              SelectableText(
+              SelectionText(
                 response.topicItem!.description!,
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               ),
@@ -418,14 +419,15 @@ class _DynTopicPageState extends State<DynTopicPage>
   Widget _buildFoldItem(FoldCardItem item) {
     return Padding(
       padding: const .only(top: 12),
-      child: InkWell(
-        onTap: _controller.topicFold,
-        child: Ink(
-          padding: const .symmetric(vertical: 10),
-          color: colorScheme.outline.withValues(alpha: .05),
-          child: Center(
+      child: Material(
+        color: colorScheme.outline.withValues(alpha: .05),
+        child: InkWell(
+          onTap: _controller.topicFold,
+          child: Padding(
+            padding: const .symmetric(vertical: 10),
             child: Row(
               mainAxisSize: .min,
+              mainAxisAlignment: .center,
               children: [
                 Text(item.foldDesc!),
                 const Icon(Icons.keyboard_arrow_right, size: 22),

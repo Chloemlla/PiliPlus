@@ -27,7 +27,7 @@ TextSpan? richNode(
 }) {
   try {
     late final style = TextStyle(color: theme.colorScheme.primary);
-    List<InlineSpan> spanChildren = [];
+    final List<InlineSpan> spanChildren = [];
 
     final moduleDynamic = item.modules.moduleDynamic;
     List<RichTextNodeItem>? richTextNodes;
@@ -68,18 +68,13 @@ TextSpan? richNode(
             if (i.origText == _linkFoldedText) {
               item.linkFolded = true;
             }
-            spanChildren.add(
-              TextSpan(
-                text: i.origText,
-                style: const TextStyle(height: 1.65),
-              ),
-            );
+            spanChildren.add(TextSpan(text: i.origText));
             break;
           // @用户
           case 'RICH_TEXT_NODE_TYPE_AT':
             spanChildren.add(
               TextSpan(
-                text: ' ${i.text}',
+                text: '${spanChildren.isNotEmpty ? ' ' : ''}${i.text}',
                 style: style,
                 recognizer: NoDeadlineTapGestureRecognizer()
                   ..onTap = () => Get.toNamed('/member?mid=${i.rid}'),
@@ -365,7 +360,10 @@ TextSpan? richNode(
             break;
         }
       }
-      return TextSpan(children: spanChildren);
+      return TextSpan(
+        children: spanChildren,
+        style: const TextStyle(height: 1.65),
+      );
     }
   } catch (err) {
     if (kDebugMode) debugPrint('❌rich_node_panel err: $err');

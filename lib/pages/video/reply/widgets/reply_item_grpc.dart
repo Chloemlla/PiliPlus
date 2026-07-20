@@ -13,8 +13,9 @@ import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
 import 'package:pili_plus/common/widgets/pendant_avatar.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
-    show ReplyInfo, ReplyControl, Content, Url, ReplyControl_VoteOption;
+    show ReplyInfo, ReplyControl, Content, Url, ReplyControl_VoteOption, Emote;
 import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/reply.dart';
@@ -34,7 +35,9 @@ import 'package:pili_plus/utils/danmaku_utils.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/selectable_region_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/global_data.dart';
@@ -47,12 +50,15 @@ import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/url_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:collection/collection.dart' show IterableExtension;
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:protobuf/protobuf.dart';
+
+part 'package:pili_plus/common/widgets/context_menu/reply_menu_helper.dart';
 
 class ReplyItemGrpc extends StatelessWidget {
   const ReplyItemGrpc({
@@ -1183,20 +1189,7 @@ class ReplyItemGrpc extends StatelessWidget {
           ListTile(
             onTap: () {
               Get.back();
-              showDialog(
-                context: context,
-                builder: (context) => Dialog(
-                  child: Padding(
-                    padding: const .symmetric(horizontal: 20, vertical: 16),
-                    child: SelectableText(
-                      message,
-                      style: const TextStyle(fontSize: 15, height: 1.7),
-                      contextMenuBuilder: (_, editableTextState) =>
-                          _filterMenuBuilder(context, editableTextState),
-                    ),
-                  ),
-                ),
-              );
+              showReplyCopyDialog(context, message, item.content.emotes);
             },
             minLeadingWidth: 0,
             leading: const Icon(Icons.copy_outlined, size: 19),
@@ -1223,58 +1216,6 @@ class ReplyItemGrpc extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-
-  static Widget _filterMenuBuilder(
-    BuildContext context,
-    EditableTextState editableTextState,
-  ) {
-    final items = editableTextState.contextMenuButtonItems;
-    if (!editableTextState.textEditingValue.selection.isCollapsed) {
-      items.add(
-        ContextMenuButtonItem(
-          onPressed: () {
-            Navigator.of(context).pop();
-            final select = editableTextState.textEditingValue;
-            String text = RegExp.escape(
-              select.selection.textInside(select.text),
-            );
-            if (ReplyGrpc.enableFilter) text = '|$text';
-
-            showConfirmDialog(
-              context: context,
-              title: const Text('是否确认评论过滤的变更：'),
-              content: Text.rich(
-                TextSpan(
-                  text: ReplyGrpc.replyRegExp.pattern,
-                  children: [
-                    TextSpan(
-                      text: text,
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: .bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              onConfirm: () {
-                final filter = ReplyGrpc.replyRegExp.pattern + text;
-                ReplyGrpc.replyRegExp = RegExp(filter, caseSensitive: true);
-                ReplyGrpc.enableFilter = true;
-                GStorage.setting.put(SettingBoxKey.banWordForReply, filter);
-                SmartDialog.showToast('已保存');
-              },
-            );
-          },
-          label: '加入过滤',
-        ),
-      );
-    }
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      buttonItems: items,
-      anchors: editableTextState.contextMenuAnchors,
     );
   }
 }

@@ -1,8 +1,149 @@
+diff --git a/packages/flutter/lib/src/rendering/paragraph.dart b/packages/flutter/lib/src/rendering/paragraph.dart
+index 97a41dafb8d..70c55832625 100644
+--- a/packages/flutter/lib/src/rendering/paragraph.dart
++++ b/packages/flutter/lib/src/rendering/paragraph.dart
+@@ -3568,7 +3568,10 @@ class _SelectableFragment
+       final selectionPaint = Paint()
+         ..style = PaintingStyle.fill
+         ..color = paragraph.selectionColor!;
+-      for (final TextBox textBox in paragraph.getBoxesForSelection(selection)) {
++      for (final TextBox textBox in paragraph.getBoxesForSelection(
++        selection,
++        boxHeightStyle: ui.BoxHeightStyle.max,
++      )) {
+         context.canvas.drawRect(textBox.toRect().shift(offset), selectionPaint);
+       }
+     }
 diff --git a/packages/flutter/lib/src/widgets/selectable_region.dart b/packages/flutter/lib/src/widgets/selectable_region.dart
-index 59de8bae20b..07ac6981c78 100644
+index 59de8bae20b..525bb76c064 100644
 --- a/packages/flutter/lib/src/widgets/selectable_region.dart
 +++ b/packages/flutter/lib/src/widgets/selectable_region.dart
-@@ -2822,7 +2822,10 @@ abstract class MultiSelectableSelectionContainerDelegate extends SelectionContai
+@@ -404,6 +404,7 @@ class SelectableRegionState extends State<SelectableRegion>
+   final StaticSelectionContainerDelegate _selectionDelegate = StaticSelectionContainerDelegate();
+   // there should only ever be one selectable, which is the SelectionContainer.
+   Selectable? _selectable;
++  Selectable? get selectable => _selectable;
+ 
+   bool get _hasSelectionOverlayGeometry =>
+       _selectionDelegate.value.startSelectionPoint != null ||
+@@ -599,48 +600,32 @@ class SelectableRegionState extends State<SelectableRegion>
+   //
+   // This method should be used in all instances when details.consecutiveTapCount
+   // would be used.
+-  int _getEffectiveConsecutiveTapCount(int rawCount) {
+-    var maxConsecutiveTap = 3;
++  static int _getEffectiveConsecutiveTapCount(int rawCount) {
+     switch (defaultTargetPlatform) {
+       case TargetPlatform.android:
+       case TargetPlatform.fuchsia:
+-        if (_lastPointerDeviceKind != null && _lastPointerDeviceKind != PointerDeviceKind.mouse) {
+-          // When the pointer device kind is not precise like a mouse, native
+-          // Android resets the tap count at 2. For example, this is so the
+-          // selection can collapse on the third tap.
+-          maxConsecutiveTap = 2;
+-        }
+-        // From observation, these platforms reset their tap count to 0 when
+-        // the number of consecutive taps exceeds the max consecutive tap supported.
+-        // For example on native Android, when going past a triple click,
+-        // on the fourth click the selection is moved to the precise click
+-        // position, on the fifth click the word at the position is selected, and
+-        // on the sixth click the paragraph at the position is selected.
+-        return rawCount <= maxConsecutiveTap
+-            ? rawCount
+-            : (rawCount % maxConsecutiveTap == 0
+-                  ? maxConsecutiveTap
+-                  : rawCount % maxConsecutiveTap);
+       case TargetPlatform.linux:
+-        // From observation, these platforms reset their tap count to 0 when
+-        // the number of consecutive taps exceeds the max consecutive tap supported.
+-        // For example on Debian Linux with GTK, when going past a triple click,
+-        // on the fourth click the selection is moved to the precise click
+-        // position, on the fifth click the word at the position is selected, and
+-        // on the sixth click the paragraph at the position is selected.
+-        return rawCount <= maxConsecutiveTap
+-            ? rawCount
+-            : (rawCount % maxConsecutiveTap == 0
+-                  ? maxConsecutiveTap
+-                  : rawCount % maxConsecutiveTap);
++        // From observation, these platform's reset their tap count to 0 when
++        // the number of consecutive taps exceeds 3. For example on Debian Linux
++        // with GTK, when going past a triple click, on the fourth click the
++        // selection is moved to the precise click position, on the fifth click
++        // the word at the position is selected, and on the sixth click the
++        // paragraph at the position is selected.
++        return rawCount <= 3 ? rawCount : (rawCount % 3 == 0 ? 3 : rawCount % 3);
+       case TargetPlatform.iOS:
+       case TargetPlatform.macOS:
++        // From observation, these platform's either hold their tap count at 3.
++        // For example on macOS, when going past a triple click, the selection
++        // should be retained at the paragraph that was first selected on triple
++        // click.
++        return min(rawCount, 3);
+       case TargetPlatform.windows:
+-        // From observation, these platforms hold their tap count at the max
+-        // consecutive tap supported. For example on macOS, when going past a triple
+-        // click, the selection should be retained at the paragraph that was first
+-        // selected on triple click.
+-        return min(rawCount, maxConsecutiveTap);
++        // From observation, this platform's consecutive tap actions alternate
++        // between double click and triple click actions. For example, after a
++        // triple click has selected a paragraph, on the next click the word at
++        // the clicked position will be selected, and on the next click the
++        // paragraph at the position is selected.
++        return rawCount < 2 ? rawCount : 2 + rawCount % 2;
+     }
+   }
+ 
+@@ -782,22 +767,8 @@ class SelectableRegionState extends State<SelectableRegion>
+             _selectionStatusNotifier.value = SelectableRegionSelectionStatus.changing;
+         }
+       case 3:
+-        switch (defaultTargetPlatform) {
+-          case TargetPlatform.android:
+-          case TargetPlatform.fuchsia:
+-          case TargetPlatform.iOS:
+-            if (details.kind != null && _isPrecisePointerDevice(details.kind!)) {
+-              // Triple tap on static text is only supported on mobile
+-              // platforms using a precise pointer device.
+-              _selectParagraphAt(offset: details.globalPosition);
+-              _selectionStatusNotifier.value = SelectableRegionSelectionStatus.changing;
+-            }
+-          case TargetPlatform.macOS:
+-          case TargetPlatform.linux:
+-          case TargetPlatform.windows:
+-            _selectParagraphAt(offset: details.globalPosition);
+-            _selectionStatusNotifier.value = SelectableRegionSelectionStatus.changing;
+-        }
++        _selectParagraphAt(offset: details.globalPosition);
++        _selectionStatusNotifier.value = SelectableRegionSelectionStatus.changing;
+     }
+     _updateSelectedContentIfNeeded();
+   }
+@@ -1049,10 +1020,10 @@ class SelectableRegionState extends State<SelectableRegion>
+       case TargetPlatform.windows:
+         // If _lastSecondaryTapDownPosition is within the current selection then
+         // keep the current selection, if not then collapse it.
+-        final bool lastSecondaryTapDownPositionWasOnActiveSelection = _positionIsOnActiveSelection(
+-          globalPosition: details.globalPosition,
+-        );
+-        if (lastSecondaryTapDownPositionWasOnActiveSelection) {
++        // final bool lastSecondaryTapDownPositionWasOnActiveSelection = _positionIsOnActiveSelection(
++        //   globalPosition: details.globalPosition,
++        // );
++        if (_selectionDelegate.value.selectionRects.isNotEmpty) {
+           // Restore _lastSecondaryTapDownPosition since it may be cleared if a user
+           // accesses contextMenuAnchors.
+           _lastSecondaryTapDownPosition = details.globalPosition;
+@@ -1957,6 +1928,8 @@ class SelectableRegionState extends State<SelectableRegion>
+         // the region on non-web platforms.
+         if (kIsWeb) {
+           _focusNode.unfocus();
++        } else {
++          clearSelection();
+         }
+       },
+       child: CompositedTransformTarget(
+@@ -2822,7 +2795,10 @@ abstract class MultiSelectableSelectionContainerDelegate extends SelectionContai
        return null;
      }
      final buffer = StringBuffer();

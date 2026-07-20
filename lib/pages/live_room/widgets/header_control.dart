@@ -187,16 +187,15 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
                 color: Colors.white,
               ),
             ),
-          Obx(() {
-            final onlyPlayAudio = plPlayerController.onlyPlayAudio.value;
-            return ComBtn(
+Obx(
+            () => ComBtn(
               height: 30,
               tooltip: '仅播放音频',
               onTap: () {
-                plPlayerController.onlyPlayAudio.value = !onlyPlayAudio;
+                plPlayerController.onlyPlayAudio.toggle();
                 widget.onPlayAudio();
               },
-              icon: onlyPlayAudio
+              icon: plPlayerController.onlyPlayAudio.value
                   ? const Icon(
                       size: 18,
                       MdiIcons.musicCircle,
@@ -207,8 +206,8 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
                       MdiIcons.musicCircleOutline,
                       color: Colors.white,
                     ),
-            );
-          }),
+            ),
+          ),
           if (PlatformUtils.isMobile)
             Obx(() {
               final continuePlayInBackground =

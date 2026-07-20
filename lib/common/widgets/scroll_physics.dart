@@ -13,6 +13,8 @@ Widget tabBarView({
   children: children,
 );
 
+final _springDescription = _customSpringDescription();
+
 SpringDescription _customSpringDescription() {
   final List<double> springDescription = Pref.springDescription;
   return SpringDescription(
@@ -33,8 +35,6 @@ class CustomTabBarViewScrollPhysics extends ScrollPhysics {
   CustomTabBarViewScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return CustomTabBarViewScrollPhysics(parent: buildParent(ancestor));
   }
-
-  static final _springDescription = _customSpringDescription();
 
   @override
   SpringDescription get spring => _springDescription;

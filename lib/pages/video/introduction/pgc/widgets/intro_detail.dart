@@ -1,7 +1,7 @@
 import 'package:pili_plus/common/widgets/flutter/page/tabs.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
-import 'package:pili_plus/common/widgets/selectable_text.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/common/widgets/stat/stat.dart';
 import 'package:pili_plus/models/common/stat_type.dart';
 import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
@@ -127,7 +127,7 @@ class _IntroDetailState extends State<PgcIntroPanel>
         bottom: MediaQuery.viewPaddingOf(context).bottom + 100,
       ),
       children: [
-        selectableText(
+        SelectionText(
           widget.item.title!,
           style: const TextStyle(fontSize: 16),
         ),
@@ -171,7 +171,7 @@ class _IntroDetailState extends State<PgcIntroPanel>
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
-          selectableText(
+          SelectionText(
             widget.item.evaluate!,
             style: textStyle,
           ),
