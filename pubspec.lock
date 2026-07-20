@@ -521,7 +521,7 @@ packages:
       resolved-ref: "02eb0aede6ca2278bea54eb5cc9ec520bf8165fc"
       url: "https://github.com/bggRGjQaUbCoE/flutter_file_picker.git"
     source: git
-    version: "12.0.0-beta.8"
+    version: "12.0.0-beta.7"
   file_selector_linux:
     dependency: transitive
     description:
@@ -710,7 +710,7 @@ packages:
       resolved-ref: "1dbede0ee22f161ec2c928e1e82f0ae9339a097d"
       url: "https://github.com/bggRGjQaUbCoE/flutter_smart_dialog.git"
     source: git
-    version: "5.1.1"
+    version: "5.1.0"
   flutter_sortable_wrap:
     dependency: "direct main"
     description:
