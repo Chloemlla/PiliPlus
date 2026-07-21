@@ -7,13 +7,13 @@ import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/report.dart';
-import 'package:pili_plus/common/widgets/extra_hit_test_widget.dart';
 import 'package:pili_plus/common/widgets/flutter/text/text.dart' as custom_text;
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
 import 'package:pili_plus/common/widgets/pendant_avatar.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
+import 'package:pili_plus/common/widgets/translucent_row.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, ReplyControl, Content, Url, ReplyControl_VoteOption, Emote;
 import 'package:pili_plus/grpc/reply.dart';
@@ -32,7 +32,6 @@ import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/color_utils.dart';
 import 'package:pili_plus/utils/danmaku_utils.dart';
-import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
@@ -153,105 +152,87 @@ class ReplyItemGrpc extends StatelessWidget {
         feedBack();
         Get.toNamed('/member?mid=${replyItem.mid}');
       },
-      child: ExtraHitTestWidget(
-        width: 46,
-        child: Row(
-          crossAxisAlignment: .center,
-          spacing: 12,
-          children: [
-            PendantAvatar(
-              member.face,
-              size: 34,
-              badgeSize: 14,
-              vipStatus: member.vipStatus.toInt(),
-              officialType: member.officialVerifyType.toInt(),
-              pendantImage: member.hasGarbPendantImage()
-                  ? member.garbPendantImage
-                  : null,
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    spacing: 6,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          member.name,
-                          maxLines: 1,
-                          overflow: .ellipsis,
-                          style: TextStyle(
-                            color: (member.vipStatus > 0 && member.vipType == 2)
-                                ? colorScheme.vipColor
-                                : colorScheme.outline,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      BiliUtils.levelPicture(
-                        member.level.toInt(),
-                        isSeniorMember: member.isSeniorMember == 1,
-                        height: 11,
-                      ),
-                      if (replyItem.mid == upMid)
-                        const PBadge(
-                          text: 'UP',
-                          size: PBadgeSize.small,
-                          isStack: false,
-                          fontSize: 9,
-                        )
-                      else if (GlobalData().showMedal &&
-                          member.hasFansMedalLevel())
-                        MedalWidget(
-                          medalName: member.fansMedalName,
-                          level: member.fansMedalLevel.toInt(),
-                          backgroundColor: DmUtils.decimalToColor(
-                            member.fansMedalColor.toInt(),
-                          ),
-                          nameColor: DmUtils.decimalToColor(
-                            member.fansMedalColorName.toInt(),
-                          ),
-                          padding: const .symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
-                        ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        replyLevel == 0
-                            ? DateFormatUtils.format(
-                                replyItem.ctime.toInt(),
-                                format: DateFormatUtils.longFormatDs,
-                              )
-                            : DateFormatUtils.dateFormat(
-                                replyItem.ctime.toInt(),
-                              ),
+      child: TranslucentRow(
+        spacing: 12,
+        extraWidth: 46,
+        children: [
+          PendantAvatar(
+            member.face,
+            size: 34,
+            badgeSize: 14,
+            vipStatus: member.vipStatus.toInt(),
+            officialType: member.officialVerifyType.toInt(),
+            pendantImage: member.hasGarbPendantImage()
+                ? member.garbPendantImage
+                : null,
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  spacing: 6,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        member.name,
+                        maxLines: 1,
+                        overflow: .ellipsis,
                         style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.outline,
+                          color: (member.vipStatus > 0 && member.vipType == 2)
+                              ? colorScheme.vipColor
+                              : colorScheme.outline,
+                          fontSize: 13,
                         ),
                       ),
-                      if (replyItem.replyControl.hasLocation())
-                        Text(
-                          ' • ${replyItem.replyControl.location}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.outline,
-                          ),
+                    ),
+                    BiliUtils.levelPicture(
+                      member.level.toInt(),
+                      isSeniorMember: member.isSeniorMember == 1,
+                      height: 11,
+                    ),
+                    if (replyItem.mid == upMid)
+                      const PBadge(
+                        text: 'UP',
+                        size: PBadgeSize.small,
+                        isStack: false,
+                        fontSize: 9,
+                      )
+                    else if (GlobalData().showMedal &&
+                        member.hasFansMedalLevel())
+                      MedalWidget(
+                        medalName: member.fansMedalName,
+                        level: member.fansMedalLevel.toInt(),
+                        backgroundColor: DmUtils.decimalToColor(
+                          member.fansMedalColor.toInt(),
                         ),
-                    ],
-                  ),
-                ],
-              ),
+                        nameColor: DmUtils.decimalToColor(
+                          member.fansMedalColorName.toInt(),
+                        ),
+                        padding: const .symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                      ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      ' • ${replyItem.replyControl.location}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
     if (PendantAvatar.showDecorate) {
