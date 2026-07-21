@@ -471,6 +471,72 @@ abstract final class Pref {
   static bool get sealAutoStart =>
       _setting.get(SettingBoxKey.sealAutoStart, defaultValue: false);
 
+  /// When true, attach logged-in Bilibili cookies to Seal delegate (protocol v2).
+  static bool get sealCookiePassthrough =>
+      _setting.get(SettingBoxKey.sealCookiePassthrough, defaultValue: true);
+
+  static bool get sealCookieRemember =>
+      _setting.get(SettingBoxKey.sealCookieRemember, defaultValue: false);
+
+  /// Remembered mid for Seal cookie account; 0 = none.
+  static int get sealCookieRememberMid {
+    final v = _setting.get(
+      SettingBoxKey.sealCookieRememberMid,
+      defaultValue: 0,
+    );
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
+  static bool get sealCookieAlwaysAsk =>
+      _setting.get(SettingBoxKey.sealCookieAlwaysAsk, defaultValue: false);
+
+  static Future<void> setSealCookieRemember({
+    required bool remember,
+    int mid = 0,
+  }) async {
+    await _setting.put(SettingBoxKey.sealCookieRemember, remember);
+    await _setting.put(
+      SettingBoxKey.sealCookieRememberMid,
+      remember ? mid : 0,
+    );
+  }
+
+  static Future<void> clearSealCookieRemember() =>
+      setSealCookieRemember(remember: false, mid: 0);
+
+  /// Opt-in: when downloading via Seal, strip SponsorBlock-marked ad ranges.
+  static bool get stripMarkedSegmentsEnabled => _setting.get(
+    SettingBoxKey.stripMarkedSegmentsEnabled,
+    defaultValue: false,
+  );
+
+  /// Default strip categories (SegmentType.name). Never includes poi_highlight.
+  static Set<String> get stripSegmentCategories {
+    final raw = _setting.get(SettingBoxKey.stripSegmentCategories);
+    if (raw is List && raw.isNotEmpty) {
+      return {
+        for (final e in raw)
+          if (e is String && e.isNotEmpty && e != 'poi_highlight') e,
+      };
+    }
+    return const {'sponsor', 'selfpromo'};
+  }
+
+  /// Min segment length for strip (ms). Defaults from blockLimit (seconds).
+  static int get stripMinSegmentMs {
+    final stored = _setting.get(SettingBoxKey.stripMinSegmentMs);
+    if (stored is int && stored > 0) return stored;
+    final fromLimit = (blockLimit * 1000).round();
+    return fromLimit > 0 ? fromLimit : 1000;
+  }
+
+  static bool get stripAlwaysAskCategories => _setting.get(
+    SettingBoxKey.stripAlwaysAskCategories,
+    defaultValue: false,
+  );
+
   static bool get savedRcmdTip =>
       _setting.get(SettingBoxKey.savedRcmdTip, defaultValue: true);
 

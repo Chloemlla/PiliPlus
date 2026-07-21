@@ -1,14 +1,23 @@
 import 'dart:async';
+import 'dart:convert' show jsonEncode;
 import 'dart:io' show Platform;
 import 'dart:math' show min;
 
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/sponsor_block.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/strip_removal_report.dart';
+import 'package:pili_plus/models_new/sponsor_block/segment_item.dart';
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/segment_strip_math.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -55,12 +64,23 @@ abstract final class SealDownloadUtils {
     return promptDownload(ctr, extractAudio: true);
   }
 
+  /// One-tap: current part only, force strip when marks exist.
+  static Future<void> downloadVideoStripMarked(VideoDetailController ctr) {
+    return promptDownload(ctr, extractAudio: false, forceStrip: true);
+  }
+
   /// Multi-P UGC: show 当前P / 选择分P… / 全部; otherwise delegate immediately.
   static Future<void> promptDownload(
     VideoDetailController ctr, {
     required bool extractAudio,
+    bool forceStrip = false,
   }) async {
     if (!isSupported) return;
+    // Force-strip is single-P only (keep_sections is per-cid).
+    if (forceStrip) {
+      await _download(ctr, extractAudio: extractAudio, forceStrip: true);
+      return;
+    }
     final pages = _ugcMultiPages(ctr);
     if (pages == null || pages.length <= 1) {
       await _download(ctr, extractAudio: extractAudio);
@@ -137,6 +157,7 @@ abstract final class SealDownloadUtils {
     required bool extractAudio,
     List<String>? urls,
     int? itemCount,
+    bool forceStrip = false,
   }) async {
     ensureListening();
     final List<String> resolvedUrls;
@@ -160,6 +181,39 @@ abstract final class SealDownloadUtils {
 
     final primaryUrl = resolvedUrls.first;
     final count = itemCount ?? resolvedUrls.length;
+
+    final wantStrip = forceStrip || Pref.stripMarkedSegmentsEnabled;
+    StripRemovalReport? stripReport;
+    String? keepSectionsJson;
+    var stripSegments = false;
+    if (wantStrip && count == 1) {
+      final prepared = await _prepareStripPlan(ctr);
+      if (prepared != null) {
+        switch (prepared) {
+          case _StripPrepareOk(:final report, :final keepJson):
+            stripReport = report;
+            keepSectionsJson = keepJson;
+            stripSegments = true;
+          case _StripPrepareSkip(:final message):
+            SmartDialog.showToast(message);
+          case _StripPrepareFail(:final message):
+            if (forceStrip) {
+              await _showErrorPanel(title: '无法去除标记片段', message: message);
+              return;
+            }
+            SmartDialog.showToast(message);
+        }
+      }
+    } else if (wantStrip && count > 1) {
+      SmartDialog.showToast('去除标记片段仅支持单个分 P，已按普通下载处理');
+    }
+
+    // Cookie account selection (after multi-P, before launch).
+    final cookieChoice = await _resolveCookiePayload();
+    if (cookieChoice == _CookieChoice.canceled) {
+      return;
+    }
+
     final requestId =
         'piliplus-${extractAudio ? 'audio' : 'video'}-${DateTime.now().microsecondsSinceEpoch}';
     final title = _titleOf(ctr);
@@ -170,6 +224,7 @@ abstract final class SealDownloadUtils {
       mediaTitle: title,
       autoStart: Pref.sealAutoStart,
       itemCount: count,
+      stripReport: stripReport,
     );
     _sessions[requestId] = session;
     _activeRequestId = requestId;
@@ -178,27 +233,60 @@ abstract final class SealDownloadUtils {
         ? SealPanelPhase.waitingAuto
         : SealPanelPhase.waitingUi;
     session.phase.value = initialBusy;
-    session.message.value = Pref.sealAutoStart
-        ? (count > 1
-              ? '已委托 Seal（$count 项），正在自动入队…'
-              : '已委托 Seal，正在自动入队…')
-        : (count > 1
-              ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
-              : '已打开 Seal，请在 Seal 中确认下载');
+    final stripHint = stripSegments && stripReport != null
+        ? '正在去除 ${stripReport.removedCount} 段标记内容…'
+        : null;
+    session.message.value = stripHint ??
+        (Pref.sealAutoStart
+            ? (count > 1
+                  ? '已委托 Seal（$count 项），正在自动入队…'
+                  : '已委托 Seal，正在自动入队…')
+            : (count > 1
+                  ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
+                  : '已打开 Seal，请在 Seal 中确认下载'));
     // Non-blocking: must not await SmartDialog dismiss Future (R1).
     unawaited(_showOrUpdatePanel(session));
+    if (stripReport != null) {
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 400), () {
+        if (session.phase.value.isBusy ||
+            session.phase.value == SealPanelPhase.completed) {
+          _showStripReportSheet(stripReport!);
+        }
+      }));
+    }
 
     try {
+      final args = <String, dynamic>{
+        'url': primaryUrl,
+        'urls': resolvedUrls,
+        'extractAudio': extractAudio,
+        'autoStart': Pref.sealAutoStart,
+        'openUi': true,
+        'requestId': requestId,
+      };
+      if (stripSegments && keepSectionsJson != null) {
+        args['stripSegments'] = true;
+        args['keepSections'] = keepSectionsJson;
+      }
+      if (cookieChoice is _CookieChoiceUse) {
+        args['cookiesFormat'] = 'json_map';
+        args['cookies'] = cookieChoice.cookiesJson;
+        args['cookiesMid'] = cookieChoice.mid;
+        args['cookiesDomainHint'] = '.bilibili.com';
+        args['useCookies'] = true;
+        // Soft: Seal may ignore cookies if accept-external is off.
+        args['cookiesRequired'] = false;
+        if (kDebugMode) {
+          // Never print cookie values — mid + size only.
+          debugPrint(
+            'SealDownload cookie mid=${cookieChoice.mid} '
+            'keys=${cookieChoice.keyCount} bytes=${cookieChoice.cookiesJson.length}',
+          );
+        }
+      }
       final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
         'delegateDownload',
-        <String, dynamic>{
-          'url': primaryUrl,
-          'urls': resolvedUrls,
-          'extractAudio': extractAudio,
-          'autoStart': Pref.sealAutoStart,
-          'openUi': true,
-          'requestId': requestId,
-        },
+        args,
       );
       if (result == null) {
         _finishSession(
@@ -260,6 +348,299 @@ abstract final class SealDownloadUtils {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Build strip plan for current cid. Null = strip not applicable.
+  static Future<_StripPrepareResult?> _prepareStripPlan(
+    VideoDetailController ctr,
+  ) async {
+    final bvid = ctr.bvid;
+    final cid = ctr.cid.value;
+    if (bvid.isEmpty || cid == 0) {
+      return const _StripPrepareFail('无法解析视频标识');
+    }
+
+    final durationMs = _resolveDurationMs(ctr);
+    if (durationMs == null || durationMs <= 0) {
+      return const _StripPrepareFail('视频时长未知，无法去除标记片段');
+    }
+
+    var categories = Pref.stripSegmentCategories;
+    if (categories.isEmpty) {
+      categories = const {'sponsor', 'selfpromo'};
+    }
+    categories = {...categories}..remove('poi_highlight');
+
+    if (Pref.stripAlwaysAskCategories) {
+      final picked = await _pickStripCategories(categories);
+      if (picked == null) {
+        return const _StripPrepareSkip('已取消去除标记片段');
+      }
+      categories = picked;
+      if (categories.isEmpty) {
+        return const _StripPrepareSkip('未选择剥离类别，已按普通下载处理');
+      }
+    }
+
+    SmartDialog.showLoading(msg: '获取标记片段…');
+    LoadingState<List<SegmentItemModel>> state;
+    try {
+      state = await SponsorBlock.getSkipSegments(bvid: bvid, cid: cid);
+    } finally {
+      SmartDialog.dismiss();
+    }
+
+    if (state is! Success<List<SegmentItemModel>>) {
+      final msg = state is Error ? (state.errMsg ?? '获取标记失败') : '获取标记失败';
+      return _StripPrepareSkip('无标记广告片段（$msg），已按普通下载处理');
+    }
+
+    final items = state.response;
+    if (items.isEmpty) {
+      return const _StripPrepareSkip('无标记广告片段，已按普通下载处理');
+    }
+
+    final inputs = <SegmentStripInput>[
+      for (final item in items)
+        SegmentStripInput(
+          category: item.category,
+          startMs: item.segment.isNotEmpty ? item.segment[0] : 0,
+          endMs: item.segment.length > 1 ? item.segment[1] : 0,
+          uuid: item.uuid.isEmpty ? null : item.uuid,
+          source: item.uuid.isEmpty ? 'pgc' : 'sponsorblock',
+        ),
+    ];
+
+    var effectiveDuration = durationMs;
+    for (final item in items) {
+      final vd = item.videoDuration;
+      if (vd != null && vd > effectiveDuration) {
+        effectiveDuration = vd.round();
+      }
+    }
+
+    final plan = SegmentStripMath.plan(
+      segments: inputs,
+      durationMs: effectiveDuration,
+      categories: categories,
+      minMs: Pref.stripMinSegmentMs,
+    );
+
+    if (plan.failure == SegmentStripFailure.durationUnknown) {
+      return const _StripPrepareFail('视频时长未知，无法去除标记片段');
+    }
+    if (plan.failure == SegmentStripFailure.fullCover ||
+        plan.failure == SegmentStripFailure.emptyKeep) {
+      return const _StripPrepareFail('标记片段覆盖全片，无法剥离（无剩余正片）');
+    }
+    if (!plan.hasRemovals) {
+      return const _StripPrepareSkip('无标记广告片段，已按普通下载处理');
+    }
+    if (!plan.shouldStrip) {
+      return const _StripPrepareSkip('无可剥离片段，已按普通下载处理');
+    }
+
+    final report = StripRemovalReport.fromPlan(
+      bvid: bvid,
+      cid: cid,
+      plan: plan,
+    );
+    final keepJson = jsonEncode(report.keepSectionsSeconds());
+    return _StripPrepareOk(report: report, keepJson: keepJson);
+  }
+
+  static int? _resolveDurationMs(VideoDetailController ctr) {
+    final fromPlay = ctr.timeLength;
+    if (fromPlay != null && fromPlay > 0) return fromPlay;
+    try {
+      final ugc = Get.find<UgcIntroController>(tag: ctr.heroTag);
+      final detail = ugc.videoDetail.value;
+      final pages = detail.pages;
+      if (pages != null) {
+        for (final part in pages) {
+          if (part.cid == ctr.cid.value) {
+            final sec = part.duration;
+            if (sec != null && sec > 0) return sec * 1000;
+            break;
+          }
+        }
+      }
+      final dur = detail.duration;
+      if (dur != null && dur > 0) return dur * 1000;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Set<String>?> _pickStripCategories(
+    Set<String> initial,
+  ) async {
+    final context = Get.context;
+    if (context == null) return initial;
+    final options = SegmentType.values
+        .where((t) => t != SegmentType.poi_highlight)
+        .toList();
+    final selected = {...initial};
+    return showModalBottomSheet<Set<String>>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxHeight: context.mediaQuerySize.height * 0.7,
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final theme = Theme.of(context);
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      '选择要剥离的标记类别',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final t in options)
+                          CheckboxListTile(
+                            dense: true,
+                            value: selected.contains(t.name),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            secondary: Icon(
+                              Icons.circle,
+                              size: 12,
+                              color: t.color,
+                            ),
+                            title: Text(t.title),
+                            subtitle: Text(
+                              t.shortTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onChanged: (v) {
+                              setState(() {
+                                if (v == true) {
+                                  selected.add(t.name);
+                                } else {
+                                  selected.remove(t.name);
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('取消'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () =>
+                                Navigator.of(context).pop(selected),
+                            child: Text('确认（${selected.length}）'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static Future<void> _showStripReportSheet(StripRemovalReport report) async {
+    final context = Get.context;
+    if (context == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxHeight: context.mediaQuerySize.height * 0.75,
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  '去除标记片段报告',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  report.summaryLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: report.removed.length,
+                  itemBuilder: (context, index) {
+                    final item = report.removed[index];
+                    return ListTile(
+                      dense: true,
+                      leading: Icon(
+                        Icons.circle,
+                        size: 12,
+                        color: item.type.color,
+                      ),
+                      title: Text(item.typeTitle),
+                      subtitle: Text(
+                        '${item.timeRangeLabel}'
+                        '${item.uuid != null && item.uuid!.isNotEmpty ? ' · ${item.uuid}' : ''}'
+                        ' · ${item.source}',
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                child: FilledButton.tonal(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('关闭'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   static String? pageUrlOf(VideoDetailController ctr) {
@@ -409,6 +790,243 @@ abstract final class SealDownloadUtils {
     return ctr.bvid;
   }
 
+  /// Resolve optional cookie payload for Seal v2.
+  /// Returns [_CookieChoice.anonymous] when passthrough off / no login / user skips.
+  /// Returns [_CookieChoice.canceled] when sheet dismissed.
+  static Future<_CookieChoice> _resolveCookiePayload() async {
+    if (!Pref.sealCookiePassthrough) {
+      return _CookieChoice.anonymous;
+    }
+    final accounts = _loginAccounts();
+    if (accounts.isEmpty) {
+      return _CookieChoice.anonymous;
+    }
+
+    LoginAccount? selected;
+    // Remembered mid wins when still valid and not always-ask.
+    if (!Pref.sealCookieAlwaysAsk && Pref.sealCookieRemember) {
+      final mid = Pref.sealCookieRememberMid;
+      if (mid != 0) {
+        for (final a in accounts) {
+          if (a.mid == mid && a.hasRequiredCookies) {
+            selected = a;
+            break;
+          }
+        }
+      }
+    }
+
+    // Single login: auto-use without sheet unless always-ask.
+    if (selected == null && accounts.length == 1 && !Pref.sealCookieAlwaysAsk) {
+      selected = accounts.first;
+    }
+
+    if (selected == null) {
+      final pick = await _showCookieAccountSheet(accounts);
+      if (pick == null) return _CookieChoice.canceled;
+      if (pick.anonymous) return _CookieChoice.anonymous;
+      selected = pick.account;
+      if (selected == null) return _CookieChoice.anonymous;
+      if (pick.remember) {
+        await Pref.setSealCookieRemember(remember: true, mid: selected.mid);
+      } else {
+        // User left remember off — clear any previous binding.
+        await Pref.clearSealCookieRemember();
+      }
+    }
+
+    return _cookieChoiceFromAccount(selected);
+  }
+
+  static _CookieChoice _cookieChoiceFromAccount(LoginAccount selected) {
+    final map = selected.cookieJar.toJson();
+    if (map.isEmpty ||
+        (map['DedeUserID']?.toString().isEmpty ?? true) ||
+        (map['bili_jct']?.toString().isEmpty ?? true)) {
+      SmartDialog.showToast('账号凭证不完整，将匿名委托');
+      return _CookieChoice.anonymous;
+    }
+    final json = jsonEncode(map);
+    // Soft size guard (Seal hard-caps 256 KiB). Never log cookie values.
+    if (json.length > 200 * 1024) {
+      SmartDialog.showToast('Cookie 数据过大，将匿名委托');
+      return _CookieChoice.anonymous;
+    }
+    return _CookieChoiceUse(
+      mid: selected.mid,
+      cookiesJson: json,
+      keyCount: map.length,
+    );
+  }
+
+  static List<LoginAccount> _loginAccounts() {
+    final list = <LoginAccount>[];
+    final seen = <int>{};
+    for (final a in Accounts.account.values) {
+      if (!a.shouldKeep || !a.hasRequiredCookies) continue;
+      if (!seen.add(a.mid)) continue;
+      list.add(a);
+    }
+    // Prefer video / main order for single-account default.
+    list.sort((a, b) {
+      int rank(LoginAccount x) {
+        if (identical(x, Accounts.video) || x.mid == Accounts.video.mid) {
+          return 0;
+        }
+        if (identical(x, Accounts.main) || x.mid == Accounts.main.mid) {
+          return 1;
+        }
+        return 2;
+      }
+
+      return rank(a).compareTo(rank(b));
+    });
+    return list;
+  }
+
+  static Future<_CookieSheetResult?> _showCookieAccountSheet(
+    List<LoginAccount> accounts,
+  ) async {
+    final context = Get.context;
+    if (context == null) return null;
+    var selectedMid = accounts.first.mid;
+    // Prefer remembered highlight even when always-ask.
+    final remembered = Pref.sealCookieRememberMid;
+    if (remembered != 0 && accounts.any((a) => a.mid == remembered)) {
+      selectedMid = remembered;
+    } else if (Accounts.video is LoginAccount &&
+        Accounts.video.isLogin &&
+        accounts.any((a) => a.mid == Accounts.video.mid)) {
+      selectedMid = Accounts.video.mid;
+    } else if (Accounts.main is LoginAccount &&
+        Accounts.main.isLogin &&
+        accounts.any((a) => a.mid == Accounts.main.mid)) {
+      selectedMid = Accounts.main.mid;
+    }
+    var remember = Pref.sealCookieRemember;
+
+    return showModalBottomSheet<_CookieSheetResult>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final theme = Theme.of(context);
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: Text(
+                      '使用 B 站账号下载',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      '将把所选账号的登录凭证临时交给 Seal，仅用于本次下载；'
+                      '不会写入 Seal 登录状态，也不会上传网络。',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  for (final a in accounts)
+                    ListTile(
+                      leading: Icon(
+                        selectedMid == a.mid
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: selectedMid == a.mid
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(_accountLabel(a)),
+                      subtitle: Text('UID ${a.mid}'),
+                      onTap: () => setModalState(() => selectedMid = a.mid),
+                    ),
+                  SwitchListTile(
+                    value: remember,
+                    onChanged: (v) => setModalState(() => remember = v),
+                    title: const Text('记住此账号'),
+                    subtitle: const Text('下次委托时跳过选择（可在设置中清除）'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(
+                            const _CookieSheetResult(anonymous: true),
+                          ),
+                          child: const Text('匿名委托'),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () {
+                            LoginAccount? acc;
+                            for (final a in accounts) {
+                              if (a.mid == selectedMid) {
+                                acc = a;
+                                break;
+                              }
+                            }
+                            Navigator.of(context).pop(
+                              _CookieSheetResult(
+                                account: acc,
+                                remember: remember,
+                              ),
+                            );
+                          },
+                          child: const Text('使用账号下载'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static String _accountLabel(LoginAccount account) {
+    final badges = <String>[];
+    if (account.mid == Accounts.main.mid && Accounts.main.isLogin) {
+      badges.add('主账号');
+    }
+    if (account.mid == Accounts.video.mid && Accounts.video.isLogin) {
+      badges.add('视频取流');
+    }
+    final uname = Pref.userInfoCache?.mid == account.mid
+        ? Pref.userInfoCache?.uname?.trim()
+        : null;
+    final namePart = (uname != null && uname.isNotEmpty)
+        ? uname
+        : 'UID ${account.mid}';
+    if (badges.isEmpty) {
+      return uname != null && uname.isNotEmpty
+          ? '$uname · UID ${account.mid}'
+          : namePart;
+    }
+    return '${badges.join(' · ')} · $namePart';
+  }
 
   static Future<dynamic> _onMethodCall(MethodCall call) async {
     if (call.method != 'onDownloadStatus') return null;
@@ -486,7 +1104,9 @@ abstract final class SealDownloadUtils {
         if (current == SealPanelPhase.completed) break;
         session.taskId = status.taskId ?? session.taskId;
         session.phase.value = SealPanelPhase.accepted;
-        session.message.value = '已交给 Seal 下载，完成后将在此更新';
+        session.message.value = session.stripReport != null
+            ? '已交给 Seal 下载（去除 ${session.stripReport!.removedCount} 段标记），完成后将在此更新'
+            : '已交给 Seal 下载，完成后将在此更新';
       case 'needs_ui':
         // Activity Result often arrives after the user already confirmed in Seal
         // (QuickDownloadActivity finishes later). Do not overwrite accepted/terminal.
@@ -513,9 +1133,24 @@ abstract final class SealDownloadUtils {
         session.displayName = status.displayName ?? session.displayName;
         session.mimeType = status.mimeType ?? session.mimeType;
         session.phase.value = SealPanelPhase.completed;
-        session.message.value = (session.contentUri?.isNotEmpty == true)
-            ? '下载完成，可打开或分享文件'
-            : '下载完成（文件在 Seal 中查看）';
+        if (session.stripReport != null) {
+          session.message.value = session.stripReport!.summaryLabel;
+          final name = session.displayName;
+          if (name != null &&
+              name.isNotEmpty &&
+              !name.contains('[去广告]')) {
+            session.displayName = '$name [去广告]';
+          }
+        } else {
+          session.message.value = (session.contentUri?.isNotEmpty == true)
+              ? '下载完成，可打开或分享文件'
+              : '下载完成（文件在 Seal 中查看）';
+        }
+        await _showOrUpdatePanel(session);
+        if (session.stripReport != null) {
+          unawaited(_showStripReportSheet(session.stripReport!));
+        }
+        return;
       case 'failed':
         if (current == SealPanelPhase.completed) break;
         _finishSession(
@@ -733,6 +1368,7 @@ final class _SealSession {
     required this.mediaTitle,
     required this.autoStart,
     this.itemCount = 1,
+    this.stripReport,
   });
 
   final String requestId;
@@ -741,6 +1377,7 @@ final class _SealSession {
   final String mediaTitle;
   final bool autoStart;
   final int itemCount;
+  final StripRemovalReport? stripReport;
 
   final ValueNotifier<SealPanelPhase> phase = ValueNotifier(
     SealPanelPhase.waitingUi,
@@ -755,11 +1392,32 @@ final class _SealSession {
   String get kindLabel => extractAudio ? '音频' : '视频';
 
   String get metaLabel {
+    final stripTag = stripReport != null ? ' · 去广告' : '';
     if (itemCount > 1) {
-      return '$kindLabel · $mediaTitle (${itemCount}P)';
+      return '$kindLabel · $mediaTitle (${itemCount}P)$stripTag';
     }
-    return '$kindLabel · $mediaTitle';
+    return '$kindLabel · $mediaTitle$stripTag';
   }
+}
+
+sealed class _StripPrepareResult {
+  const _StripPrepareResult();
+}
+
+final class _StripPrepareOk extends _StripPrepareResult {
+  const _StripPrepareOk({required this.report, required this.keepJson});
+  final StripRemovalReport report;
+  final String keepJson;
+}
+
+final class _StripPrepareSkip extends _StripPrepareResult {
+  const _StripPrepareSkip(this.message);
+  final String message;
+}
+
+final class _StripPrepareFail extends _StripPrepareResult {
+  const _StripPrepareFail(this.message);
+  final String message;
 }
 
 final class SealDownloadStatus {
@@ -834,9 +1492,51 @@ final class SealDownloadStatus {
       'internal_error' => 'Seal 内部错误',
       'download_failed' => 'Seal 下载失败',
       'canceled' => '已取消 Seal 下载',
+      'cookie_denied' || 'cookies_disabled' =>
+        'Seal 未允许外部 Cookie（请在 Seal → 外部下载中开启）',
+      'cookie_invalid' || 'cookies_invalid' => 'Cookie 无效，请重新登录后重试',
+      'cookie_too_large' || 'cookies_too_large' => 'Cookie 数据过大',
+      'cookies_uri_denied' => '无法将 Cookie 交给 Seal',
+      'cookies_unsupported' => 'Seal 不支持当前 Cookie 格式',
       _ => null,
     };
   }
+}
+
+sealed class _CookieChoice {
+  const _CookieChoice();
+  static const anonymous = _CookieChoiceAnonymous();
+  static const canceled = _CookieChoiceCanceled();
+}
+
+final class _CookieChoiceAnonymous extends _CookieChoice {
+  const _CookieChoiceAnonymous();
+}
+
+final class _CookieChoiceCanceled extends _CookieChoice {
+  const _CookieChoiceCanceled();
+}
+
+final class _CookieChoiceUse extends _CookieChoice {
+  const _CookieChoiceUse({
+    required this.mid,
+    required this.cookiesJson,
+    required this.keyCount,
+  });
+  final int mid;
+  final String cookiesJson;
+  final int keyCount;
+}
+
+final class _CookieSheetResult {
+  const _CookieSheetResult({
+    this.account,
+    this.anonymous = false,
+    this.remember = false,
+  });
+  final LoginAccount? account;
+  final bool anonymous;
+  final bool remember;
 }
 
 class _SealStatusPanel extends StatefulWidget {
@@ -1140,6 +1840,20 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
                 color: cs.onSurfaceVariant,
               ),
             ),
+          if (widget.session.stripReport != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                SealDownloadUtils._showStripReportSheet(
+                  widget.session.stripReport!,
+                );
+              },
+              icon: const Icon(Icons.playlist_remove_rounded, size: 18),
+              label: Text(
+                '查看去除报告（${widget.session.stripReport!.removedCount} 段）',
+              ),
+            ),
+          ],
           const SizedBox(height: 4),
           TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
         ],

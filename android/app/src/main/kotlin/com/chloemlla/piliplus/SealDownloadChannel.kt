@@ -96,6 +96,24 @@ internal class SealDownloadChannel(
         val autoStart = call.argument<Boolean>("autoStart") ?: false
         val openUi = call.argument<Boolean>("openUi") ?: true
         val requestId = call.argument<String>("requestId")
+        val stripSegments = call.argument<Boolean>("stripSegments") ?: false
+        val keepSections = call.argument<String>("keepSections")?.trim().orEmpty()
+        val cookiesFormat = call.argument<String>("cookiesFormat")?.trim().orEmpty()
+        val cookies = call.argument<String>("cookies")
+        val cookiesMid = call.argument<Number>("cookiesMid")?.toLong()
+            ?: call.argument<String>("cookiesMid")?.toLongOrNull()
+        val cookiesDomainHint = call.argument<String>("cookiesDomainHint")?.trim().orEmpty()
+        val useCookies = call.argument<Boolean>("useCookies")
+        val cookiesRequired = call.argument<Boolean>("cookiesRequired") ?: false
+        val hasCookies = !cookies.isNullOrBlank()
+        // Protocol v2 when strip or cookie extras present; Seal accepts 1..2.
+        // Always send v2 for strip/cookie paths; otherwise keep v1 for pure legacy callers.
+        val protocolVersion =
+            if (stripSegments || keepSections.isNotEmpty() || hasCookies) {
+                PROTOCOL_VERSION_V2
+            } else {
+                PROTOCOL_VERSION
+            }
 
         val intent = Intent(ACTION_DOWNLOAD).apply {
             // Prefer QuickDownloadActivity so extract_audio maps to the dialog type UI.
@@ -103,7 +121,7 @@ internal class SealDownloadChannel(
             component = ComponentName(sealPackage, "com.chloemlla.seal.QuickDownloadActivity")
             setPackage(sealPackage)
             type = "text/plain"
-            putExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION)
+            putExtra(EXTRA_PROTOCOL_VERSION, protocolVersion)
             putExtra(EXTRA_URL, url)
             // Seal multi-URL batch protocol (single URL still sent as EXTRA_URL for compat).
             putExtra(EXTRA_URLS, urls.toTypedArray())
@@ -114,6 +132,27 @@ internal class SealDownloadChannel(
             putExtra(EXTRA_CALLER_PACKAGE, activity.packageName)
             if (!requestId.isNullOrEmpty()) {
                 putExtra(EXTRA_CALLER_REQUEST_ID, requestId)
+            }
+            if (stripSegments) {
+                putExtra(EXTRA_STRIP_SEGMENTS, true)
+            }
+            if (keepSections.isNotEmpty()) {
+                putExtra(EXTRA_KEEP_SECTIONS, keepSections)
+            }
+            if (hasCookies) {
+                putExtra(EXTRA_COOKIES_FORMAT, cookiesFormat.ifEmpty { "json_map" })
+                putExtra(EXTRA_COOKIES, cookies)
+                if (cookiesMid != null && cookiesMid > 0L) {
+                    putExtra(EXTRA_COOKIES_MID, cookiesMid)
+                }
+                putExtra(
+                    EXTRA_COOKIES_DOMAIN_HINT,
+                    cookiesDomainHint.ifEmpty { ".bilibili.com" },
+                )
+                putExtra(EXTRA_USE_COOKIES, useCookies ?: true)
+                if (cookiesRequired) {
+                    putExtra(EXTRA_COOKIES_REQUIRED, true)
+                }
             }
         }
 
@@ -217,6 +256,7 @@ internal class SealDownloadChannel(
 
         const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
         const val PROTOCOL_VERSION = 1
+        const val PROTOCOL_VERSION_V2 = 2
         const val EXTRA_PROTOCOL_VERSION = "protocol_version"
         const val EXTRA_URL = "url"
         const val EXTRA_URLS = "urls"
@@ -225,6 +265,14 @@ internal class SealDownloadChannel(
         const val EXTRA_OPEN_UI = "open_ui"
         const val EXTRA_CALLER_REQUEST_ID = "caller_request_id"
         const val EXTRA_CALLER_PACKAGE = "caller_package"
+        const val EXTRA_STRIP_SEGMENTS = "strip_segments"
+        const val EXTRA_KEEP_SECTIONS = "keep_sections"
+        const val EXTRA_COOKIES_FORMAT = "cookies_format"
+        const val EXTRA_COOKIES = "cookies"
+        const val EXTRA_COOKIES_MID = "cookies_mid"
+        const val EXTRA_COOKIES_DOMAIN_HINT = "cookies_domain_hint"
+        const val EXTRA_USE_COOKIES = "use_cookies"
+        const val EXTRA_COOKIES_REQUIRED = "cookies_required"
 
         val SEAL_PACKAGES = listOf(
             "com.chloemlla.seal",

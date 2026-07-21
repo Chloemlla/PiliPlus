@@ -243,6 +243,43 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.sealAutoStart,
     defaultVal: false,
   ),
+  const SwitchModel(
+    title: '下载时去除标记广告片段',
+    subtitle:
+        '基于空降助手标记，通过 Seal 分段下载保留正片；默认类别为赞助/自我推广，不含精彩时刻',
+    leading: Icon(Icons.content_cut_rounded),
+    setKey: SettingBoxKey.stripMarkedSegmentsEnabled,
+    defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '委托 Seal 时传递登录 Cookie',
+    subtitle: '将所选 B 站账号凭证临时交给 Seal（任务级）。需在 Seal 开启「允许外部应用提供 Cookies」',
+    leading: Icon(Icons.cookie_outlined),
+    setKey: SettingBoxKey.sealCookiePassthrough,
+    defaultVal: true,
+  ),
+  const SwitchModel(
+    title: '每次询问 Seal 下载账号',
+    subtitle: '关闭且已记住账号时将跳过账号选择',
+    leading: Icon(Icons.manage_accounts_outlined),
+    setKey: SettingBoxKey.sealCookieAlwaysAsk,
+    defaultVal: false,
+  ),
+  NormalModel(
+    title: '清除记住的 Seal 下载账号',
+    getSubtitle: () {
+      final mid = Pref.sealCookieRememberMid;
+      if (!Pref.sealCookieRemember || mid == 0) {
+        return '当前未记住账号';
+      }
+      return '已记住 UID $mid';
+    },
+    leading: const Icon(Icons.person_off_outlined),
+    onTap: (context, setState) async {
+      await Pref.clearSealCookieRemember();
+      setState();
+    },
+  ),
   NormalModel(
     title: '横向滑动阈值',
     getSubtitle: () => '当前:「${Pref.touchSlopH}」，系统默认值: $deviceTouchSlop',

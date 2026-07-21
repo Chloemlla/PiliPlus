@@ -404,6 +404,18 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(Icons.download_outlined, size: 20),
                   title: const Text('下载视频', style: titleStyle),
                 ),
+                if (Platform.isAndroid)
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      SealDownloadUtils.downloadVideoStripMarked(
+                        videoDetailCtr,
+                      );
+                    },
+                    leading: const Icon(Icons.content_cut_rounded, size: 20),
+                    title: const Text('下载并去除标记片段', style: titleStyle),
+                  ),
                 ListTile(
                   dense: true,
                   onTap: () {
