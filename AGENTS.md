@@ -38,3 +38,14 @@ Every user-facing feature/fix commit must update the immersive "本次更新说�
 - Full contract: `docs/flutter-build-whats-new.md` (tracked) and local Trellis `.trellis/spec/frontend/flutter-build-whats-new.md`.
 
 Skip only for pure docs/CI/format/lockfile changes with no user-visible app behavior change.
+
+## CI / Failed Actions Auto-Repair (mandatory)
+
+When repairing PRs or failed GitHub Actions:
+
+1. Use **gh CLI** to inventory and inspect **all** failures (`gh pr checks`, `gh run list`, `gh run view --log-failed`). Do not stop at the first red job.
+2. Auto-delegate **parallel subagents** by independent root-cause class; merge patches in the main session.
+3. **Forbidden**: local Flutter / Gradle / emulator / full test builds. CI is the only build/test authority.
+4. **Allowed**: declarative dependency installs for static inspection (`dart pub get` / `flutter pub get`).
+5. After commit/push, verify with gh (`gh run rerun --failed` / `gh pr checks`) and loop until every inventoried failure is green or explicitly blocked.
+6. Full contract: `docs/ci-action-auto-repair.md` (tracked) and local Trellis `.trellis/spec/frontend/ci-action-auto-repair.md`.
