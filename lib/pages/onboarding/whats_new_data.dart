@@ -48,7 +48,7 @@ abstract final class WhatsNewData {
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.touch_app_outlined,
       title: '界面交互重构',
       subtitle: '上游 opt ui 用更轻的命中与滚动包装替换旧组件，评论区、动态作者区、多列表 FAB 行为更统一。',
@@ -59,7 +59,7 @@ abstract final class WhatsNewData {
       ],
       tip: '这是体验重构，不是功能被砍掉。',
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.live_tv_outlined,
       title: '直播反馈',
       subtitle: '直播推荐卡片支持按官方反馈理由提交不喜欢/反馈，减少无效推荐。',
@@ -69,7 +69,7 @@ abstract final class WhatsNewData {
         '提交成功后会有轻提示，失败可重试。',
       ],
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.public_outlined,
       title: '应用内网页更稳',
       subtitle: 'in-app WebView 会拦截非 http(s) scheme，避免 ERR_UNKNOWN_URL_SCHEME 直接崩链路。',
@@ -79,7 +79,7 @@ abstract final class WhatsNewData {
       ],
       tip: '从动态 / 评论打开站外链接时体验更可预期。',
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.play_circle_outline,
       title: '播放兜底增强',
       subtitle: '多段旧格式资源走 EDL 拼接播放；音视频源组装与指针滚动也有同步优化。',
@@ -89,7 +89,7 @@ abstract final class WhatsNewData {
         '指针滚动与 seek 初始化边界更清晰。',
       ],
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.subtitles_outlined,
       title: '弹幕调节更细',
       subtitle: '弹幕透明度与字号滑条精度提升，方便微调观感。',
@@ -99,7 +99,7 @@ abstract final class WhatsNewData {
         'macOS 标题栏恢复不透明背景，避免首帧透明。',
       ],
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.bug_report_outlined,
       title: '本构建修复补充',
       subtitle: '同步上游时有一处非有意回退，已在本分支单独修回。',
@@ -109,7 +109,7 @@ abstract final class WhatsNewData {
       ],
       tip: '若仍看到无日期，请确认已安装包含该修复的构建。',
     ),
-    ImprovementsGuidePageData(
+    const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
       title: '可以继续使用了',
       subtitle: '以上是本构建值得知道的有意变更。之后同一 Commit / Build Time 不会再自动弹出。',
