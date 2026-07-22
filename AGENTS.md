@@ -26,3 +26,15 @@ apply_patch 在当前环境可用。
   *** End Patch
 
   末尾不能多写 ***。工具只认精确的 *** Begin Patch 作为第一行。
+
+## Build Whats-New Guide (mandatory for user-facing commits)
+
+Every user-facing feature/fix commit must update the immersive "本次更新说明" content:
+
+- Edit `lib/pages/onboarding/whats_new_data.dart` (`WhatsNewData.pages`) in the same change set.
+- Detection is by `BuildConfig.commitHash` + `BuildConfig.buildTime` (not a one-shot boolean).
+- Keep welcome identity bullets dynamic via `WhatsNewData` label getters; never hard-code hash/time.
+- Branch-long fork deltas go to first-install `ImprovementsGuideData`; this-build notes go to `WhatsNewData`.
+- Full contract: `docs/flutter-build-whats-new.md` (tracked) and local Trellis `.trellis/spec/frontend/flutter-build-whats-new.md`.
+
+Skip only for pure docs/CI/format/lockfile changes with no user-visible app behavior change.

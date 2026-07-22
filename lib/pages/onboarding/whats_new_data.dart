@@ -4,6 +4,10 @@ import 'package:pili_plus/pages/onboarding/improvements_guide_data.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 
 /// User-facing explanation of intentional changes in the current build.
+///
+/// Contract: every user-facing commit must refresh [pages] in the same change
+/// set. See docs/flutter-build-whats-new.md and Trellis
+/// .trellis/spec/frontend/flutter-build-whats-new.md.
 abstract final class WhatsNewData {
   static String get buildTimeLabel {
     if (BuildConfig.buildTime <= 0) {
