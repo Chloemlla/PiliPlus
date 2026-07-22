@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 /// Serializes cold-start fullscreen overlays that share [Get.key] navigator.
 ///
 /// Priority is enforced by callers: crash report > OSS notice > improvements
-/// guide > Android first-launch permissions.
+/// guide > build-scoped what's-new > Android first-launch permissions.
 abstract final class StartupOverlayCoordinator {
   static const int maxNavigatorRetries = 30;
 

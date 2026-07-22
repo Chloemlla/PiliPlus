@@ -10,6 +10,8 @@ class ImprovementsGuidePage extends StatefulWidget {
     super.key,
     this.markSeenOnClose = true,
     this.onFinished,
+    this.pages,
+    this.finishLabel = '开始使用',
   });
 
   /// When true, calling skip/finish should mark first-launch guide as seen.
@@ -17,6 +19,12 @@ class ImprovementsGuidePage extends StatefulWidget {
 
   /// Optional callback after user finishes or skips (before route pop).
   final Future<void> Function()? onFinished;
+
+  /// Override page content; defaults to branch improvements guide.
+  final List<ImprovementsGuidePageData>? pages;
+
+  /// CTA label on the last page.
+  final String finishLabel;
 
   @override
   State<ImprovementsGuidePage> createState() => _ImprovementsGuidePageState();
@@ -27,7 +35,8 @@ class _ImprovementsGuidePageState extends State<ImprovementsGuidePage> {
   int _index = 0;
   bool _closing = false;
 
-  List<ImprovementsGuidePageData> get _pages => ImprovementsGuideData.pages;
+  List<ImprovementsGuidePageData> get _pages =>
+      widget.pages ?? ImprovementsGuideData.pages;
 
   bool get _isLast => _index >= _pages.length - 1;
 
@@ -135,7 +144,7 @@ class _ImprovementsGuidePageState extends State<ImprovementsGuidePage> {
                         const Spacer(),
                         FilledButton(
                           onPressed: _goNext,
-                          child: Text(_isLast ? '开始使用' : '下一步'),
+                          child: Text(_isLast ? widget.finishLabel : '下一步'),
                         ),
                       ],
                     ),

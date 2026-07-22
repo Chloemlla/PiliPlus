@@ -15,6 +15,8 @@ abstract final class SettingBoxKey {
           'androidFirstLaunchPermissionsRequested',
       firstLaunchImprovementsGuideSeen = 'firstLaunchImprovementsGuideSeen',
       firstLaunchOssNoticeSeen = 'firstLaunchOssNoticeSeen',
+      whatsNewAckCommitHash = 'whatsNewAckCommitHash',
+      whatsNewAckBuildTime = 'whatsNewAckBuildTime',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',
