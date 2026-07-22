@@ -1,10 +1,8 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 import 'package:pili_plus/pages/onboarding/improvements_guide_page.dart';
-import 'package:pili_plus/services/android_first_launch_permission_service.dart';
 import 'package:pili_plus/services/first_launch_migration.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
+import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 
@@ -65,9 +63,8 @@ abstract final class FirstLaunchImprovementsGuideService {
       await StartupOverlayCoordinator.waitUntilCrashIdle();
 
       if (hasSeen) {
-        if (Platform.isAndroid) {
-          await AndroidFirstLaunchPermissionService.requestMissingPermissions();
-        }
+        // Upgrade / returning path: continue to build-scoped what's-new.
+        await WhatsNewGuideService.maybeShow();
         return;
       }
 
@@ -100,13 +97,14 @@ abstract final class FirstLaunchImprovementsGuideService {
           if (!hasSeen) {
             await markSeen();
           }
+          // First install already covered branch deltas; don't re-open as
+          // what's-new for the same build.
+          await WhatsNewGuideService.markCurrentBuildAcknowledged();
         },
         debugLabel: 'improvements-guide',
       );
 
-      if (Platform.isAndroid) {
-        await AndroidFirstLaunchPermissionService.requestMissingPermissions();
-      }
+      await WhatsNewGuideService.maybeShow();
     } finally {
       _isRunning = false;
     }
