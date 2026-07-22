@@ -395,6 +395,246 @@ class HeaderControlState extends State<HeaderControl>
                   dense: true,
                   onTap: () {
                     Get.back();
+                    shutdownTimerService.showScheduleExitDialog(
+                      this.context,
+                      isFullScreen: isFullScreen,
+                    );
+                  },
+                  leading: const Icon(Icons.hourglass_top_outlined, size: 20),
+                  title: const Text('定时关闭', style: titleStyle),
+                ),
+                if (!isFileSource) ...[
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      videoDetailCtr.editPlayUrl();
+                    },
+                    leading: const Icon(
+                      Icons.link,
+                      size: 20,
+                    ),
+                    title: const Text('播放地址', style: titleStyle),
+                  ),
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      videoDetailCtr.queryVideoUrl(fromReset: true);
+                    },
+                    leading: const Icon(Icons.refresh_outlined, size: 20),
+                    title: const Text('重载视频', style: titleStyle),
+                  ),
+                ],
+                PopupListTile<SuperResolutionType>(
+                  dense: true,
+                  leading: const Icon(
+                    Icons.stay_current_landscape_outlined,
+                    size: 20,
+                  ),
+                  title: const Text('超分辨率'),
+                  value: () {
+                    final value = plPlayerController.superResolutionType.value;
+                    return (value, value.label);
+                  },
+                  itemBuilder: (_) => enumItemBuilder(
+                    SuperResolutionType.values,
+                  ),
+                  onSelected: (value, setState) {
+                    plPlayerController.setShader(value);
+                    setState();
+                  },
+                  descFontSize: 12,
+                  descPosType: .subtitle,
+                ),
+                if (PlatformUtils.isMobile)
+                  if (plPlayerController.videoPlayerController
+                      case final player?)
+                    Builder(
+                      builder: (context) => ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.volume_up, size: 20),
+                        title: const Text('播放器音量'),
+                        subtitle: Text(
+                          '当前: ${Pref.playerVolume.toStringAsFixed(0)}%',
+                        ),
+                        onTap: () => showPlayerVolumeDialog(
+                          context,
+                          () => (context as Element).markNeedsBuild(),
+                          onChanged: player.setVolume,
+                        ),
+                      ),
+                    ),
+                if (!isFileSource)
+                  ListTile(
+                    dense: true,
+                    title: const Text('CDN 设置', style: titleStyle),
+                    leading: const Icon(MdiIcons.cloudPlusOutline, size: 20),
+                    subtitle: Text(
+                      '当前：${VideoUtils.cdnService.desc}，无法播放请切换',
+                      style: subTitleStyle,
+                    ),
+                    onTap: () async {
+                      Get.back();
+                      final result = await showDialog<CDNService>(
+                        context: context,
+                        builder: (context) => CdnSelectDialog(
+                          sample: videoInfo.dash?.video?.firstOrNull,
+                        ),
+                      );
+                      if (result != null) {
+                        VideoUtils.cdnService = result;
+                        setting.put(SettingBoxKey.CDNService, result.name);
+                        SmartDialog.showToast('已设置为 ${result.desc}，正在重载视频');
+                        videoDetailCtr.queryVideoUrl(fromReset: true);
+                      }
+                    },
+                  ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    spacing: 10,
+                    children: [
+                      Obx(
+                        () {
+                          final flipX = plPlayerController.flipX.value;
+                          return ActionRowLineItem(
+                            iconData: Icons.flip,
+                            onTap: () =>
+                                plPlayerController.flipX.value = !flipX,
+                            text: " 左右翻转 ",
+                            selectStatus: flipX,
+                          );
+                        },
+                      ),
+                      Obx(
+                        () {
+                          final flipY = plPlayerController.flipY.value;
+                          return ActionRowLineItem(
+                            icon: Icon(
+                              CustomIcons.flip_rotate_90,
+                              size: 13,
+                              color: flipY
+                                  ? theme.colorScheme.onSecondaryContainer
+                                  : theme.colorScheme.outline,
+                            ),
+                            onTap: () {
+                              plPlayerController.flipY.value = !flipY;
+                            },
+                            text: " 上下翻转 ",
+                            selectStatus: flipY,
+                          );
+                        },
+                      ),
+                      if ((isFileSource &&
+                              !(plPlayerController.dataSource as FileSource)
+                                  .isMp4) ||
+                          (!isFileSource &&
+                              videoDetailCtr.audioUrl?.isNotEmpty == true))
+                        Obx(
+                          () {
+                            final onlyPlayAudio =
+                                plPlayerController.onlyPlayAudio.value;
+                            return ActionRowLineItem(
+                              iconData: Icons.headphones,
+                              onTap: () {
+                                plPlayerController.onlyPlayAudio.value =
+                                    !onlyPlayAudio;
+                                final player =
+                                    plPlayerController.videoPlayerController!;
+                                if (onlyPlayAudio &&
+                                    player.state.tracks.video.length <= 2) {
+                                  videoDetailCtr.playerInit();
+                                } else {
+                                  player.setProperty(
+                                    'file-local-options/vid',
+                                    onlyPlayAudio ? 'auto' : 'no',
+                                  );
+                                }
+                              },
+                              text: " 听视频 ",
+                              selectStatus: onlyPlayAudio,
+                            );
+                          },
+                        ),
+                      if (PlatformUtils.isMobile)
+                        Obx(
+                          () => ActionRowLineItem(
+                            iconData: Icons.play_circle_outline,
+                            onTap:
+                                plPlayerController.setContinuePlayInBackground,
+                            text: " 后台播放 ",
+                            selectStatus: plPlayerController
+                                .continuePlayInBackground
+                                .value,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (!isFileSource) ...[
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      showSetVideoQa();
+                    },
+                    leading: const Icon(Icons.play_circle_outline, size: 20),
+                    title: const Text('选择画质', style: titleStyle),
+                    subtitle: Text(
+                      '当前画质 ${videoDetailCtr.currentVideoQa.value?.desc}',
+                      style: subTitleStyle,
+                    ),
+                  ),
+                  if (videoDetailCtr.currentAudioQa != null)
+                    ListTile(
+                      dense: true,
+                      onTap: () {
+                        Get.back();
+                        showSetAudioQa();
+                      },
+                      leading: const Icon(Icons.album_outlined, size: 20),
+                      title: const Text('选择音质', style: titleStyle),
+                      subtitle: Text(
+                        '当前音质 ${videoDetailCtr.currentAudioQa!.desc}',
+                        style: subTitleStyle,
+                      ),
+                    ),
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      showSetDecodeFormats();
+                    },
+                    leading: const Icon(Icons.av_timer_outlined, size: 20),
+                    title: const Text('解码格式', style: titleStyle),
+                    subtitle: Text(
+                      '当前解码格式 ${videoDetailCtr.currentDecodeFormats.description}',
+                      style: subTitleStyle,
+                    ),
+                  ),
+                ],
+                PopupListTile(
+                  dense: true,
+                  leading: const Icon(Icons.repeat, size: 20),
+                  title: const Text('播放顺序'),
+                  value: () {
+                    final value = plPlayerController.playRepeat;
+                    return (value, value.label);
+                  },
+                  itemBuilder: (_) => enumItemBuilder(PlayRepeat.values),
+                  onSelected: (value, setState) {
+                    plPlayerController.setPlayRepeat(value);
+                    setState();
+                  },
+                  descPosType: .subtitle,
+                  descFontSize: 12,
+                ),
+                ListTile(
+                  dense: true,
+                  onTap: () {
+                    Get.back();
                     if (Platform.isAndroid) {
                       SealDownloadUtils.downloadVideo(videoDetailCtr);
                     } else {
@@ -1291,14 +1531,14 @@ class HeaderControlState extends State<HeaderControl>
 
         void updateFontScaleFS(double val) {
           plPlayerController
-            ..subtitleFontScaleFS = val
+            ..subtitleFontScaleFS = val.toPrecision(2)
             ..updateSubtitleStyle();
           setState(() {});
         }
 
         void updateFontScale(double val) {
           plPlayerController
-            ..subtitleFontScale = val
+            ..subtitleFontScale = val.toPrecision(2)
             ..updateSubtitleStyle();
           setState(() {});
         }
@@ -1348,7 +1588,7 @@ class HeaderControlState extends State<HeaderControl>
                         min: 0.5,
                         max: 2.5,
                         value: subtitleFontScale,
-                        divisions: 20,
+                        divisions: 200,
                         label:
                             '${(subtitleFontScale * 100).toStringAsFixed(1)}%',
                         onChanged: updateFontScale,
@@ -1377,7 +1617,7 @@ class HeaderControlState extends State<HeaderControl>
                         min: 0.5,
                         max: 2.5,
                         value: subtitleFontScaleFS,
-                        divisions: 20,
+                        divisions: 200,
                         label:
                             '${(subtitleFontScaleFS * 100).toStringAsFixed(1)}%',
                         onChanged: updateFontScaleFS,
@@ -1491,7 +1731,9 @@ class HeaderControlState extends State<HeaderControl>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('背景不透明度 ${(subtitleBgOpacity * 100).toInt()}%'),
+                      Text(
+                        '背景不透明度 ${(subtitleBgOpacity * 100).toStringAsFixed(1)}%',
+                      ),
                       resetBtn(theme, '67%', () => updateOpacity(0.67)),
                     ],
                   ),
@@ -1507,6 +1749,7 @@ class HeaderControlState extends State<HeaderControl>
                       child: Slider(
                         min: 0,
                         max: 1,
+                        divisions: 100,
                         value: subtitleBgOpacity,
                         onChanged: updateOpacity,
                       ),

@@ -9,6 +9,8 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
 import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
+    show platformClampingPhysics;
 import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pb.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
@@ -918,7 +920,7 @@ class _AudioPageState extends State<AudioPage> {
                 child: ListView(
                   key: const PageStorageKey(_AudioPageState),
                   shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
+                  physics: platformClampingPhysics,
                   children: [
                     Center(
                       child: GestureDetector(

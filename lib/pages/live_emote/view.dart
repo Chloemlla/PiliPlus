@@ -3,7 +3,8 @@ import 'dart:math';
 import 'package:pili_plus/common/widgets/custom_tooltip.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:pili_plus/common/widgets/scroll_physics.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
+    show tabBarView, platformClampingPhysics;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models_new/live/live_emote/datum.dart';
@@ -81,7 +82,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                           final width = widthFac * 38;
                           final height = heightFac * 38;
                           return GridView.builder(
-                            physics: const ClampingScrollPhysics(),
+                            physics: platformClampingPhysics,
                             padding: const EdgeInsets.only(
                               left: 12,
                               right: 12,

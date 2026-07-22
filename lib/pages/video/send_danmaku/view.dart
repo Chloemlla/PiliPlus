@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
+    show platformClampingPhysics;
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/http/danmaku.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -174,7 +176,7 @@ class _SendDanmakuPanelState extends CommonTextPubPageState<SendDanmakuPanel> {
       ),
     ),
     child: ListView(
-      physics: const ClampingScrollPhysics(),
+      physics: platformClampingPhysics,
       padding: .only(
         top: 12,
         bottom: 12 + MediaQuery.viewPaddingOf(context).bottom,

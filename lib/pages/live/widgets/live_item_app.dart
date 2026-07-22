@@ -39,6 +39,7 @@ class LiveCardVApp extends StatelessWidget {
             onLongPress: onLongPress,
             onSecondaryTap: PlatformUtils.isMobile ? null : onLongPress,
             child: Column(
+              crossAxisAlignment: .start,
               children: [
                 AspectRatio(
                   aspectRatio: Style.aspectRatio,
@@ -56,11 +57,7 @@ class LiveCardVApp extends StatelessWidget {
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          child: AnimatedOpacity(
-                            opacity: 1,
-                            duration: const Duration(milliseconds: 200),
-                            child: videoStat(),
-                          ),
+                          child: videoStat(),
                         ),
                       ],
                     ),
@@ -159,7 +156,6 @@ class LiveCardVApp extends StatelessWidget {
 
   Widget liveContent(ThemeData theme) {
     return Expanded(
-      flex: 1,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(5, 8, 5, 4),
         child: Column(
@@ -173,18 +169,15 @@ class LiveCardVApp extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            Align(
-              alignment: .topLeft,
-              child: Text(
-                item.uname.toString(),
-                textAlign: TextAlign.start,
-                style: TextStyle(
-                  fontSize: theme.textTheme.labelMedium!.fontSize,
-                  color: theme.colorScheme.outline,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            Text(
+              item.uname.toString(),
+              textAlign: TextAlign.start,
+              style: TextStyle(
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                color: theme.colorScheme.outline,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

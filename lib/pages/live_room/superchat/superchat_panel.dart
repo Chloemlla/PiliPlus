@@ -1,3 +1,5 @@
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
+    show platformClampingPhysics;
 import 'package:pili_plus/models/common/super_chat_type.dart';
 import 'package:pili_plus/pages/live_room/controller.dart';
 import 'package:pili_plus/pages/live_room/superchat/superchat_card.dart';
@@ -32,7 +34,7 @@ class _SuperChatPanelState extends DebounceStreamState<SuperChatPanel, bool>
       () => ListView.separated(
         key: const PageStorageKey(_SuperChatPanelState),
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        physics: const ClampingScrollPhysics(),
+        physics: platformClampingPhysics,
         itemCount: widget.controller.superChatMsg.length,
         findItemIndexCallback: (key) {
           final index = widget.controller.superChatMsg.indexWhere(
