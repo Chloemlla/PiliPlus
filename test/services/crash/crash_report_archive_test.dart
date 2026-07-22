@@ -130,6 +130,50 @@ void main() {
         expect(archive.pendingReport, newer);
       },
     );
+
+    test(
+      'imports lumen-style reports into history without startup pending',
+      () {
+        final lumen = _report(
+          3000,
+          reportId: 'lumen-a1b2c3d4',
+          rootCause: 'boom',
+          severity: CrashSeverity.fatal,
+        );
+
+        final archive = const CrashReportArchive.empty().add(
+          lumen,
+          makePending: false,
+        );
+
+        expect(archive.reports, [lumen]);
+        expect(archive.pendingReport, isNull);
+      },
+    );
+
+    test(
+      'does not replace an existing startup pending with a lumen history import',
+      () {
+        final exitPending = _report(
+          2000,
+          reportId: 'exit-pending',
+          severity: CrashSeverity.fatal,
+        );
+        final lumenHistory = _report(
+          4000,
+          reportId: 'lumen-history',
+          rootCause: 'lumen boom',
+          severity: CrashSeverity.fatal,
+        );
+
+        final archive = const CrashReportArchive.empty()
+            .add(exitPending)
+            .add(lumenHistory, makePending: false);
+
+        expect(archive.pendingReport, exitPending);
+        expect(archive.reports, containsAll([exitPending, lumenHistory]));
+      },
+    );
   });
 }
 

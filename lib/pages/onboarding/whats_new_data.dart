@@ -102,10 +102,11 @@ abstract final class WhatsNewData {
     const ImprovementsGuidePageData(
       icon: Icons.bug_report_outlined,
       title: '本构建修复补充',
-      subtitle: '同步上游时有一处非有意回退，已在本分支单独修回。',
+      subtitle: '同步上游时有一处非有意回退，已在本分支单独修回；并收敛崩溃恢复体验。',
       bullets: [
         '评论日期显示：恢复主评完整时间、子评相对/短日期。',
         'IP 归属仅在有 location 时拼接，避免孤立的「 • 」。',
+        'Lumen 完成上次崩溃日志后，不再二次弹出自维护的异常报告页；报告仍可在历史中查看。',
       ],
       tip: '若仍看到无日期，请确认已安装包含该修复的构建。',
     ),

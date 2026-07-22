@@ -243,7 +243,9 @@ abstract final class CrashReporter {
         json,
         systemInfo: CrashReportSystemInfo.cached,
       );
-      CrashReportStore.saveSync(report, makePending: true);
+      // History only: Lumen already finished recovery before main UI.
+      // Do not re-open Flutter CrashReportPage for the same report.
+      CrashReportStore.saveSync(report, makePending: false);
     } catch (error) {
       if (kDebugMode) {
         debugPrint('Lumen pending report import failed: $error');
