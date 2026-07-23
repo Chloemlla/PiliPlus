@@ -90,5 +90,5 @@ abstract final class WhatsNewData {
       ],
       tip: '点「知道了」进入应用。',
     ),
-  ]];
+  ];
 }

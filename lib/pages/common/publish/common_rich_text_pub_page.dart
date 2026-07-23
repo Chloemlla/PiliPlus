@@ -7,8 +7,8 @@ import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/http/msg.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
 import 'package:pili_plus/models/common/publish_panel_type.dart';
-import 'package:pili_plus/models/dynamics/result.dart'
 import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/models/dynamics/result.dart'
     show PicModel, FilePicModel, OpusPicModel;
 import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/models_new/emote/emote.dart' as e;

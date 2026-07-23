@@ -1,9 +1,12 @@
 // 内容
+import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/common/widgets/emote_span.dart';
 import 'package:pili_plus/common/widgets/flutter/text/text.dart' as custom_text;
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
+import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/pages/dynamics/widgets/rich_node_panel.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';

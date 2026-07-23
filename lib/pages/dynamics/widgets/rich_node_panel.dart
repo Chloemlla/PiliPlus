@@ -6,8 +6,8 @@ import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
 import 'package:pili_plus/http/dynamics.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/search.dart';
-import 'package:pili_plus/models/common/image_preview_type.dart'
 import 'package:pili_plus/common/widgets/emote_span.dart';
+import 'package:pili_plus/models/common/image_preview_type.dart'
     show SourceModel;
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart';

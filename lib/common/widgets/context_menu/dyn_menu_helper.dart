@@ -67,7 +67,7 @@ void _showEmoteDialog(ModuleDynamicModel? moduleDynamic) {
                         rawText: Style.placeHolder,
                         child: NetworkImgLayer(
                           src: emoji.url,
-                          type: .emote,
+                          type: ImageType.emote,
                           width: size,
                           height: size,
                         ),
