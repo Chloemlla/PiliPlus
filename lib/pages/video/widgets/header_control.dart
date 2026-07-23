@@ -654,7 +654,7 @@ class HeaderControlState extends State<HeaderControl>
                       );
                     },
                     leading: const Icon(Icons.content_cut_rounded, size: 20),
-                    title: const Text('下载并去除标记片段', style: titleStyle),
+                    title: const Text('下载并去除空降助手标记', style: titleStyle),
                   ),
                 ListTile(
                   dense: true,

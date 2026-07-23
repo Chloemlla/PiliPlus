@@ -64,91 +64,79 @@ abstract final class SealDownloadUtils {
     return promptDownload(ctr, extractAudio: true);
   }
 
-  /// One-tap: current part only, force strip when marks exist.
+  /// Force strip using 空降助手 marks (multi-P supported).
   static Future<void> downloadVideoStripMarked(VideoDetailController ctr) {
     return promptDownload(ctr, extractAudio: false, forceStrip: true);
   }
 
   /// Multi-P UGC: show 当前P / 选择分P… / 全部; otherwise delegate immediately.
+  ///
+  /// Strip uses **空降助手** segments per cid (`SponsorBlock.getSkipSegments`).
+  /// Multi-P with strip launches one Seal task per part (keep_sections is per-cid).
   static Future<void> promptDownload(
     VideoDetailController ctr, {
     required bool extractAudio,
     bool forceStrip = false,
   }) async {
     if (!isSupported) return;
-    // Force-strip is single-P only (keep_sections is per-cid).
-    if (forceStrip) {
-      await _download(ctr, extractAudio: extractAudio, forceStrip: true);
-      return;
-    }
     final pages = _ugcMultiPages(ctr);
     if (pages == null || pages.length <= 1) {
-      await _download(ctr, extractAudio: extractAudio);
+      await _download(ctr, extractAudio: extractAudio, forceStrip: forceStrip);
       return;
     }
 
     final choice = await _showMultiPChoiceSheet(
       extractAudio: extractAudio,
       pageCount: pages.length,
+      forceStrip: forceStrip,
     );
     if (choice == null) return;
 
-    switch (choice) {
-      case _MultiPChoice.current:
-        // Prefer cid-resolved pageUrlOf; never fall back to pages.first (wrong P).
-        final currentIndex = pages.indexWhere((e) => e.cid == ctr.cid.value);
-        final url = currentIndex >= 0
-            ? pageUrlForPart(ctr.bvid, pages[currentIndex], currentIndex)
-            : pageUrlOf(ctr);
-        if (url == null || url.isEmpty) {
-          await _showErrorPanel(
-            title: '无法委托下载',
-            message: '无法构造视频链接',
-          );
-          return;
-        }
-        await _download(ctr, extractAudio: extractAudio, urls: [url]);
-      case _MultiPChoice.all:
-        final urls = pageUrlsForParts(ctr.bvid, pages);
-        if (urls.isEmpty) {
-          await _showErrorPanel(
-            title: '无法委托下载',
-            message: '无法构造视频链接',
-          );
-          return;
-        }
-        await _download(
+    Future<void> launchParts(List<int> indices) async {
+      final wantStrip = forceStrip || Pref.stripMarkedSegmentsEnabled;
+      if (wantStrip) {
+        await _downloadPartsWithStrip(
           ctr,
           extractAudio: extractAudio,
-          urls: urls,
-          itemCount: urls.length,
+          pages: pages,
+          indices: indices,
+          forceStrip: forceStrip,
         );
+        return;
+      }
+      final urls = [
+        for (final i in indices) pageUrlForPart(ctr.bvid, pages[i], i),
+      ];
+      await _download(
+        ctr,
+        extractAudio: extractAudio,
+        urls: urls,
+        itemCount: urls.length,
+      );
+    }
+
+    switch (choice) {
+      case _MultiPChoice.current:
+        final currentIndex = pages.indexWhere((e) => e.cid == ctr.cid.value);
+        if (currentIndex >= 0) {
+          await launchParts([currentIndex]);
+        } else {
+          await _download(
+            ctr,
+            extractAudio: extractAudio,
+            forceStrip: forceStrip,
+          );
+        }
+      case _MultiPChoice.all:
+        await launchParts([for (var i = 0; i < pages.length; i++) i]);
       case _MultiPChoice.select:
-        // Indices into the full `pages` list so ?p= fallback stays correct
-        // when Part.page is null on a non-contiguous subset.
         final selectedIndices = await _pickPartIndices(
           ctr: ctr,
           parts: pages,
           extractAudio: extractAudio,
         );
         if (selectedIndices == null || selectedIndices.isEmpty) return;
-        final urls = [
-          for (final i in selectedIndices)
-            pageUrlForPart(ctr.bvid, pages[i], i),
-        ];
-        if (urls.isEmpty) {
-          await _showErrorPanel(
-            title: '无法委托下载',
-            message: '无法构造视频链接',
-          );
-          return;
-        }
-        await _download(
-          ctr,
-          extractAudio: extractAudio,
-          urls: urls,
-          itemCount: urls.length,
-        );
+        await launchParts(selectedIndices);
     }
   }
 
@@ -158,6 +146,11 @@ abstract final class SealDownloadUtils {
     List<String>? urls,
     int? itemCount,
     bool forceStrip = false,
+    int? stripCid,
+    int? stripDurationMs,
+    String? stripPageLabel,
+    Set<String>? stripCategories,
+    bool askStripCategories = true,
   }) async {
     ensureListening();
     final List<String> resolvedUrls;
@@ -187,7 +180,14 @@ abstract final class SealDownloadUtils {
     String? keepSectionsJson;
     var stripSegments = false;
     if (wantStrip && count == 1) {
-      final prepared = await _prepareStripPlan(ctr);
+      final prepared = await _prepareStripPlan(
+        ctr,
+        cidOverride: stripCid,
+        durationMsOverride: stripDurationMs,
+        pageLabel: stripPageLabel,
+        categories: stripCategories,
+        askCategories: askStripCategories,
+      );
       if (prepared != null) {
         switch (prepared) {
           case _StripPrepareOk(:final report, :final keepJson):
@@ -198,14 +198,14 @@ abstract final class SealDownloadUtils {
             SmartDialog.showToast(message);
           case _StripPrepareFail(:final message):
             if (forceStrip) {
-              await _showErrorPanel(title: '无法去除标记片段', message: message);
+              await _showErrorPanel(title: '无法去除空降助手标记', message: message);
               return;
             }
             SmartDialog.showToast(message);
         }
       }
     } else if (wantStrip && count > 1) {
-      SmartDialog.showToast('去除标记片段仅支持单个分 P，已按普通下载处理');
+      SmartDialog.showToast('空降助手去除标记仅支持按分 P 独立处理，已按普通下载处理');
     }
 
     // Cookie account selection (after multi-P, before launch).
@@ -234,7 +234,7 @@ abstract final class SealDownloadUtils {
         : SealPanelPhase.waitingUi;
     session.phase.value = initialBusy;
     final stripHint = stripSegments && stripReport != null
-        ? '正在去除 ${stripReport.removedCount} 段标记内容…'
+        ? '正在去除空降助手标记 ${stripReport.removedCount} 段…'
         : null;
     session.message.value = stripHint ??
         (Pref.sealAutoStart
@@ -350,54 +350,68 @@ abstract final class SealDownloadUtils {
     }
   }
 
-  /// Build strip plan for current cid. Null = strip not applicable.
+  /// Build strip plan from **空降助手** segments for one bvid+cid.
+  ///
+  /// Data source is always [SponsorBlock.getSkipSegments] (空降助手 API), not
+  /// Seal built-in SponsorBlock and not the playback-only filtered segment list.
   static Future<_StripPrepareResult?> _prepareStripPlan(
-    VideoDetailController ctr,
-  ) async {
+    VideoDetailController ctr, {
+    int? cidOverride,
+    int? durationMsOverride,
+    String? pageLabel,
+    Set<String>? categories,
+    bool askCategories = true,
+    bool showLoading = true,
+  }) async {
     final bvid = ctr.bvid;
-    final cid = ctr.cid.value;
+    final cid = cidOverride ?? ctr.cid.value;
     if (bvid.isEmpty || cid == 0) {
       return const _StripPrepareFail('无法解析视频标识');
     }
 
-    final durationMs = _resolveDurationMs(ctr);
+    final durationMs = durationMsOverride ?? _resolveDurationMs(ctr);
     if (durationMs == null || durationMs <= 0) {
-      return const _StripPrepareFail('视频时长未知，无法去除标记片段');
+      return const _StripPrepareFail('视频时长未知，无法去除空降助手标记片段');
     }
 
-    var categories = Pref.stripSegmentCategories;
-    if (categories.isEmpty) {
-      categories = const {'sponsor', 'selfpromo'};
+    var cats = categories ?? Pref.stripSegmentCategories;
+    if (cats.isEmpty) {
+      cats = const {'sponsor', 'selfpromo'};
     }
-    categories = {...categories}..remove('poi_highlight');
+    cats = {...cats}..remove('poi_highlight');
 
-    if (Pref.stripAlwaysAskCategories) {
-      final picked = await _pickStripCategories(categories);
+    if (askCategories && Pref.stripAlwaysAskCategories) {
+      final picked = await _pickStripCategories(cats);
       if (picked == null) {
         return const _StripPrepareSkip('已取消去除标记片段');
       }
-      categories = picked;
-      if (categories.isEmpty) {
+      cats = picked;
+      if (cats.isEmpty) {
         return const _StripPrepareSkip('未选择剥离类别，已按普通下载处理');
       }
     }
 
-    SmartDialog.showLoading(msg: '获取标记片段…');
+    if (showLoading) {
+      SmartDialog.showLoading(msg: '获取空降助手标记…');
+    }
     LoadingState<List<SegmentItemModel>> state;
     try {
+      // 空降助手 / BilibiliSponsorBlock — authoritative mark source for strip.
       state = await SponsorBlock.getSkipSegments(bvid: bvid, cid: cid);
     } finally {
-      SmartDialog.dismiss();
+      if (showLoading) {
+        SmartDialog.dismiss();
+      }
     }
 
     if (state is! Success<List<SegmentItemModel>>) {
       final msg = state is Error ? (state.errMsg ?? '获取标记失败') : '获取标记失败';
-      return _StripPrepareSkip('无标记广告片段（$msg），已按普通下载处理');
+      return _StripPrepareSkip('空降助手无可用标记（$msg），已按普通下载处理');
     }
 
     final items = state.response;
     if (items.isEmpty) {
-      return const _StripPrepareSkip('无标记广告片段，已按普通下载处理');
+      return const _StripPrepareSkip('空降助手无标记广告片段，已按普通下载处理');
     }
 
     final inputs = <SegmentStripInput>[
@@ -407,7 +421,7 @@ abstract final class SealDownloadUtils {
           startMs: item.segment.isNotEmpty ? item.segment[0] : 0,
           endMs: item.segment.length > 1 ? item.segment[1] : 0,
           uuid: item.uuid.isEmpty ? null : item.uuid,
-          source: item.uuid.isEmpty ? 'pgc' : 'sponsorblock',
+          source: item.uuid.isEmpty ? 'pgc' : '空降助手',
         ),
     ];
 
@@ -422,32 +436,388 @@ abstract final class SealDownloadUtils {
     final plan = SegmentStripMath.plan(
       segments: inputs,
       durationMs: effectiveDuration,
-      categories: categories,
+      categories: cats,
       minMs: Pref.stripMinSegmentMs,
     );
 
     if (plan.failure == SegmentStripFailure.durationUnknown) {
-      return const _StripPrepareFail('视频时长未知，无法去除标记片段');
+      return const _StripPrepareFail('视频时长未知，无法去除空降助手标记片段');
     }
     if (plan.failure == SegmentStripFailure.fullCover ||
         plan.failure == SegmentStripFailure.emptyKeep) {
-      return const _StripPrepareFail('标记片段覆盖全片，无法剥离（无剩余正片）');
+      return const _StripPrepareFail('空降助手标记覆盖全片，无法剥离（无剩余正片）');
     }
     if (!plan.hasRemovals) {
-      return const _StripPrepareSkip('无标记广告片段，已按普通下载处理');
+      return const _StripPrepareSkip('空降助手无标记广告片段，已按普通下载处理');
     }
     if (!plan.shouldStrip) {
-      return const _StripPrepareSkip('无可剥离片段，已按普通下载处理');
+      return const _StripPrepareSkip('空降助手无可剥离片段，已按普通下载处理');
     }
 
     final report = StripRemovalReport.fromPlan(
       bvid: bvid,
       cid: cid,
       plan: plan,
+      pageLabel: pageLabel,
     );
     final keepJson = jsonEncode(report.keepSectionsSeconds());
     return _StripPrepareOk(report: report, keepJson: keepJson);
   }
+
+  /// Multi-P strip: one 空降助手 plan + Seal task per selected part.
+  static Future<void> _downloadPartsWithStrip(
+    VideoDetailController ctr, {
+    required bool extractAudio,
+    required List<Part> pages,
+    required List<int> indices,
+    bool forceStrip = false,
+  }) async {
+    if (indices.isEmpty) return;
+    if (indices.length == 1) {
+      final i = indices.first;
+      final part = pages[i];
+      final cid = part.cid ?? 0;
+      final url = pageUrlForPart(ctr.bvid, part, i);
+      final durSec = part.duration;
+      await _download(
+        ctr,
+        extractAudio: extractAudio,
+        urls: [url],
+        forceStrip: forceStrip,
+        stripCid: cid == 0 ? null : cid,
+        stripDurationMs: (durSec != null && durSec > 0) ? durSec * 1000 : null,
+        stripPageLabel: _partLabel(part, i),
+      );
+      return;
+    }
+
+    var categories = Pref.stripSegmentCategories;
+    if (categories.isEmpty) {
+      categories = const {'sponsor', 'selfpromo'};
+    }
+    categories = {...categories}..remove('poi_highlight');
+    if (Pref.stripAlwaysAskCategories) {
+      final picked = await _pickStripCategories(categories);
+      if (picked == null) {
+        SmartDialog.showToast('已取消去除标记片段');
+        return;
+      }
+      categories = picked;
+      if (categories.isEmpty) {
+        final urls = [
+          for (final i in indices) pageUrlForPart(ctr.bvid, pages[i], i),
+        ];
+        await _download(
+          ctr,
+          extractAudio: extractAudio,
+          urls: urls,
+          itemCount: urls.length,
+        );
+        return;
+      }
+    }
+
+    final cookieChoice = await _resolveCookiePayload();
+    if (cookieChoice == _CookieChoice.canceled) return;
+
+    final reports = <StripRemovalReport>[];
+    var launched = 0;
+    var stripped = 0;
+    var plain = 0;
+    var failed = 0;
+
+    SmartDialog.showLoading(msg: '按分 P 读取空降助手标记…');
+    try {
+      for (final i in indices) {
+        final part = pages[i];
+        final cid = part.cid ?? 0;
+        if (cid == 0) {
+          failed++;
+          continue;
+        }
+        final url = pageUrlForPart(ctr.bvid, part, i);
+        final durSec = part.duration;
+        final prepared = await _prepareStripPlan(
+          ctr,
+          cidOverride: cid,
+          durationMsOverride:
+              (durSec != null && durSec > 0) ? durSec * 1000 : null,
+          pageLabel: _partLabel(part, i),
+          categories: categories,
+          askCategories: false,
+          showLoading: false,
+        );
+
+        String? keepJson;
+        StripRemovalReport? report;
+        var doStrip = false;
+        if (prepared is _StripPrepareOk) {
+          keepJson = prepared.keepJson;
+          report = prepared.report;
+          doStrip = true;
+          reports.add(report);
+          stripped++;
+        } else if (prepared is _StripPrepareFail && forceStrip) {
+          failed++;
+          continue;
+        } else {
+          if (prepared is _StripPrepareSkip) {
+            // keep silent-ish; count as plain
+          }
+          plain++;
+        }
+
+        final ok = await _launchSingleDelegate(
+          ctr,
+          extractAudio: extractAudio,
+          url: url,
+          cookieChoice: cookieChoice,
+          stripReport: report,
+          keepSectionsJson: keepJson,
+          stripSegments: doStrip,
+          mediaTitleSuffix: _partLabel(part, i),
+        );
+        if (ok) {
+          launched++;
+        } else {
+          failed++;
+        }
+      }
+    } finally {
+      SmartDialog.dismiss();
+    }
+
+    if (launched == 0) {
+      await _showErrorPanel(
+        title: '无法委托下载',
+        message: forceStrip
+            ? '所选分 P 均无可用空降助手标记或启动失败'
+            : '未能启动任何 Seal 下载任务',
+      );
+      return;
+    }
+
+    SmartDialog.showToast(
+      '已委托 Seal：$launched 项'
+      '${stripped > 0 ? '（空降助手去除 $stripped）' : ''}'
+      '${plain > 0 ? '，普通 $plain' : ''}'
+      '${failed > 0 ? '，跳过 $failed' : ''}',
+    );
+
+    if (reports.isNotEmpty) {
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 400), () {
+        _showCombinedStripReports(reports);
+      }));
+    }
+  }
+
+  static String _partLabel(Part part, int index) {
+    final pageNo = part.page ?? (index + 1);
+    final title = part.part?.trim();
+    if (title != null && title.isNotEmpty) {
+      return 'P$pageNo · $title';
+    }
+    return 'P$pageNo';
+  }
+
+  static Future<void> _showCombinedStripReports(
+    List<StripRemovalReport> reports,
+  ) async {
+    if (reports.isEmpty) return;
+    if (reports.length == 1) {
+      await _showStripReportSheet(reports.first);
+      return;
+    }
+    final context = Get.context;
+    if (context == null) return;
+    final totalRemoved =
+        reports.fold<int>(0, (s, r) => s + r.removedCount);
+    final totalDurSec =
+        (reports.fold<int>(0, (s, r) => s + r.removedDurationMs) / 1000)
+            .round();
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxHeight: context.mediaQuerySize.height * 0.8,
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  '空降助手去除标记报告',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  '共 ${reports.length} 个分 P，去除 $totalRemoved 段（约 ${totalDurSec}s）',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: reports.length,
+                  itemBuilder: (context, index) {
+                    final r = reports[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(r.pageLabel ?? '分 P ${index + 1}'),
+                      subtitle: Text(r.summaryLabel),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showStripReportSheet(r),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                child: FilledButton.tonal(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('关闭'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Launch one Seal delegate without re-prompting cookies / multi-P.
+  static Future<bool> _launchSingleDelegate(
+    VideoDetailController ctr, {
+    required bool extractAudio,
+    required String url,
+    required _CookieChoice cookieChoice,
+    StripRemovalReport? stripReport,
+    String? keepSectionsJson,
+    bool stripSegments = false,
+    String? mediaTitleSuffix,
+  }) async {
+    ensureListening();
+    final requestId =
+        'piliplus-${extractAudio ? 'audio' : 'video'}-${DateTime.now().microsecondsSinceEpoch}';
+    final baseTitle = _titleOf(ctr);
+    final title = mediaTitleSuffix == null || mediaTitleSuffix.isEmpty
+        ? baseTitle
+        : '$baseTitle · $mediaTitleSuffix';
+    final session = _SealSession(
+      requestId: requestId,
+      extractAudio: extractAudio,
+      pageUrl: url,
+      mediaTitle: title,
+      autoStart: Pref.sealAutoStart,
+      itemCount: 1,
+      stripReport: stripReport,
+    );
+    _sessions[requestId] = session;
+    _activeRequestId = requestId;
+    session.phase.value = Pref.sealAutoStart
+        ? SealPanelPhase.waitingAuto
+        : SealPanelPhase.waitingUi;
+    session.message.value = stripSegments && stripReport != null
+        ? '正在去除空降助手标记 ${stripReport.removedCount} 段…'
+        : (Pref.sealAutoStart
+              ? '已委托 Seal，正在自动入队…'
+              : '已打开 Seal，请在 Seal 中确认下载');
+    unawaited(_showOrUpdatePanel(session));
+
+    try {
+      final args = <String, dynamic>{
+        'url': url,
+        'urls': <String>[url],
+        'extractAudio': extractAudio,
+        'autoStart': Pref.sealAutoStart,
+        'openUi': true,
+        'requestId': requestId,
+      };
+      if (stripSegments && keepSectionsJson != null) {
+        args['stripSegments'] = true;
+        args['keepSections'] = keepSectionsJson;
+      }
+      if (cookieChoice is _CookieChoiceUse) {
+        args['cookiesFormat'] = 'json_map';
+        args['cookies'] = cookieChoice.cookiesJson;
+        args['cookiesMid'] = cookieChoice.mid;
+        args['cookiesDomainHint'] = '.bilibili.com';
+        args['useCookies'] = true;
+        args['cookiesRequired'] = false;
+      }
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'delegateDownload',
+        args,
+      );
+      if (result == null) {
+        _finishSession(
+          session,
+          SealPanelPhase.failed,
+          message: '未收到 Seal 启动结果',
+        );
+        return false;
+      }
+      final status = SealDownloadStatus.fromMap(result);
+      if (status.status == 'launched') {
+        session.phase.value = Pref.sealAutoStart
+            ? SealPanelPhase.waitingAuto
+            : SealPanelPhase.waitingUi;
+        return true;
+      }
+      if (status.status == 'not_installed' ||
+          status.errorCode == 'not_installed') {
+        _finishSession(
+          session,
+          SealPanelPhase.notInstalled,
+          message: status.errorMessage ?? '请先安装 Seal',
+        );
+        return false;
+      }
+      _finishSession(
+        session,
+        SealPanelPhase.failed,
+        message: status.errorMessage ?? status.errorCode ?? 'Seal 启动失败',
+      );
+      return false;
+    } on PlatformException catch (e) {
+      if (e.code == 'not_installed') {
+        _finishSession(
+          session,
+          SealPanelPhase.notInstalled,
+          message: e.message ?? '请先安装 Seal',
+        );
+      } else {
+        _finishSession(
+          session,
+          SealPanelPhase.failed,
+          message: e.message ?? e.code,
+        );
+      }
+      return false;
+    } catch (e) {
+      _finishSession(
+        session,
+        SealPanelPhase.failed,
+        message: e.toString(),
+      );
+      return false;
+    }
+  }
+
 
   static int? _resolveDurationMs(VideoDetailController ctr) {
     final fromPlay = ctr.timeLength;
@@ -591,7 +961,7 @@ abstract final class SealDownloadUtils {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: Text(
-                  '去除标记片段报告',
+                  '空降助手去除标记报告',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -691,10 +1061,14 @@ abstract final class SealDownloadUtils {
   static Future<_MultiPChoice?> _showMultiPChoiceSheet({
     required bool extractAudio,
     required int pageCount,
+    bool forceStrip = false,
   }) async {
     final context = Get.context;
     if (context == null) return null;
     final kind = extractAudio ? '音频' : '视频';
+    final title = forceStrip
+        ? '下载并去除空降助手标记 · $pageCount 个分 P'
+        : '下载$kind · $pageCount 个分 P';
     return showModalBottomSheet<_MultiPChoice>(
       context: context,
       useSafeArea: true,
@@ -712,7 +1086,7 @@ abstract final class SealDownloadUtils {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  '下载$kind · $pageCount 个分 P',
+                  title,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -1105,7 +1479,7 @@ abstract final class SealDownloadUtils {
         session.taskId = status.taskId ?? session.taskId;
         session.phase.value = SealPanelPhase.accepted;
         session.message.value = session.stripReport != null
-            ? '已交给 Seal 下载（去除 ${session.stripReport!.removedCount} 段标记），完成后将在此更新'
+            ? '已交给 Seal 下载（空降助手去除 ${session.stripReport!.removedCount} 段），完成后将在此更新'
             : '已交给 Seal 下载，完成后将在此更新';
       case 'needs_ui':
         // Activity Result often arrives after the user already confirmed in Seal
@@ -1850,7 +2224,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
               },
               icon: const Icon(Icons.playlist_remove_rounded, size: 18),
               label: Text(
-                '查看去除报告（${widget.session.stripReport!.removedCount} 段）',
+                '查看空降助手去除报告（${widget.session.stripReport!.removedCount} 段）',
               ),
             ),
           ],

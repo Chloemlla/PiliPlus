@@ -45,9 +45,11 @@ abstract final class ImprovementsGuideData {
         '离线缓存仍走应用内下载服务，与 Seal 委托互不替代。',
         '未安装 Seal 时会提示并打开 Seal Releases。',
         'PiliPlus 自有状态面板：等待确认 → 进行中 → 完成 / 失败 / 取消（跳过「正在启动」闪屏）。',
+        '可透传已登录账号 Cookie 给 Seal（任务级）；多账号可选并记住。',
+        '可按空降助手已标记片段去除广告并合成成品，并展示逐段报告。',
         '设置项「委托 Seal 时自动开始下载」默认关闭，需 Seal 同步开启 Allow external auto-start。',
       ],
-      tip: '路径：视频页三点菜单 → 下载视频 / 下载音频。包名 com.chloemlla.seal。',
+      tip: '路径：视频页三点菜单 → 下载视频 / 下载并去除空降助手标记 / 下载音频。包名 com.chloemlla.seal。',
     ),
     ImprovementsGuidePageData(
       icon: Icons.qr_code_scanner_outlined,

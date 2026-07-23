@@ -61,6 +61,18 @@ abstract final class WhatsNewData {
       tip: '仅 Android；需使用配套 ClashMetaForAndroid 构建以获得伙伴状态查询。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.content_cut_rounded,
+      title: 'Seal 下载：Cookie 与空降助手去广告',
+      subtitle: '委托 Seal 时可透传登录 Cookie，并按空降助手已标记片段合成无广告成品。',
+      bullets: [
+        '多账号可选下载鉴权账号，支持记住选择，无需在 Seal 再管 Cookie。',
+        '「下载并去除空降助手标记」：读取空降助手片段，经 Seal 分段合成正片。',
+        '完成后展示逐段去除报告（类型、时间范围、时长）；支持多 P 逐个处理。',
+        '设置中可配置默认类别、最小时长、是否每次询问类别与 Cookie 透传。',
+      ],
+      tip: '路径：视频菜单 → 下载并去除空降助手标记；设置 → 其它设置。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.content_copy_outlined,
       title: '文本选择更顺手',
       subtitle: '多段选中文本按换行拼接，复制阅读更清晰；双击/三击与跨平台选区表现更稳定。',
