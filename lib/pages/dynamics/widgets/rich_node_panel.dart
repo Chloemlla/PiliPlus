@@ -7,6 +7,7 @@ import 'package:pili_plus/http/dynamics.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/search.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart'
+import 'package:pili_plus/common/widgets/emote_span.dart';
     show SourceModel;
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
@@ -160,7 +161,8 @@ TextSpan? richNode(
           case 'RICH_TEXT_NODE_TYPE_EMOJI' when (i.emoji != null):
             final size = i.emoji!.size * 20.0;
             spanChildren.add(
-              WidgetSpan(
+              EmoteSpan(
+                rawText: i.origText,
                 child: NetworkImgLayer(
                   src: i.emoji!.url,
                   type: ImageType.emote,

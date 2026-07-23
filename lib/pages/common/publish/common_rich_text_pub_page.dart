@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' show File, HttpException;
 
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/button/toolbar_icon_button.dart';
@@ -8,6 +8,7 @@ import 'package:pili_plus/http/msg.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
 import 'package:pili_plus/models/common/publish_panel_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart'
+import 'package:pili_plus/common/style.dart';
     show PicModel, FilePicModel, OpusPicModel;
 import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/models_new/emote/emote.dart' as e;
@@ -252,8 +253,8 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
     if (emote is e.Emote) {
       final isTextEmote = width == null;
       onInsertText(
-        isTextEmote ? emote.text! : '\uFFFC',
-        RichTextType.emoji,
+        isTextEmote ? emote.text! : Style.placeHolder,
+        .emoji,
         rawText: emote.text!,
         emote: isTextEmote
             ? null
@@ -265,8 +266,8 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
       );
     } else if (emote is Emoticon) {
       onInsertText(
-        '\uFFFC',
-        RichTextType.emoji,
+        Style.placeHolder,
+        .emoji,
         rawText: emote.emoji!,
         emote: Emote(
           url: emote.url!,
@@ -282,13 +283,13 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
     final list = <Map<String, dynamic>>[];
     for (final e in editController.items) {
       switch (e.type) {
-        case RichTextType.text || RichTextType.composing || RichTextType.common:
+        case .text || .composing || .common:
           list.add({
             "raw_text": e.text,
             "type": 1,
             "biz_id": "",
           });
-        case RichTextType.at:
+        case .at:
           list
             ..add({
               "raw_text": '@${e.rawText}',
@@ -300,13 +301,13 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
               "type": 1,
               "biz_id": "",
             });
-        case RichTextType.emoji:
+        case .emoji:
           list.add({
             "raw_text": e.rawText,
             "type": 9,
             "biz_id": "",
           });
-        case RichTextType.vote:
+        case .vote:
           list
             ..add({
               "raw_text": e.rawText,
@@ -346,7 +347,7 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
   void _onInsertUser(MentionItem e, bool fromClick) {
     onInsertText(
       '@${e.name} ',
-      RichTextType.at,
+      .at,
       rawText: e.name,
       id: e.uid,
       fromClick: fromClick,
@@ -374,7 +375,7 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
       TextEditingDelta delta;
 
       if (selection.isCollapsed) {
-        if (type == RichTextType.at && fromClick == false) {
+        if (type == .at && fromClick == false) {
           delta = RichTextEditingDeltaReplacement(
             oldText: oldValue.text,
             replacementText: text,

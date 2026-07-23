@@ -11,7 +11,7 @@ Widget dynTextMenuBuilder(
       ContextMenuButtonItem(
         label: '文本',
         onPressed: () {
-          state.hideToolbar();
+          state.hideAndClear();
           _showTextDialog(text);
         },
       ),
@@ -21,9 +21,7 @@ Widget dynTextMenuBuilder(
       ContextMenuButtonItem(
         label: '表情',
         onPressed: () {
-          state
-            ..hideToolbar()
-            ..clearSelection();
+          state.hideAndClear();
           _showEmoteDialog(moduleDynamic);
         },
       ),
@@ -65,7 +63,8 @@ void _showEmoteDialog(ModuleDynamicModel? moduleDynamic) {
                   return TextSpan(
                     children: [
                       if (i != 0) const TextSpan(text: '\n\n'),
-                      WidgetSpan(
+                      EmoteSpan(
+                        rawText: Style.placeHolder,
                         child: NetworkImgLayer(
                           src: emoji.url,
                           type: .emote,

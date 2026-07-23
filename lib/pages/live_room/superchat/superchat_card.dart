@@ -4,8 +4,11 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/models_new/live/live_superchat/item.dart';
 import 'package:pili_plus/pages/member/widget/medal_widget.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/color_utils.dart';
 import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/extension/selectable_region_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -14,6 +17,8 @@ import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+part 'package:pili_plus/common/widgets/context_menu/live_menu_helper.dart';
 
 class SuperChatCard extends StatefulWidget {
   const SuperChatCard({
@@ -250,6 +255,7 @@ class _SuperChatCardState extends State<SuperChatCard> {
             ),
             child: SelectionText(
               item.message,
+              contextMenuBuilder: scMenuBuilder,
               style: TextStyle(
                 color: ColourUtils.parseColor(item.messageFontColor),
                 // decoration: widget.persistentSC && item.deleted

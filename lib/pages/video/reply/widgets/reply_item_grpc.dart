@@ -7,6 +7,7 @@ import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/report.dart';
+import 'package:pili_plus/common/widgets/emote_span.dart';
 import 'package:pili_plus/common/widgets/flutter/text/text.dart' as custom_text;
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -825,7 +826,8 @@ class ReplyItemGrpc extends StatelessWidget {
           final emote = content.emotes[matchStr]!;
           final size = emote.size.toInt() * 20.0;
           spanChildren.add(
-            WidgetSpan(
+            EmoteSpan(
+              rawText: matchStr,
               child: NetworkImgLayer(
                 src: emote.hasWebpUrl()
                     ? emote.webpUrl

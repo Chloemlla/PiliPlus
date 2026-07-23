@@ -1,7 +1,20 @@
 diff --git a/packages/flutter/lib/src/rendering/paragraph.dart b/packages/flutter/lib/src/rendering/paragraph.dart
-index 97a41dafb8d..70c55832625 100644
+index 97a41dafb8d..0be1766148e 100644
 --- a/packages/flutter/lib/src/rendering/paragraph.dart
 +++ b/packages/flutter/lib/src/rendering/paragraph.dart
+@@ -1925,9 +1925,9 @@ class _SelectableFragment
+     final Matrix4 transform = paragraph.getTransformTo(null);
+     transform.invert();
+     final Offset localPosition = MatrixUtils.transformPoint(transform, globalPosition);
+-    if (_rect.isEmpty) {
+-      return SelectionUtils.getResultBasedOnRect(_rect, localPosition);
+-    }
++    // if (_rect.isEmpty) {
++    //   return SelectionUtils.getResultBasedOnRect(_rect, localPosition);
++    // }
+     final Offset adjustedOffset = SelectionUtils.adjustDragOffset(
+       _rect,
+       localPosition,
 @@ -3568,7 +3568,10 @@ class _SelectableFragment
        final selectionPaint = Paint()
          ..style = PaintingStyle.fill
@@ -14,19 +27,60 @@ index 97a41dafb8d..70c55832625 100644
          context.canvas.drawRect(textBox.toRect().shift(offset), selectionPaint);
        }
      }
+diff --git a/packages/flutter/lib/src/rendering/selection.dart b/packages/flutter/lib/src/rendering/selection.dart
+index a813e141dc4..78b9bb84c0e 100644
+--- a/packages/flutter/lib/src/rendering/selection.dart
++++ b/packages/flutter/lib/src/rendering/selection.dart
+@@ -114,6 +114,8 @@ abstract class SelectionHandler implements ValueListenable<SelectionGeometry> {
+ 
+   /// The length of the content in this object.
+   int get contentLength;
++
++  Object? get separator;
+ }
+ 
+ /// This class stores the range information of the selection under a [Selectable]
+@@ -236,6 +238,8 @@ class SelectedContent with Diagnosticable {
+ /// See also:
+ ///  * [SelectableRegion], which provides an overview of selection system.
+ mixin Selectable implements SelectionHandler {
++  Object? get separator => null;
++
+   /// {@macro flutter.rendering.RenderObject.getTransformTo}
+   Matrix4 getTransformTo(RenderObject? ancestor);
+ 
+diff --git a/packages/flutter/lib/src/widgets/scrollable.dart b/packages/flutter/lib/src/widgets/scrollable.dart
+index 9df2d633f16..54d30883245 100644
+--- a/packages/flutter/lib/src/widgets/scrollable.dart
++++ b/packages/flutter/lib/src/widgets/scrollable.dart
+@@ -1177,6 +1177,9 @@ class _ScrollableSelectionContainerDelegate extends MultiSelectableSelectionCont
+     _position.addListener(_scheduleLayoutChange);
+   }
+ 
++  @override
++  Object separator = '\n';
++
+   // Pointer drag is a single point, it should not have a size.
+   static const double _kDefaultDragTargetSize = 0;
+ 
 diff --git a/packages/flutter/lib/src/widgets/selectable_region.dart b/packages/flutter/lib/src/widgets/selectable_region.dart
-index 59de8bae20b..525bb76c064 100644
+index 59de8bae20b..39bfeb2b4f0 100644
 --- a/packages/flutter/lib/src/widgets/selectable_region.dart
 +++ b/packages/flutter/lib/src/widgets/selectable_region.dart
-@@ -404,6 +404,7 @@ class SelectableRegionState extends State<SelectableRegion>
-   final StaticSelectionContainerDelegate _selectionDelegate = StaticSelectionContainerDelegate();
+@@ -401,9 +401,11 @@ class SelectableRegionState extends State<SelectableRegion>
+   final LayerLink _startHandleLayerLink = LayerLink();
+   final LayerLink _endHandleLayerLink = LayerLink();
+   final LayerLink _toolbarLayerLink = LayerLink();
+-  final StaticSelectionContainerDelegate _selectionDelegate = StaticSelectionContainerDelegate();
++  final StaticSelectionContainerDelegate _selectionDelegate = StaticSelectionContainerDelegate(separator: '\n');
++  StaticSelectionContainerDelegate get selectionDelegate => _selectionDelegate;
    // there should only ever be one selectable, which is the SelectionContainer.
    Selectable? _selectable;
 +  Selectable? get selectable => _selectable;
  
    bool get _hasSelectionOverlayGeometry =>
        _selectionDelegate.value.startSelectionPoint != null ||
-@@ -599,48 +600,32 @@ class SelectableRegionState extends State<SelectableRegion>
+@@ -599,48 +601,32 @@ class SelectableRegionState extends State<SelectableRegion>
    //
    // This method should be used in all instances when details.consecutiveTapCount
    // would be used.
@@ -94,7 +148,7 @@ index 59de8bae20b..525bb76c064 100644
      }
    }
  
-@@ -782,22 +767,8 @@ class SelectableRegionState extends State<SelectableRegion>
+@@ -782,22 +768,8 @@ class SelectableRegionState extends State<SelectableRegion>
              _selectionStatusNotifier.value = SelectableRegionSelectionStatus.changing;
          }
        case 3:
@@ -119,7 +173,7 @@ index 59de8bae20b..525bb76c064 100644
      }
      _updateSelectedContentIfNeeded();
    }
-@@ -1049,10 +1020,10 @@ class SelectableRegionState extends State<SelectableRegion>
+@@ -1049,10 +1021,10 @@ class SelectableRegionState extends State<SelectableRegion>
        case TargetPlatform.windows:
          // If _lastSecondaryTapDownPosition is within the current selection then
          // keep the current selection, if not then collapse it.
@@ -134,7 +188,7 @@ index 59de8bae20b..525bb76c064 100644
            // Restore _lastSecondaryTapDownPosition since it may be cleared if a user
            // accesses contextMenuAnchors.
            _lastSecondaryTapDownPosition = details.globalPosition;
-@@ -1957,6 +1928,8 @@ class SelectableRegionState extends State<SelectableRegion>
+@@ -1957,6 +1929,8 @@ class SelectableRegionState extends State<SelectableRegion>
          // the region on non-web platforms.
          if (kIsWeb) {
            _focusNode.unfocus();
@@ -143,15 +197,48 @@ index 59de8bae20b..525bb76c064 100644
          }
        },
        child: CompositedTransformTarget(
-@@ -2822,7 +2795,10 @@ abstract class MultiSelectableSelectionContainerDelegate extends SelectionContai
+@@ -2087,6 +2061,11 @@ class _DirectionallyExtendCaretSelectionAction<T extends DirectionalCaretMovemen
+ ///  * [MultiSelectableSelectionContainerDelegate], for the class that provides
+ ///  the main implementation details of this [SelectionContainerDelegate].
+ class StaticSelectionContainerDelegate extends MultiSelectableSelectionContainerDelegate {
++  StaticSelectionContainerDelegate({this.separator});
++
++  @override
++  final Object? separator;
++
+   /// The set of [Selectable]s that have received start events.
+   final Set<Selectable> _hasReceivedStartEvent = <Selectable>{};
+ 
+@@ -2822,8 +2801,17 @@ abstract class MultiSelectableSelectionContainerDelegate extends SelectionContai
        return null;
      }
      final buffer = StringBuffer();
 -    for (final selection in selections) {
-+    for (final (i, selection) in selections.indexed) {
-+      if (i != 0) {
-+        buffer.write('\n');
+-      buffer.write(selection.plainText);
++    if (separator != null) {
++      for (final (i, selection) in selections.indexed) {
++        if (i != 0) {
++          buffer.write(separator);
++        }
++        buffer.write(selection.plainText);
 +      }
-       buffer.write(selection.plainText);
++    } else {
++      for (final selection in selections) {
++        buffer.write(selection.plainText);
++      }
      }
      return SelectedContent(plainText: buffer.toString());
+   }
+diff --git a/packages/flutter/lib/src/widgets/selection_container.dart b/packages/flutter/lib/src/widgets/selection_container.dart
+index 5d5a2386a7a..92e7d1eb70a 100644
+--- a/packages/flutter/lib/src/widgets/selection_container.dart
++++ b/packages/flutter/lib/src/widgets/selection_container.dart
+@@ -270,6 +270,8 @@ class SelectionRegistrarScope extends InheritedWidget {
+ /// This delegate needs to implement [SelectionRegistrar] to register
+ /// [Selectable]s in the [SelectionContainer] subtree.
+ abstract class SelectionContainerDelegate implements SelectionHandler, SelectionRegistrar {
++  Object? get separator => null;
++
+   BuildContext? _selectionContainerContext;
+ 
+   /// Gets the paint transform from the [Selectable] child to
