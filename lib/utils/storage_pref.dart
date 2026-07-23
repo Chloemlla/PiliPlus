@@ -826,6 +826,10 @@ abstract final class Pref {
   static bool get enableSystemProxy =>
       _setting.get(SettingBoxKey.enableSystemProxy, defaultValue: false);
 
+  /// When true (default), skip manual HTTP proxy while Clash Meta VPN is routing.
+  static bool get clashAutoAdapt =>
+      _setting.get(SettingBoxKey.clashAutoAdapt, defaultValue: true);
+
   static bool get enableHttp2 =>
       _setting.get(SettingBoxKey.enableHttp2, defaultValue: false);
 

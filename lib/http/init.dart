@@ -277,6 +277,7 @@ class Request {
     }
   }
 
+  // App-lifetime listener; cancelled only if re-started.
   static StreamSubscription<void>? _clashStatusSub;
   static bool? _lastClashVpnRouting;
 
@@ -288,7 +289,9 @@ class Request {
         _resetAdaptersForNetworkChange();
       }
     }));
-    _clashStatusSub ??= ClashCompat.onStatusChanged.listen((_) {
+    if (_clashStatusSub != null) return;
+    // ignore: cancel_subscriptions - process-lifetime Clash VPN status bridge
+    _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
       if (!Pref.clashAutoAdapt) return;
       final routing = ClashCompat.isClashVpnRouting;
       if (_lastClashVpnRouting == routing) return;

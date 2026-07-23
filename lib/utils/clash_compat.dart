@@ -28,7 +28,9 @@ abstract final class ClashCompat {
   static Future<void> ensureStarted() async {
     if (!Platform.isAndroid) return;
     await refresh();
-    _sub ??= _events.receiveBroadcastStream().listen(
+    if (_sub != null) return;
+    // ignore: cancel_subscriptions - process-lifetime EventChannel bridge
+    _sub = _events.receiveBroadcastStream().listen(
       _onEvent,
       onError: (Object e) {
         if (kDebugMode) debugPrint('ClashCompat event error: $e');
