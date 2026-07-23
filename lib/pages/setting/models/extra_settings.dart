@@ -16,6 +16,7 @@ import 'package:pili_plus/models/common/audio_normalization.dart';
 import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
 import 'package:pili_plus/models/common/member/tab_type.dart';
 import 'package:pili_plus/models/common/reply/reply_sort_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
 import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
 import 'package:pili_plus/models/common/super_resolution_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart'
@@ -31,6 +32,8 @@ import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/clash_compat.dart';
+import 'package:pili_plus/http/init.dart' show Request;
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/filtering_text.dart';
@@ -246,10 +249,47 @@ List<SettingsModel> get extraSettings => [
   const SwitchModel(
     title: '下载时去除标记广告片段',
     subtitle:
-        '基于空降助手标记，通过 Seal 分段下载保留正片；默认类别为赞助/自我推广，不含精彩时刻',
+        '使用空降助手（SponsorBlock）已标记片段，经 Seal 分段合成正片；默认赞助/自我推广，不含精彩时刻',
     leading: Icon(Icons.content_cut_rounded),
     setKey: SettingBoxKey.stripMarkedSegmentsEnabled,
     defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '去除片段前询问类别',
+    subtitle: '开启后每次下载前可多选要剥离的空降助手类别',
+    leading: Icon(Icons.checklist_outlined),
+    setKey: SettingBoxKey.stripAlwaysAskCategories,
+    defaultVal: false,
+  ),
+  NormalModel(
+    title: '默认去除标记类别',
+    getSubtitle: () {
+      final cats = Pref.stripSegmentCategories;
+      if (cats.isEmpty) return '赞助 / 自我推广';
+      final titles = <String>[];
+      for (final name in cats) {
+        try {
+          titles.add(SegmentType.values.byName(name).shortTitle);
+        } catch (_) {
+          titles.add(name);
+        }
+      }
+      return titles.join(' / ');
+    },
+    leading: const Icon(Icons.category_outlined),
+    onTap: _showStripCategoriesDialog,
+  ),
+  NormalModel(
+    title: '去除片段最小时长',
+    getSubtitle: () {
+      final ms = Pref.stripMinSegmentMs;
+      if (ms < 1000) return '${ms}ms';
+      final sec = ms / 1000;
+      if (sec == sec.roundToDouble()) return '${sec.toInt()}s';
+      return '${sec.toStringAsFixed(1)}s';
+    },
+    leading: const Icon(Icons.timer_outlined),
+    onTap: _showStripMinDurationDialog,
   ),
   const SwitchModel(
     title: '委托 Seal 时传递登录 Cookie',
@@ -628,10 +668,24 @@ List<SettingsModel> get extraSettings => [
     defaultVal: false,
     onChanged: (value) => MemberTabType.showMemberShop = value,
   ),
+  SplitModel(
+    normalModel: NormalModel.split(
+      title: 'Clash VPN 自动适配',
+      getSubtitle: () => ClashCompat.statusLabel(autoAdaptEnabled: Pref.clashAutoAdapt),
+      leading: const Icon(Icons.vpn_lock_outlined),
+    ),
+    switchModel: SwitchModel.split(
+      defaultVal: true,
+      setKey: SettingBoxKey.clashAutoAdapt,
+      onChanged: (_) {
+        Request.resetAdaptersForClashAdapt();
+      },
+    ),
+  ),
   const SplitModel(
     normalModel: NormalModel.split(
       title: '设置代理',
-      subtitle: '设置代理 host:port',
+      subtitle: '设置代理 host:port（Clash VPN 活跃时自动忽略）',
       leading: Icon(Icons.airplane_ticket_outlined),
     ),
     switchModel: SwitchModel.split(
@@ -1292,3 +1346,123 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
 }
 
 
+Future<void> _showStripCategoriesDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final options = SegmentType.values
+      .where((t) => t != SegmentType.poi_highlight)
+      .toList(growable: false);
+  final selected = {...Pref.stripSegmentCategories};
+  if (selected.isEmpty) {
+    selected.addAll(const {'sponsor', 'selfpromo'});
+  }
+  final result = await showModalBottomSheet<Set<String>>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final theme = Theme.of(context);
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    '默认去除空降助手标记类别',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final t in options)
+                        CheckboxListTile(
+                          dense: true,
+                          value: selected.contains(t.name),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          secondary: Icon(
+                            Icons.circle,
+                            size: 12,
+                            color: t.color,
+                          ),
+                          title: Text(t.title),
+                          subtitle: Text(
+                            t.shortTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onChanged: (v) {
+                            setModalState(() {
+                              if (v == true) {
+                                selected.add(t.name);
+                              } else {
+                                selected.remove(t.name);
+                              }
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: selected.isEmpty
+                              ? null
+                              : () => Navigator.of(context).pop({...selected}),
+                          child: Text('保存（${selected.length}）'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+  if (result == null) return;
+  await Pref.setStripSegmentCategories(result);
+  setState();
+}
+
+Future<void> _showStripMinDurationDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<double>(
+    context: context,
+    builder: (context) => SliderDialog(
+      title: const Text('去除空降助手片段最小时长'),
+      min: 0,
+      max: 30,
+      divisions: 30,
+      precise: 0,
+      value: (Pref.stripMinSegmentMs / 1000).clamp(0, 30).toDouble(),
+      suffix: 's',
+    ),
+  );
+  if (res == null) return;
+  await Pref.setStripMinSegmentMs((res * 1000).round());
+  setState();
+}

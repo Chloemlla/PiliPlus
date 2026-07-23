@@ -39,7 +39,7 @@ abstract final class WhatsNewData {
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
       subtitle:
-          '你第一次打开这个构建。本版本合并上游文本选择与表情选择改进，并附上构建标识便于核对。',
+          '你第一次打开这个构建。本版本加入 Clash Meta VPN 自动适配，并保留上游文本/表情选择改进。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -47,6 +47,18 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.vpn_lock_outlined,
+      title: 'Clash VPN 自动适配',
+      subtitle: '同时安装 Clash Meta 并开启 VPN 时，PiliPlus 流量自动经 Clash 处理，无需手填代理。',
+      bullets: [
+        '默认开启；可在「设置 → 其它设置」关闭「Clash VPN 自动适配」。',
+        'Clash 访问控制在仅代理名单模式下也会自动放行本应用。',
+        'VPN 开/关时会刷新网络连接池，避免旧连接绕路。',
+        '手动系统代理在 Clash VPN 活跃时自动忽略，防止双重代理。',
+      ],
+      tip: '仅 Android；需使用配套 ClashMetaForAndroid 构建以获得伙伴状态查询。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.content_copy_outlined,

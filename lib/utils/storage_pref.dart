@@ -537,6 +537,22 @@ abstract final class Pref {
     defaultValue: false,
   );
 
+  static Future<void> setStripSegmentCategories(Set<String> categories) async {
+    final cleaned = {
+      for (final e in categories)
+        if (e.isNotEmpty && e != 'poi_highlight') e,
+    };
+    await _setting.put(
+      SettingBoxKey.stripSegmentCategories,
+      cleaned.toList(growable: false),
+    );
+  }
+
+  static Future<void> setStripMinSegmentMs(int ms) async {
+    final v = ms < 0 ? 0 : ms;
+    await _setting.put(SettingBoxKey.stripMinSegmentMs, v);
+  }
+
   static bool get savedRcmdTip =>
       _setting.get(SettingBoxKey.savedRcmdTip, defaultValue: true);
 
@@ -1124,4 +1140,5 @@ abstract final class Pref {
 
   static List? get liveStream => _setting.get(SettingBoxKey.liveStream);
 }
+
 

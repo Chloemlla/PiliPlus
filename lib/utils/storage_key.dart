@@ -73,6 +73,7 @@ abstract final class SettingBoxKey {
       enableWordRe = 'enableWordRe',
       enableSearchWord = 'enableSearchWord',
       enableSystemProxy = 'enableSystemProxy',
+      clashAutoAdapt = 'clashAutoAdapt',
       enableAi = 'enableAi',
       disableLikeMsg = 'disableLikeMsg',
       defaultHomePage = 'defaultHomePage',
@@ -275,5 +276,6 @@ abstract final class VideoBoxKey {
       speedsList = 'speedsList',
       cacheVideoFit = 'cacheVideoFit';
 }
+
 
 

@@ -17,6 +17,7 @@ class MainActivity : AudioServiceActivity() {
     private var qrScannerChannel: QrScannerChannel? = null
     private var nativeCrashChannel: NativeCrashChannel? = null
     private var sealDownloadChannel: SealDownloadChannel? = null
+    private var clashCompatChannel: ClashCompatChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -28,6 +29,10 @@ class MainActivity : AudioServiceActivity() {
         )
         sealDownloadChannel = SealDownloadChannel(
             this,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
+        clashCompatChannel = ClashCompatChannel(
+            applicationContext,
             flutterEngine.dartExecutor.binaryMessenger,
         )
         MethodChannel(
@@ -52,6 +57,8 @@ class MainActivity : AudioServiceActivity() {
         nativeCrashChannel = null
         sealDownloadChannel?.dispose()
         sealDownloadChannel = null
+        clashCompatChannel?.dispose()
+        clashCompatChannel = null
         NativeMediaService.detachFlutterEngine()
         super.cleanUpFlutterEngine(flutterEngine)
     }
@@ -142,3 +149,4 @@ class MainActivity : AudioServiceActivity() {
         private const val CREDENTIAL_REQUEST_CODE = 0x7001
     }
 }
+

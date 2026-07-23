@@ -12,6 +12,7 @@ import 'package:pili_plus/utils/accounts/account_manager/account_mgr.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/log_redactor.dart';
+import 'package:pili_plus/utils/clash_compat.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:archive/archive.dart';
@@ -131,7 +132,11 @@ class Request {
     final bool enableSystemProxy;
     late final String systemProxyHost;
     late final int? systemProxyPort;
-    if (Pref.enableSystemProxy) {
+    // Clash VPN auto-adapt: traffic already goes through TUN — do not stack HTTP proxy.
+    final skipManualProxy = Pref.clashAutoAdapt &&
+        Platform.isAndroid &&
+        ClashCompat.isClashVpnRouting;
+    if (Pref.enableSystemProxy && !skipManualProxy) {
       systemProxyHost = Pref.systemProxyHost;
       systemProxyPort = int.tryParse(Pref.systemProxyPort);
       enableSystemProxy = systemProxyPort != null && systemProxyHost.isNotEmpty;
@@ -183,6 +188,14 @@ class Request {
   }
 
   @pragma('vm:notify-debugger-on-exception')
+  /// Public entry for settings toggle / VPN adapt refresh.
+  static void resetAdaptersForClashAdapt() {
+    if (Platform.isAndroid) {
+      unawaited(ClashCompat.refresh());
+    }
+    _resetAdaptersForNetworkChange();
+  }
+
   static void _resetAdaptersForNetworkChange() {
     try {
       final (h11, connectionManager) = _createPool();
@@ -257,7 +270,31 @@ class Request {
         return status != null && status >= 200 && status < 300;
       };
 
-    if (Platform.isIOS) _watchConnectivity();
+    if (Platform.isIOS) {
+      _watchConnectivity();
+    } else if (Platform.isAndroid) {
+      _startClashAutoAdapt();
+    }
+  }
+
+  static StreamSubscription<void>? _clashStatusSub;
+  static bool? _lastClashVpnRouting;
+
+  static void _startClashAutoAdapt() {
+    if (!Platform.isAndroid) return;
+    unawaited(ClashCompat.ensureStarted().then((_) {
+      _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+      if (Pref.clashAutoAdapt) {
+        _resetAdaptersForNetworkChange();
+      }
+    }));
+    _clashStatusSub ??= ClashCompat.onStatusChanged.listen((_) {
+      if (!Pref.clashAutoAdapt) return;
+      final routing = ClashCompat.isClashVpnRouting;
+      if (_lastClashVpnRouting == routing) return;
+      _lastClashVpnRouting = routing;
+      _resetAdaptersForNetworkChange();
+    });
   }
 
   /*
@@ -365,3 +402,4 @@ class Request {
     allowMalformed: true,
   );
 }
+
