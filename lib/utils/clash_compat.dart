@@ -9,6 +9,7 @@ abstract final class ClashCompat {
   static const MethodChannel _method = MethodChannel('pili_plus/clash_compat');
   static const EventChannel _events = EventChannel('pili_plus/clash_compat_events');
 
+  // ignore: cancel_subscriptions
   static StreamSubscription<dynamic>? _sub;
   static bool clashInstalled = false;
   static bool vpnActive = false;
@@ -29,7 +30,6 @@ abstract final class ClashCompat {
     if (!Platform.isAndroid) return;
     await refresh();
     if (_sub != null) return;
-    // ignore: cancel_subscriptions - process-lifetime EventChannel bridge
     _sub = _events.receiveBroadcastStream().listen(
       _onEvent,
       onError: (Object e) {
