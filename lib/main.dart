@@ -346,7 +346,7 @@ class MyApp extends StatelessWidget {
         FlutterSmartDialog.observer,
       ],
       scrollBehavior: PlatformUtils.isDesktop
-          ? const CustomScrollBehavior(desktopDragDevices)
+          ? const CustomScrollBehavior()
           : null,
     );
   }

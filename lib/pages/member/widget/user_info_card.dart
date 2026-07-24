@@ -395,6 +395,7 @@ class UserInfoCard extends StatelessWidget {
   }
 
   Column _buildRight(ColorScheme colorScheme) => Column(
+    spacing: 5,
     mainAxisSize: .min,
     children: [
       Row(
@@ -418,7 +419,6 @@ class UserInfoCard extends StatelessWidget {
             .skip(1)
             .toList(),
       ),
-      const SizedBox(height: 5),
       Row(
         spacing: 10,
         mainAxisSize: .min,
@@ -441,22 +441,25 @@ class UserInfoCard extends StatelessWidget {
                 }
               },
               icon: const Icon(Icons.mail_outline, size: 21),
-              style: IconButton.styleFrom(
-                side: BorderSide(
-                  width: 1.0,
-                  color: colorScheme.outline.withValues(alpha: 0.3),
+              style: ButtonStyle(
+                side: WidgetStatePropertyAll(
+                  BorderSide(
+                    width: 1.0,
+                    color: colorScheme.outline.withValues(alpha: 0.3),
+                  ),
                 ),
-                padding: .zero,
-                tapTargetSize: .padded,
+                padding: const WidgetStatePropertyAll(.zero),
+                tapTargetSize: .shrinkWrap,
                 visualDensity: .compact,
               ),
             ),
           Expanded(
             child: FilledButton.tonal(
               onPressed: !isOwner && relation == -1 ? null : onFollow,
-              style: FilledButton.styleFrom(
+              style: ButtonStyle(
+                padding: const WidgetStatePropertyAll(.zero),
                 backgroundColor: relation != 0
-                    ? colorScheme.onInverseSurface
+                    ? WidgetStatePropertyAll(colorScheme.onInverseSurface)
                     : null,
                 tapTargetSize: .padded,
                 visualDensity: const VisualDensity(vertical: -1.8),

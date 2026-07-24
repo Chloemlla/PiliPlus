@@ -119,7 +119,7 @@ index 09fba7fc4fb..57ee469358e 100644
    void computeSemanticsInformation(
      List<InlineSpanSemanticsInformation> collector, {
 diff --git a/packages/flutter/lib/src/rendering/paragraph.dart b/packages/flutter/lib/src/rendering/paragraph.dart
-index 0be1766148e..56ff3b367ac 100644
+index 97a41dafb8d..00672540c54 100644
 --- a/packages/flutter/lib/src/rendering/paragraph.dart
 +++ b/packages/flutter/lib/src/rendering/paragraph.dart
 @@ -502,13 +502,16 @@ class RenderParagraph extends RenderBox
@@ -187,6 +187,26 @@ index 0be1766148e..56ff3b367ac 100644
      final int start = math.min(_textSelectionStart!.offset, _textSelectionEnd!.offset);
      final int end = math.max(_textSelectionStart!.offset, _textSelectionEnd!.offset);
      return SelectedContent(plainText: fullText.substring(start, end));
+@@ -1934,9 +1953,16 @@ class _SelectableFragment
+       direction: paragraph.textDirection,
+     );
+ 
+-    final TextPosition position = _clampTextPosition(
+-      paragraph.getPositionForOffset(adjustedOffset),
+-    );
++    final TextPosition position;
++    if (rawText != null) {
++      position = _clampTextPosition(
++        adjustedOffset.dx * 2 > _rect.left + _rect.right
++            ? TextPosition(offset: range.end)
++            : TextPosition(offset: range.start),
++      );
++    } else {
++      position = _clampTextPosition(paragraph.getPositionForOffset(adjustedOffset));
++    }
+     _setSelectionPosition(position, isEnd: isEnd);
+     if (position.offset == range.end) {
+       return SelectionResult.next;
 diff --git a/packages/flutter/lib/src/widgets/widget_span.dart b/packages/flutter/lib/src/widgets/widget_span.dart
 index 09da3b76525..4a83efb0392 100644
 --- a/packages/flutter/lib/src/widgets/widget_span.dart

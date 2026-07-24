@@ -149,7 +149,6 @@ $patches = @($ModalBarrierPatch, $TextSelectionPatch, $MouseCursorPatch,
 
 switch ($platform.ToLower()) {
     "android" {
-        $reverts += $NewOverScrollIndicator
         $patches += $BottomSheetAndroidPatch
         $patches += $ScrollViewPatch
         $patches += $NavigatorPatch

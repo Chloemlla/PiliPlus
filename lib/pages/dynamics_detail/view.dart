@@ -5,6 +5,8 @@ import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/scroll_behavior.dart'
+    show NoOverscrollIndicator;
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
@@ -412,6 +414,7 @@ class _DynamicDetailPageState
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: padding),
       child: NestedScrollView(
+        scrollBehavior: const NoOverscrollIndicator(),
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverToBoxWithOffsetAdapter(

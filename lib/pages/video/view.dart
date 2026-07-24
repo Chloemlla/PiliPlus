@@ -8,6 +8,8 @@ import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
 import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
+import 'package:pili_plus/common/widgets/scroll_behavior.dart'
+    show NoOverscrollIndicator;
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
     show tabBarView, platformAlwaysClampingPhysics, platformClampingPhysics;
 import 'package:pili_plus/common/widgets/sliver/video_header.dart';
@@ -55,7 +57,6 @@ import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/max_screen_size.dart';
-import 'package:pili_plus/utils/media_export_utils.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
@@ -521,6 +522,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
             physics: platformClampingPhysics,
             key: videoDetailController.scrollKey,
             controller: videoDetailController.scrollCtr,
+            scrollBehavior: const NoOverscrollIndicator(),
             pinnedHeaderSliverHeightBuilder: () {
               double pinnedHeight = this.isFullScreen || !isPortrait
                   ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
@@ -1181,20 +1183,11 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
           onTap: () => videoDetailController.showNoteList(context),
           child: const Text('查看笔记'),
         ),
-      if (!videoDetailController.isFileSource) ...[
+      if (!videoDetailController.isFileSource)
         PopupMenuItem(
           onTap: () => videoDetailController.onDownload(this.context),
           child: const Text('缓存视频'),
         ),
-        PopupMenuItem(
-          onTap: () => MediaExportUtils.exportVideo(videoDetailController),
-          child: const Text('下载视频'),
-        ),
-        PopupMenuItem(
-          onTap: () => MediaExportUtils.exportAudio(videoDetailController),
-          child: const Text('下载音频'),
-        ),
-      ],
       if (videoDetailController.cover.value.isNotEmpty)
         PopupMenuItem(
           onTap: () =>
