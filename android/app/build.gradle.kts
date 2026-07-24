@@ -76,10 +76,12 @@ android {
                     value = "PiliPlus dev",
                 )
             }
-//            proguardFiles(
-//                getDefaultProguardFile("proguard-android-optimize.txt"),
-//                "proguard-rules.pro"
-//            )
+            // Flutter release enables minify/R8 by default; keep Scan Kit / optional
+            // HMS network stubs from failing full-mode missing-class checks.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
         debug {
             applicationIdSuffix = ".debug"
