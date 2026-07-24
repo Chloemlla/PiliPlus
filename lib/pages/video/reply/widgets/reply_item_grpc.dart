@@ -21,7 +21,6 @@ import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/reply.dart';
 import 'package:pili_plus/http/video.dart';
-import 'package:pili_plus/models/common/badge_type.dart';
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
 import 'package:pili_plus/pages/member/widget/medal_widget.dart';
@@ -168,13 +167,14 @@ class ReplyItemGrpc extends StatelessWidget {
                 ? member.garbPendantImage
                 : null,
           ),
-          Expanded(
+          Flexible(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: .min,
+              crossAxisAlignment: .start,
               children: [
                 Row(
                   spacing: 6,
+                  mainAxisSize: .min,
                   children: [
                     Flexible(
                       child: Text(
@@ -197,7 +197,7 @@ class ReplyItemGrpc extends StatelessWidget {
                     if (replyItem.mid == upMid)
                       const PBadge(
                         text: 'UP',
-                        size: PBadgeSize.small,
+                        size: .small,
                         isStack: false,
                         fontSize: 9,
                       )
@@ -212,15 +212,12 @@ class ReplyItemGrpc extends StatelessWidget {
                         nameColor: DmUtils.decimalToColor(
                           member.fansMedalColorName.toInt(),
                         ),
-                        padding: const .symmetric(
-                          horizontal: 6,
-                          vertical: 1.5,
-                        ),
+                        padding: const .symmetric(horizontal: 6, vertical: 1.5),
                       ),
                   ],
                 ),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: .min,
                   children: [
                     Text(
                       replyLevel == 0
@@ -228,9 +225,7 @@ class ReplyItemGrpc extends StatelessWidget {
                               replyItem.ctime.toInt(),
                               format: DateFormatUtils.longFormatDs,
                             )
-                          : DateFormatUtils.dateFormat(
-                              replyItem.ctime.toInt(),
-                            ),
+                          : DateFormatUtils.dateFormat(replyItem.ctime.toInt()),
                       style: TextStyle(
                         fontSize: 11,
                         color: colorScheme.outline,
@@ -353,12 +348,12 @@ class ReplyItemGrpc extends StatelessWidget {
               children: [
                 if (replyControl.isUpTop) ...[
                   const WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
+                    alignment: .middle,
                     child: PBadge(
                       text: 'TOP',
-                      size: PBadgeSize.small,
+                      size: .small,
                       isStack: false,
-                      type: PBadgeType.line_primary,
+                      type: .line_primary,
                       fontSize: 9,
                       textScaleFactor: 1,
                     ),
@@ -644,10 +639,10 @@ class ReplyItemGrpc extends StatelessWidget {
                           if (childReply.mid == upMid) ...[
                             const TextSpan(text: ' '),
                             const WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
+                              alignment: .middle,
                               child: PBadge(
                                 text: 'UP',
-                                size: PBadgeSize.small,
+                                size: .small,
                                 isStack: false,
                                 fontSize: 9,
                                 textScaleFactor: 1,
