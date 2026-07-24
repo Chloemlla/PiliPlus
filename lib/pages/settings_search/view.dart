@@ -1,19 +1,26 @@
+import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
+import 'package:pili_plus/models/common/setting_type.dart';
 import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState;
-import 'package:pili_plus/pages/setting/models/extra_settings.dart';
+import 'package:pili_plus/pages/setting/common_setting.dart';
 import 'package:pili_plus/pages/setting/models/model.dart';
-import 'package:pili_plus/pages/setting/models/play_settings.dart';
-import 'package:pili_plus/pages/setting/models/privacy_settings.dart';
-import 'package:pili_plus/pages/setting/models/recommend_settings.dart';
-import 'package:pili_plus/pages/setting/models/style_settings.dart';
-import 'package:pili_plus/pages/setting/models/video_settings.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/waterfall.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
 import 'package:waterfall_flow/waterfall_flow.dart'
     hide SliverWaterfallFlowDelegateWithMaxCrossAxisExtent;
+
+class _SearchableSetting {
+  const _SearchableSetting({
+    required this.type,
+    required this.model,
+  });
+
+  final SettingType type;
+  final SettingsModel model;
+}
 
 class SettingsSearchPage extends StatefulWidget {
   const SettingsSearchPage({super.key});
@@ -25,14 +32,21 @@ class SettingsSearchPage extends StatefulWidget {
 class _SettingsSearchPageState
     extends DebounceStreamState<SettingsSearchPage, String> {
   final _textEditingController = TextEditingController();
-  final RxList<SettingsModel> _list = <SettingsModel>[].obs;
-  late final _settings = [
-    ...extraSettings,
-    ...privacySettings,
-    ...recommendSettings,
-    ...videoSettings,
-    ...playSettings,
-    ...styleSettings,
+  final RxList<_SearchableSetting> _list = <_SearchableSetting>[].obs;
+
+  static const _searchableTypes = <SettingType>[
+    SettingType.privacySetting,
+    SettingType.recommendSetting,
+    SettingType.videoSetting,
+    SettingType.playSetting,
+    SettingType.styleSetting,
+    SettingType.extraSetting,
+  ];
+
+  late final List<_SearchableSetting> _settings = [
+    for (final type in _searchableTypes)
+      for (final model in type.settings)
+        _SearchableSetting(type: type, model: model),
   ];
 
   @override
@@ -44,8 +58,9 @@ class _SettingsSearchPageState
       _list.value = _settings
           .where(
             (item) =>
-                item.effectiveTitle.toLowerCase().contains(value) ||
-                item.effectiveSubtitle?.toLowerCase().contains(value) == true,
+                item.model.effectiveTitle.toLowerCase().contains(value) ||
+                item.model.effectiveSubtitle?.toLowerCase().contains(value) ==
+                    true,
           )
           .toList();
     }
@@ -57,8 +72,23 @@ class _SettingsSearchPageState
     super.dispose();
   }
 
+  void _openSetting(_SearchableSetting entry) {
+    Get.to(
+      () => CommonSetting(
+        settingType: entry.type,
+        highlightSettingsId: entry.model.settingsId,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.titleMedium!;
+    final subTitleStyle = theme.textTheme.labelMedium!.copyWith(
+      color: theme.colorScheme.outline,
+    );
+
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -100,7 +130,31 @@ class _SettingsSearchPageState
                             maxCrossAxisExtent: Grid.smallCardWidth * 2,
                           ),
                       delegate: SliverChildBuilderDelegate(
-                        (_, index) => _list[index].widget,
+                        (_, index) {
+                          final entry = _list[index];
+                          final model = entry.model;
+                          final subtitle = model.effectiveSubtitle;
+                          return ListTile(
+                            leading: model.leading,
+                            title: Text(
+                              model.effectiveTitle,
+                              style: titleStyle,
+                            ),
+                            subtitle: subtitle == null
+                                ? Text(entry.type.title, style: subTitleStyle)
+                                : Text(
+                                    '${entry.type.title} · $subtitle',
+                                    style: subTitleStyle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                            trailing: Icon(
+                              Icons.my_location_outlined,
+                              color: theme.colorScheme.primary,
+                            ),
+                            onTap: () => _openSetting(entry),
+                          );
+                        },
                         childCount: _list.length,
                       ),
                     ),

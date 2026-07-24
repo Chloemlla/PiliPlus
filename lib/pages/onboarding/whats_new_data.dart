@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '你第一次打开这个构建。本版本将 Android 扫码切换为华为 Scan Kit，并保留 Clash / Seal 等能力。',
+      subtitle: '你第一次打开这个构建。设置搜索可一键定位到分区项并荧光闪烁，同时保留 Scan Kit / Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -46,6 +46,17 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.search,
+      title: '设置搜索：一键定位',
+      subtitle: '在设置搜索中点选结果，会跳转到对应分区页并滚动到该项。',
+      bullets: [
+        '目标设置项会荧光高亮闪烁一次，方便在长列表中辨认。',
+        '定位后开关与点击项仍可正常操作。',
+        '结果行展示所属分区，便于确认跳转目标。',
+      ],
+      tip: '路径：设置 → 搜索。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.qr_code_scanner_outlined,
@@ -83,26 +94,8 @@ abstract final class WhatsNewData {
       ],
       tip: '路径：视频菜单 → 下载并去除空降助手标记；设置 → 其它设置。',
     ),
-    const ImprovementsGuidePageData(
-      icon: Icons.content_copy_outlined,
-      title: '文本选择更顺手',
-      subtitle: '多段选中文本按换行拼接，复制阅读更清晰；双击/三击与跨平台选区表现更稳定。',
-      bullets: [
-        '选中后展示菜单前会统一收起工具栏并清理选区。',
-        '评论「加入过滤」在选区为空时会安全跳过，避免崩溃。',
-        '直播超聊选中文本可直接走「视频」「搜索」入口。',
-      ],
-    ),
-    const ImprovementsGuidePageData(
-      icon: Icons.emoji_emotions_outlined,
-      title: '表情选择与还原',
-      subtitle: '复制/回复流程对「表情与文本」处理更顺畅，表情占位会还原为原始文本。',
-      bullets: [
-        '动态、私信、评论等富文本表情改用 EmoteSpan 携带原文。',
-        '编辑器表情插入使用统一占位符，序列化更一致。',
-        '继续支持把选中内容加入评论过滤。',
-      ],
-    ),
+
+
     const ImprovementsGuidePageData(
       icon: Icons.bug_report_outlined,
       title: '本构建保留与修复',

@@ -22,6 +22,9 @@ sealed class SettingsModel {
   String get effectiveTitle;
   String? get effectiveSubtitle;
 
+  /// Stable id for settings search locate (unique within a category page).
+  String get settingsId => effectiveTitle;
+
   const SettingsModel({
     this.subtitle,
     this.leading,
@@ -50,6 +53,9 @@ class SplitModel extends SettingsModel {
   final NormalModel normalModel;
 
   final SwitchModel switchModel;
+
+  @override
+  String get settingsId => switchModel.setKey;
 
   @override
   Widget get widget => SetSwitchItem(
@@ -90,6 +96,9 @@ class PopupModel<T extends EnumWithLabel> extends SettingsModel {
   final ValueGetter<T> value;
   final List<T> items;
   final PopupMenuItemSelected<T> onSelected;
+
+  @override
+  String get settingsId => 'popup:$title';
 
   @override
   Widget get widget => PopupListTile<T>(
@@ -143,6 +152,9 @@ class NormalModel extends SettingsModel {
   String? get effectiveSubtitle => subtitle ?? getSubtitle?.call();
 
   @override
+  String get settingsId => title ?? 'normal:${getTitle!()}';
+
+  @override
   Widget get widget => NormalItem(
     title: title,
     getTitle: getTitle,
@@ -190,6 +202,9 @@ class SwitchModel extends SettingsModel {
   String get effectiveTitle => title!;
   @override
   String? get effectiveSubtitle => subtitle;
+
+  @override
+  String get settingsId => setKey;
 
   @override
   Widget get widget => SetSwitchItem(
@@ -347,3 +362,4 @@ SettingsModel getVideoFilterSelectModel({
     },
   );
 }
+ ok sealed ok split ok popup ok normal ok switch
