@@ -65,6 +65,18 @@ class ShutdownTimerService {
     );
   }
 
+  void startQuickTimer(int durationInMinutes) {
+    _waitUntilCompleted = false;
+    _shutdownType = .pause;
+    _startShutdownTimer(durationInMinutes);
+  }
+
+  void cycleQuickTimer() {
+    const minutes = [10, 30, 60, 0];
+    final index = minutes.indexOf(_durationInMinutes);
+    startQuickTimer(minutes[(index + 1) % minutes.length]);
+  }
+
   void _handleShutdown() {
     switch (_shutdownType) {
       case _ShutdownType.pause:
