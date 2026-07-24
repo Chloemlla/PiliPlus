@@ -7,6 +7,7 @@ import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/illustration/dynamic_color_illustration.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/select_mask.dart';
 import 'package:pili_plus/models/common/badge_type.dart';
@@ -206,7 +207,10 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                   if (_downloadService.waitDownloadQueue.isNotEmpty) {
                     return const SliverToBoxAdapter();
                   }
-                  return const HttpError();
+                  return const HttpError(
+                    errMsg: '暂无离线缓存',
+                    illustration: DynamicColorIllustrationType.download,
+                  );
                 }),
                 SliverToBoxAdapter(
                   child: SizedBox(height: padding.bottom + 100),

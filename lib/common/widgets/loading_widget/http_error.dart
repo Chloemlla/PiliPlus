@@ -1,7 +1,6 @@
-import 'package:pili_plus/common/assets.dart';
-import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pili_plus/common/widgets/illustration/dynamic_color_illustration.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
 
 class HttpError extends StatelessWidget {
   const HttpError({
@@ -11,6 +10,7 @@ class HttpError extends StatelessWidget {
     this.onReload,
     this.btnText,
     this.safeArea = true,
+    this.illustration = DynamicColorIllustrationType.empty,
   });
 
   final bool isSliver;
@@ -18,6 +18,9 @@ class HttpError extends StatelessWidget {
   final VoidCallback? onReload;
   final String? btnText;
   final bool safeArea;
+
+  /// Theme-following undraw-style hero for empty / error surfaces.
+  final DynamicColorIllustrationType illustration;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +31,7 @@ class HttpError extends StatelessWidget {
       crossAxisAlignment: .center,
       children: [
         const SizedBox(height: 40),
-        SvgPicture.asset(Assets.error, height: 200),
+        DynamicColorIllustration(type: illustration, height: 200),
         const SizedBox(height: 30),
         Padding(
           padding: const .symmetric(horizontal: 16, vertical: 5),
