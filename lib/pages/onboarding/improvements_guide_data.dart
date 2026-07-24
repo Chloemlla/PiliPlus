@@ -60,7 +60,7 @@ abstract final class ImprovementsGuideData {
         '支持相机扫码、相册识别与粘贴链接。',
         '解析后展示场景信息（环境、临时登录、短信验证等），失败可重试。',
         '授权请求会附着账号 Cookie，并与现有多账号体系打通。',
-        '扫码链路加固，降低 native 崩溃；日志对敏感字段脱敏。',
+        'Android 扫码使用华为 HMS Scan Kit（无 GMS 依赖）；日志对敏感字段脱敏。',
       ],
       tip: '入口：登录 / Web QR 授权相关页面（扫描网页登录）。',
     ),

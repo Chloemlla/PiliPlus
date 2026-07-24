@@ -38,8 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle:
-          '你第一次打开这个构建。本版本加入 Clash Meta VPN 自动适配，并保留上游文本/表情选择改进。',
+      subtitle: '你第一次打开这个构建。本版本将 Android 扫码切换为华为 Scan Kit，并保留 Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -47,6 +46,18 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.qr_code_scanner_outlined,
+      title: 'Android 扫码改用华为 Scan Kit',
+      subtitle: '网页二维码授权的相机与相册识别改为 HMS Scan Kit，不依赖 Google ML Kit / GMS。',
+      platformHint: 'Android',
+      bullets: [
+        '相机扫码使用 Scan Kit RemoteView；相册识别使用 decodeWithBitmap。',
+        'Flutter 通道契约不变：scanCamera / scanImage，网页登录授权流程不变。',
+        '无需 agconnect-services.json 即可走 Scan Kit 独立 SDK；依赖声明华为 Maven。',
+      ],
+      tip: '入口：登录 / Web QR 授权（扫描网页登录）。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.vpn_lock_outlined,
