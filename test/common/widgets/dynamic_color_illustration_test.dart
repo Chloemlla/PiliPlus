@@ -42,10 +42,10 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: CustomScrollView(
-            slivers: const [
+            slivers: [
               HttpError(
                 errMsg: '暂无离线缓存',
                 illustration: DynamicColorIllustrationType.download,

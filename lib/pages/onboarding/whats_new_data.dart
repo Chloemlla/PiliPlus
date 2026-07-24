@@ -39,7 +39,7 @@ abstract final class WhatsNewData {
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
       subtitle:
-          '你第一次打开这个构建。本版本为空状态接入跟随主题的动态色插画，并保留设置搜索定位、Scan Kit / Clash / Seal 等能力。',
+          '你第一次打开这个构建。本版本为空状态接入跟随主题的动态色插画，并修回设置搜索定位相关分析错误，保留 Scan Kit / Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',

@@ -144,21 +144,24 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final scale = size.shortestSide / 240;
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.scale(scale);
+    canvas
+      ..save()
+      ..translate(size.width / 2, size.height / 2)
+      ..scale(scale);
 
     // Soft ground shadow (undraw floor strip).
     final ground = Paint()
       ..color = colors.surfaceContainerHigh.withValues(alpha: 0.9);
-    canvas.drawOval(
-      Rect.fromCenter(center: const Offset(0, 92), width: 210, height: 28),
-      ground,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(center: const Offset(0, 100), width: 170, height: 16),
-      Paint()..color = colors.outline.withValues(alpha: 0.35),
-    );
+    final groundEdge = Paint()..color = colors.outline.withValues(alpha: 0.35);
+    canvas
+      ..drawOval(
+        Rect.fromCenter(center: const Offset(0, 92), width: 210, height: 28),
+        ground,
+      )
+      ..drawOval(
+        Rect.fromCenter(center: const Offset(0, 100), width: 170, height: 16),
+        groundEdge,
+      );
 
     switch (type) {
       case DynamicColorIllustrationType.download:
@@ -177,28 +180,30 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
       Rect.fromCenter(center: const Offset(-18, 10), width: 110, height: 130),
       const Radius.circular(14),
     );
-    canvas.drawRRect(
-      card.shift(const Offset(14, 8)),
-      Paint()..color = colors.secondaryContainer.withValues(alpha: 0.85),
-    );
-    canvas.drawRRect(card, Paint()..color = colors.surface);
-    canvas.drawRRect(
-      card,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = colors.ink.withValues(alpha: 0.85),
-    );
+    final backCard = Paint()
+      ..color = colors.secondaryContainer.withValues(alpha: 0.85);
+    final cardFill = Paint()..color = colors.surface;
+    final cardStroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = colors.ink.withValues(alpha: 0.85);
+    final header = Paint()..color = colors.primaryFixedDim;
+    final line = Paint()..color = colors.outline.withValues(alpha: 0.7);
+    final plant = Paint()..color = colors.tertiaryContainer;
+    final pot = Paint()..color = colors.ink.withValues(alpha: 0.7);
 
-    // Accent header bar on card.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(card.left + 12, card.top + 16, card.width - 24, 18),
-        const Radius.circular(6),
-      ),
-      Paint()..color = colors.primaryFixedDim,
-    );
-    // Content lines.
+    canvas
+      ..drawRRect(card.shift(const Offset(14, 8)), backCard)
+      ..drawRRect(card, cardFill)
+      ..drawRRect(card, cardStroke)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(card.left + 12, card.top + 16, card.width - 24, 18),
+          const Radius.circular(6),
+        ),
+        header,
+      );
+
     for (var i = 0; i < 3; i++) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -210,11 +215,10 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
           ),
           const Radius.circular(5),
         ),
-        Paint()..color = colors.outline.withValues(alpha: 0.7),
+        line,
       );
     }
 
-    // Person silhouette (simplified undraw figure).
     _paintPerson(
       canvas,
       origin: const Offset(58, 18),
@@ -222,81 +226,78 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
       accent: colors.primaryContainer,
     );
 
-    // Decorative plant blob.
-    canvas.drawCircle(
-      const Offset(-78, 70),
-      18,
-      Paint()..color = colors.tertiaryContainer,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-86, 78, 16, 28),
-        const Radius.circular(4),
-      ),
-      Paint()..color = colors.ink.withValues(alpha: 0.7),
-    );
+    canvas
+      ..drawCircle(const Offset(-78, 70), 18, plant)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-86, 78, 16, 28),
+          const Radius.circular(4),
+        ),
+        pot,
+      );
   }
 
   void _paintDownload(Canvas canvas) {
-    // Device / phone body.
     final phone = RRect.fromRectAndRadius(
       Rect.fromCenter(center: const Offset(-36, 8), width: 92, height: 148),
       const Radius.circular(16),
     );
-    canvas.drawRRect(phone, Paint()..color = colors.ink);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: const Offset(-36, 4), width: 78, height: 124),
-        const Radius.circular(10),
-      ),
-      Paint()..color = colors.surface,
-    );
+    final phoneBody = Paint()..color = colors.ink;
+    final phoneScreen = Paint()..color = colors.surface;
+    final badge = Paint()..color = colors.primaryFixedDim;
+    final arrowPaint = Paint()
+      ..color = colors.onPrimaryFixedVariant
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final chipSecondary = Paint()..color = colors.secondaryContainer;
+    final chipPrimary = Paint()..color = colors.primaryContainer;
+    final chipTertiary = Paint()..color = colors.tertiaryContainer;
 
-    // Download badge circle (primary fixed dim like Seal).
-    canvas.drawCircle(
-      const Offset(-36, 0),
-      28,
-      Paint()..color = colors.primaryFixedDim,
-    );
-    // Arrow down.
     final arrow = Path()
       ..moveTo(-36, -14)
       ..lineTo(-36, 8)
       ..moveTo(-48, -2)
       ..lineTo(-36, 12)
       ..lineTo(-24, -2);
-    canvas.drawPath(
-      arrow,
-      Paint()
-        ..color = colors.onPrimaryFixedVariant
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
 
-    // Floating file chips.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(18, -60, 56, 40),
-        const Radius.circular(8),
-      ),
-      Paint()..color = colors.secondaryContainer,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(32, -28, 64, 44),
-        const Radius.circular(8),
-      ),
-      Paint()..color = colors.primaryContainer,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(24, 12, 52, 36),
-        const Radius.circular(8),
-      ),
-      Paint()..color = colors.tertiaryContainer,
-    );
+    canvas
+      ..drawRRect(phone, phoneBody)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: const Offset(-36, 4),
+            width: 78,
+            height: 124,
+          ),
+          const Radius.circular(10),
+        ),
+        phoneScreen,
+      )
+      ..drawCircle(const Offset(-36, 0), 28, badge)
+      ..drawPath(arrow, arrowPaint)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(18, -60, 56, 40),
+          const Radius.circular(8),
+        ),
+        chipSecondary,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(32, -28, 64, 44),
+          const Radius.circular(8),
+        ),
+        chipPrimary,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(24, 12, 52, 36),
+          const Radius.circular(8),
+        ),
+        chipTertiary,
+      );
 
     _paintPerson(
       canvas,
@@ -308,54 +309,54 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
   }
 
   void _paintSync(Canvas canvas) {
-    // Cloud body.
     final cloudPaint = Paint()..color = colors.primaryContainer;
-    canvas.drawCircle(const Offset(-24, -8), 36, cloudPaint);
-    canvas.drawCircle(const Offset(18, -4), 30, cloudPaint);
-    canvas.drawCircle(const Offset(-2, -28), 28, cloudPaint);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-52, -12, 90, 42),
-        const Radius.circular(20),
-      ),
-      cloudPaint,
-    );
-
-    // Sync arrows ring.
     final ring = Paint()
       ..color = colors.primaryFixedDim
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCenter(center: const Offset(-6, -6), width: 54, height: 54),
-      -math.pi * 0.15,
-      math.pi * 1.2,
-      false,
-      ring,
-    );
-    // Arrow heads.
+    final ringFill = Paint()..color = colors.primaryFixedDim;
+    final deviceBody = Paint()..color = colors.ink;
+    final deviceScreen = Paint()..color = colors.surface;
+
     final head = Path()
       ..moveTo(14, -22)
       ..lineTo(22, -10)
       ..lineTo(6, -8);
-    canvas.drawPath(head, Paint()..color = colors.primaryFixedDim);
 
-    // Ground device.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-40, 42, 70, 48),
-        const Radius.circular(10),
-      ),
-      Paint()..color = colors.ink,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-34, 48, 58, 32),
-        const Radius.circular(6),
-      ),
-      Paint()..color = colors.surface,
-    );
+    canvas
+      ..drawCircle(const Offset(-24, -8), 36, cloudPaint)
+      ..drawCircle(const Offset(18, -4), 30, cloudPaint)
+      ..drawCircle(const Offset(-2, -28), 28, cloudPaint)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-52, -12, 90, 42),
+          const Radius.circular(20),
+        ),
+        cloudPaint,
+      )
+      ..drawArc(
+        Rect.fromCenter(center: const Offset(-6, -6), width: 54, height: 54),
+        -math.pi * 0.15,
+        math.pi * 1.2,
+        false,
+        ring,
+      )
+      ..drawPath(head, ringFill)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-40, 42, 70, 48),
+          const Radius.circular(10),
+        ),
+        deviceBody,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-34, 48, 58, 32),
+          const Radius.circular(6),
+        ),
+        deviceScreen,
+      );
 
     _paintPerson(
       canvas,
@@ -373,45 +374,41 @@ class _DynamicColorIllustrationPainter extends CustomPainter {
     required Color accent,
     double scale = 1,
   }) {
-    canvas.save();
-    canvas.translate(origin.dx, origin.dy);
-    canvas.scale(scale);
+    final skin = Paint()..color = colors.skin;
+    final hair = Paint()..color = colors.ink.withValues(alpha: 0.9);
+    final torso = Paint()..color = body;
+    final legs = Paint()..color = colors.ink;
+    final sleeve = Paint()..color = accent;
 
-    // Head.
-    canvas.drawCircle(const Offset(0, -46), 14, Paint()..color = colors.skin);
-    // Hair blob.
-    canvas.drawCircle(
-      const Offset(0, -54),
-      12,
-      Paint()..color = colors.ink.withValues(alpha: 0.9),
-    );
-    // Torso.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-16, -30, 32, 48),
-        const Radius.circular(12),
-      ),
-      Paint()..color = body,
-    );
-    // Legs.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(-14, 14, 12, 34),
-        const Radius.circular(6),
-      ),
-      Paint()..color = colors.ink,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(2, 14, 12, 34),
-        const Radius.circular(6),
-      ),
-      Paint()..color = colors.ink,
-    );
-    // Accent sleeve.
-    canvas.drawCircle(const Offset(-20, -10), 8, Paint()..color = accent);
-
-    canvas.restore();
+    canvas
+      ..save()
+      ..translate(origin.dx, origin.dy)
+      ..scale(scale)
+      ..drawCircle(const Offset(0, -46), 14, skin)
+      ..drawCircle(const Offset(0, -54), 12, hair)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-16, -30, 32, 48),
+          const Radius.circular(12),
+        ),
+        torso,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-14, 14, 12, 34),
+          const Radius.circular(6),
+        ),
+        legs,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(2, 14, 12, 34),
+          const Radius.circular(6),
+        ),
+        legs,
+      )
+      ..drawCircle(const Offset(-20, -10), 8, sleeve)
+      ..restore();
   }
 
   @override
