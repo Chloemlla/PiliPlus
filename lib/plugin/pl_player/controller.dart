@@ -99,6 +99,9 @@ class PlPlayerController with BlockConfigMixin {
   void updateDuration(Duration value) {
     duration.value = value.inSeconds;
     durationInMilliseconds = value.inMilliseconds;
+    if (value > Duration.zero) {
+      videoPlayerServiceHandler?.onDurationChange(value);
+    }
   }
 
   int _playerCount = 0;
@@ -1032,6 +1035,7 @@ class PlPlayerController with BlockConfigMixin {
       stream.duration.listen(updateDuration),
       stream.buffer.listen((Duration buffer) {
         buffered.value = buffer.inSeconds;
+        videoPlayerServiceHandler?.onBufferedChange(buffer);
       }),
       stream.buffering.listen((bool buffering) {
         isBuffering.value = buffering;

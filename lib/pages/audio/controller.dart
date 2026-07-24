@@ -419,6 +419,9 @@ class AudioController extends GetxController
       }),
       stream.duration.listen((duration) {
         this.duration.value = duration.inSeconds;
+        if (duration > Duration.zero) {
+          videoPlayerServiceHandler?.onDurationChange(duration);
+        }
       }),
       stream.playing.listen((playing) {
         final PlayerStatus playerStatus;

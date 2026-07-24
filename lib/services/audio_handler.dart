@@ -41,10 +41,52 @@ Future<VideoPlayerServiceHandler> initAudioService() {
 
 class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   static final List<MediaItem> _item = [];
+
+  /// Native position push throttling. SystemUI interpolates the scrubber
+  /// while playing via speed + updateTime, so we push sparingly: push
+  /// when paused (no interpolation), on a jump, or when the interval elapses.
+  static bool shouldPushNativePosition({
+    required bool playing,
+    required Duration deltaFromPrevious,
+    required Duration deltaFromLastPushed,
+    required Duration? sinceLastPush,
+    required Duration pushInterval,
+    required Duration jumpThreshold,
+  }) {
+    final jumped = deltaFromPrevious.abs() >= jumpThreshold ||
+        deltaFromLastPushed.abs() >= jumpThreshold;
+    final due = sinceLastPush == null || sinceLastPush >= pushInterval;
+    return !playing || jumped || due;
+  }
+
+  /// Whether a position tick after seek should be applied (true) or dropped
+  /// as stale (false). Drops until the player reports a position near the
+  /// seek target, or the grace window expires.
+  static bool shouldAcceptPositionAfterSeek({
+    required Duration position,
+    required Duration seekTarget,
+    required Duration settleThreshold,
+    required bool graceExpired,
+  }) {
+    if (graceExpired) return true;
+    return (position - seekTarget).abs() < settleThreshold;
+  }
+
+  // Player position stream is already ~1 Hz; push more slowly while playing so
+  // SystemUI can interpolate via speed + updateTime and FGS rebuilds stay rare.
+  static const Duration _nativePositionPushInterval = Duration(seconds: 3);
+  static const Duration _nativePositionJumpThreshold = Duration(seconds: 2);
   bool enableBackgroundPlay = Pref.enableBackgroundPlay;
 
   MediaItem? _currentMediaItem;
   Duration _lastPosition = Duration.zero;
+  Duration _lastPushedPosition = Duration.zero;
+  Duration _lastBuffered = Duration.zero;
+  DateTime? _lastNativePositionPush;
+  /// After a seek, ignore stale player position ticks so the scrubber does not
+  /// snap back before media_kit reports the new position.
+  Duration? _pendingSeekPosition;
+  DateTime? _pendingSeekUntil;
   PlayerStatus _lastStatus = PlayerStatus.paused;
   bool _lastBuffering = false;
   bool _lastIsLive = false;
@@ -92,6 +134,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> seek(Duration position) async {
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
+    // Optimistic local position so notification scrubber / relative seeks stay
+    // consistent until the player reports the new position.
+    _noteOptimisticPosition(position);
     await (onSeek?.call(position) ??
         PlPlayerController.seekToIfExists(position, isSeek: false));
     // await player.seekTo(position);
@@ -166,13 +211,27 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     if (duration != null && duration > Duration.zero && position > duration) {
       position = duration;
     }
-    _lastPosition = position;
+    // seek() already applies optimistic position + stale-tick guard.
     await seek(position);
     if (_useNativeAndroidNotification) {
       await nativeMediaNotificationService.updatePlayback({
         'positionMs': position.inMilliseconds,
+        'bufferedMs': _lastBuffered.inMilliseconds,
+        'durationMs': _currentMediaItem?.duration?.inMilliseconds,
+        'playing': _lastStatus.isPlaying,
+        'buffering': _lastBuffering,
+        'completed': _lastStatus.isCompleted,
+        'live': _lastIsLive,
       });
     }
+  }
+
+  void _noteOptimisticPosition(Duration position) {
+    _lastPosition = position;
+    _lastPushedPosition = position;
+    _lastNativePositionPush = DateTime.now();
+    _pendingSeekPosition = position;
+    _pendingSeekUntil = DateTime.now().add(const Duration(seconds: 2));
   }
 
   double _nextPlaybackSpeed() {
@@ -193,6 +252,12 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     // }
     _currentMediaItem = newMediaItem;
     _lastPosition = Duration.zero;
+    _lastPushedPosition = Duration.zero;
+    _lastBuffered = Duration.zero;
+    _lastNativePositionPush = null;
+    _pendingSeekPosition = null;
+    _pendingSeekUntil = null;
+    _lastIsLive = newMediaItem.isLive ?? false;
     if (_useNativeAndroidNotification) {
       nativeMediaNotificationService.updateMetadata({
         'id': newMediaItem.id,
@@ -211,6 +276,51 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     if (!mediaItem.isClosed) mediaItem.add(newMediaItem);
   }
 
+  /// Player-reported duration. Required for MediaStyle scrubber (duration > 0).
+  void onDurationChange(Duration duration) {
+    if (!enableBackgroundPlay || _item.isEmpty || !_hasPlaybackTarget) {
+      return;
+    }
+    if (_lastIsLive || duration <= Duration.zero) return;
+
+    final current = _currentMediaItem;
+    if (current == null) return;
+    if (current.duration == duration) return;
+
+    final updated = current.copyWith(duration: duration);
+    _currentMediaItem = updated;
+    final index = _item.lastIndexWhere((item) => item.id == updated.id);
+    if (index != -1) {
+      _item[index] = updated;
+    }
+
+    if (_useNativeAndroidNotification) {
+      nativeMediaNotificationService.updateMetadata({
+        'durationMs': duration.inMilliseconds,
+        'live': false,
+        'positionMs': _lastPosition.inMilliseconds,
+        'playing': _lastStatus.isPlaying,
+        'buffering': _lastBuffering,
+        'completed': _lastStatus.isCompleted,
+        'supportsPrevious': onPrevious != null,
+        'supportsNext': onNext != null,
+        'videoActions': _lastVideoActions,
+        ..._nativePlaybackFlags(),
+      });
+      return;
+    }
+    if (!mediaItem.isClosed) mediaItem.add(updated);
+  }
+
+  void onBufferedChange(Duration buffered) {
+    if (!enableBackgroundPlay || _item.isEmpty || !_hasPlaybackTarget) {
+      return;
+    }
+    if (_lastIsLive) return;
+    // Store only; applied on the next playback/position push (no FGS spam).
+    _lastBuffered = buffered;
+  }
+
   void setPlaybackState(PlayerStatus status, bool isBuffering, bool isLive) {
     if (!enableBackgroundPlay || _item.isEmpty || !_hasPlaybackTarget) {
       return;
@@ -226,12 +336,15 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         'completed': status.isCompleted,
         'live': isLive,
         'positionMs': _lastPosition.inMilliseconds,
+        'bufferedMs': _lastBuffered.inMilliseconds,
         'durationMs': _currentMediaItem?.duration?.inMilliseconds,
         'supportsPrevious': onPrevious != null,
         'supportsNext': onNext != null,
         'videoActions': _lastVideoActions,
         ..._nativePlaybackFlags(),
       });
+      _lastPushedPosition = _lastPosition;
+      _lastNativePositionPush = DateTime.now();
       if (Platform.isAndroid &&
           (AndroidHelper.isPipMode ||
               PlPlayerController.instance?.isAutoEnterPip == true)) {
@@ -318,12 +431,15 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       'completed': _lastStatus.isCompleted,
       'live': _lastIsLive,
       'positionMs': _lastPosition.inMilliseconds,
+      'bufferedMs': _lastBuffered.inMilliseconds,
       'durationMs': _currentMediaItem?.duration?.inMilliseconds,
       'supportsPrevious': onPrevious != null,
       'supportsNext': onNext != null,
       'videoActions': _lastVideoActions,
       ..._nativePlaybackFlags(),
     });
+    _lastPushedPosition = _lastPosition;
+    _lastNativePositionPush = DateTime.now();
   }
 
   void onStatusChange(PlayerStatus status, bool isBuffering, isLive) {
@@ -467,6 +583,11 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     if (_useNativeAndroidNotification) {
       _currentMediaItem = null;
       _lastPosition = Duration.zero;
+      _lastPushedPosition = Duration.zero;
+      _lastBuffered = Duration.zero;
+      _lastNativePositionPush = null;
+      _pendingSeekPosition = null;
+      _pendingSeekUntil = null;
       _lastStatus = PlayerStatus.paused;
       _item.clear();
       nativeMediaNotificationService.stop();
@@ -506,10 +627,46 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       return;
     }
 
+    // Drop stale ticks after seek so the scrubber does not jump backward.
+    if (_pendingSeekPosition != null) {
+      final target = _pendingSeekPosition!;
+      final expired = _pendingSeekUntil == null ||
+          DateTime.now().isAfter(_pendingSeekUntil!);
+      if (!shouldAcceptPositionAfterSeek(
+        position: position,
+        seekTarget: target,
+        settleThreshold: _nativePositionJumpThreshold,
+        graceExpired: expired,
+      )) {
+        return;
+      }
+      _pendingSeekPosition = null;
+      _pendingSeekUntil = null;
+    }
+
+    final previous = _lastPosition;
     _lastPosition = position;
     if (_useNativeAndroidNotification) {
+      final now = DateTime.now();
+      final sinceLastPush = _lastNativePositionPush == null
+          ? null
+          : now.difference(_lastNativePositionPush!);
+      if (!shouldPushNativePosition(
+        playing: _lastStatus.isPlaying,
+        deltaFromPrevious: position - previous,
+        deltaFromLastPushed: position - _lastPushedPosition,
+        sinceLastPush: sinceLastPush,
+        pushInterval: _nativePositionPushInterval,
+        jumpThreshold: _nativePositionJumpThreshold,
+      )) {
+        return;
+      }
+
+      _lastNativePositionPush = now;
+      _lastPushedPosition = position;
       nativeMediaNotificationService.updatePlayback({
         'positionMs': position.inMilliseconds,
+        'bufferedMs': _lastBuffered.inMilliseconds,
         'playing': _lastStatus.isPlaying,
         'buffering': _lastBuffering,
         'completed': _lastStatus.isCompleted,

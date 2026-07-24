@@ -164,10 +164,12 @@ class NativeMediaService : Service() {
                 .build()
         )
 
-        var actions = PlaybackState.ACTION_PLAY_PAUSE or
-            PlaybackState.ACTION_STOP or
-            PlaybackState.ACTION_SEEK_TO
+        var actions = PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_STOP
         actions = actions or if (state.playing) PlaybackState.ACTION_PAUSE else PlaybackState.ACTION_PLAY
+        // Scrubber requires duration > 0; omit SEEK_TO for live / unknown duration.
+        if (!state.live && state.durationMs > 0L) {
+            actions = actions or PlaybackState.ACTION_SEEK_TO
+        }
         if (!state.live) {
             actions = actions or PlaybackState.ACTION_REWIND or PlaybackState.ACTION_FAST_FORWARD
         }
@@ -190,6 +192,7 @@ class NativeMediaService : Service() {
                     if (state.playing) state.speed else 0f,
                     SystemClock.elapsedRealtime()
                 )
+                .setBufferedPosition(state.bufferedMs.coerceAtLeast(0L))
                 .addVideoCustomActions()
                 .build()
         )
