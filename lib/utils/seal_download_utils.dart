@@ -17,6 +17,7 @@ import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/seal_download_title.dart';
 import 'package:pili_plus/utils/segment_strip_math.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart';
@@ -1149,19 +1150,22 @@ abstract final class SealDownloadUtils {
   }
 
   static String _titleOf(VideoDetailController ctr) {
+    Map? args;
     try {
-      final args = Get.arguments;
-      if (args is Map) {
-        final t = args['title']?.toString().trim();
-        if (t != null && t.isNotEmpty) return t;
-        final fav = args['favTitle']?.toString().trim();
-        if (fav != null && fav.isNotEmpty) return fav;
-      }
-    } catch (_) {}
-    if (ctr.watchLaterTitle.trim().isNotEmpty) {
-      return ctr.watchLaterTitle.trim();
+      // Prefer controller-cached route args; live Get.arguments may already
+      // belong to a pushed intermediate route (e.g. PublishRoute).
+      args = ctr.args;
+    } catch (_) {
+      try {
+        final live = Get.arguments;
+        if (live is Map) args = live;
+      } catch (_) {}
     }
-    return ctr.bvid;
+    return resolveSealMediaTitle(
+      args: args,
+      watchLaterTitle: ctr.watchLaterTitle,
+      bvid: ctr.bvid,
+    );
   }
 
   /// Resolve optional cookie payload for Seal v2.

@@ -104,7 +104,9 @@ class VideoDetailController extends GetxController
   late bool isFileSource;
   late bool _mediaDesc = false;
   late final RxList<MediaListItemModel> mediaList = <MediaListItemModel>[].obs;
-  late String watchLaterTitle;
+
+  /// Playlist / 稍后再看 panel title. Empty when not [isPlayAll].
+  String watchLaterTitle = '';
 
   /// tabs相关配置
   late TabController tabCtr;
