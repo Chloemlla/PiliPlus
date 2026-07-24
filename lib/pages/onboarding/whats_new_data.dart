@@ -38,7 +38,8 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '你第一次打开这个构建。设置搜索可一键定位到分区项并荧光闪烁，同时保留 Scan Kit / Clash / Seal 等能力。',
+      subtitle:
+          '你第一次打开这个构建。本版本为空状态接入跟随主题的动态色插画，并保留设置搜索定位、Scan Kit / Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -46,6 +47,17 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.palette_outlined,
+      title: '空状态动态色插画',
+      subtitle: '列表 / 缓存等空状态改用 undraw 风格矢量插画，填充色绑定 Material ColorScheme。',
+      bullets: [
+        '主色、容器色与 primaryFixed 角色随主题与动态取色变化。',
+        '离线缓存空列表使用下载主题插画；通用无数据场景使用默认插画。',
+        '开源声明已补充 unDraw 署名；本地绘制，无需联网下载插画资源。',
+      ],
+      tip: '可在「设置 → 主题」切换亮暗/取色后，打开空列表查看效果。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.search,
@@ -90,22 +102,8 @@ abstract final class WhatsNewData {
         '多账号可选下载鉴权账号，支持记住选择，无需在 Seal 再管 Cookie。',
         '「下载并去除空降助手标记」：读取空降助手片段，经 Seal 分段合成正片。',
         '完成后展示逐段去除报告（类型、时间范围、时长）；支持多 P 逐个处理。',
-        '设置中可配置默认类别、最小时长、是否每次询问类别与 Cookie 透传。',
       ],
       tip: '路径：视频菜单 → 下载并去除空降助手标记；设置 → 其它设置。',
-    ),
-
-
-    const ImprovementsGuidePageData(
-      icon: Icons.bug_report_outlined,
-      title: '本构建保留与修复',
-      subtitle: '合并上游时保留本分支已有能力，并收敛滚动与主题相关稳定性。',
-      bullets: [
-        '评论日期显示：继续保留主评完整时间、子评相对/短日期。',
-        '滚动偏移补丁改为始终写入像素，边界判断使用 minScrollExtent。',
-        '动态取色等内容展开状态与上游修复对齐。',
-      ],
-      tip: '若仍看到无日期，请确认已安装包含该修复的构建。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,

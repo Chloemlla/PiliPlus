@@ -193,6 +193,14 @@ abstract final class OssNoticeData {
       url: 'https://pub.dev/packages/dynamic_color',
     ),
     OssCredit(
+      name: 'unDraw',
+      author: 'Katerina Limpitsouni',
+      description:
+          '空状态动态色插画灵感来源（主题 ColorScheme 填充的 undraw 风格矢量，本地 CustomPaint 实现，无 CDN 依赖）。',
+      license: 'unDraw License（可免费用于开源/商业，需署名）',
+      url: 'https://undraw.co/',
+    ),
+    OssCredit(
       name: 'flex_seed_scheme',
       author: 'Mike Rydstrom (rydmike)',
       description: '基于 seed 的配色方案生成。',
