@@ -4,6 +4,9 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.core.content.ContextCompat
+import com.huawei.hms.hmsscankit.ScanUtil
+import com.huawei.hms.ml.scan.HmsScan
+import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -14,13 +17,22 @@ internal object QrBarcodeDecoder {
         onSuccess: (String?) -> Unit,
         onError: (Throwable) -> Unit,
     ) {
+        val appContext = context.applicationContext
         val executor = Executors.newSingleThreadExecutor()
         val mainExecutor = ContextCompat.getMainExecutor(context)
         executor.execute {
             var bitmap: android.graphics.Bitmap? = null
             try {
-                bitmap = decodeSampledBitmap(context, uri)
-                val value = ZxingQrDecoder().decode(bitmap)
+                bitmap = decodeSampledBitmap(appContext, uri)
+                val options = HmsScanAnalyzerOptions.Creator()
+                    .setHmsScanTypes(HmsScan.QRCODE_SCAN_TYPE)
+                    .setPhotoMode(true)
+                    .create()
+                val results = ScanUtil.decodeWithBitmap(appContext, bitmap, options)
+                val value = results
+                    ?.firstOrNull()
+                    ?.originalValue
+                    ?.takeIf(String::isNotBlank)
                 mainExecutor.execute { onSuccess(value) }
             } catch (error: OutOfMemoryError) {
                 mainExecutor.execute { onError(error) }

@@ -375,11 +375,11 @@ abstract final class OssNoticeData {
       url: 'https://pub.dev',
     ),
     OssCredit(
-      name: 'CameraX / ZXing',
-      author: 'AndroidX / ZXing authors',
-      description: 'Android 网页二维码扫码链路相关组件。',
-      license: 'Apache-2.0',
-      url: 'https://developer.android.com/media/camera/camerax',
+      name: 'HMS Scan Kit (scanplus)',
+      author: 'Huawei',
+      description: 'Android 网页二维码扫码（相机 RemoteView + 图库 decodeWithBitmap）。',
+      license: '华为 Scan Kit 许可 / SDK 条款',
+      url: 'https://developer.huawei.com/consumer/cn/doc/HMSCore-Guides/android-0000001051075346',
     ),
     OssCredit(
       name: 'Seal（联调下载器，可选）',

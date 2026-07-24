@@ -105,17 +105,16 @@ flutter {
 }
 
 dependencies {
-    val cameraXVersion = "1.6.1"
     val lumenCrashVersion =
         providers.gradleProperty("lumenCrashVersion")
             .orElse(providers.environmentVariable("LUMEN_CRASH_VERSION"))
             .orElse("0.1.0")
             .get()
 
-    implementation("androidx.camera:camera-camera2:$cameraXVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
-    implementation("androidx.camera:camera-view:$cameraXVersion")
-    implementation("com.google.zxing:core:3.5.3")
+    // Huawei Scan Kit full SDK (scanplus): camera + bitmap decode without GMS.
+    // Independent SDK path — no agconnect-services.json / AGConnect plugin required.
+    // Artifact lives on https://developer.huawei.com/repo/ (see android/build.gradle.kts).
+    implementation("com.huawei.hms:scanplus:2.15.0.301")
     implementation("com.tencent:mmkv-static:1.3.14")
     // Capture-only host: Flutter owns crash product UI. Prefer lumen-crash-core
     // so Compose crash UI / FileProvider share surface is not pulled in.
