@@ -191,7 +191,14 @@ class Request {
   /// Public entry for settings toggle / VPN adapt refresh.
   static void resetAdaptersForClashAdapt() {
     if (Platform.isAndroid) {
-      unawaited(ClashCompat.refresh());
+      unawaited(() async {
+        await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
+        await ClashCompat.refresh();
+        _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+        _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
+        _resetAdaptersForNetworkChange();
+      }());
+      return;
     }
     _resetAdaptersForNetworkChange();
   }
@@ -280,18 +287,35 @@ class Request {
   // ignore: cancel_subscriptions
   static StreamSubscription<void>? _clashStatusSub;
   static bool? _lastClashVpnRouting;
+  static bool? _lastClashAutoAdaptPref;
 
   static void _startClashAutoAdapt() {
     if (!Platform.isAndroid) return;
-    unawaited(ClashCompat.ensureStarted().then((_) {
+    unawaited(ClashCompat.ensureStarted().then((_) async {
+      // Keep native process-binding flag in sync with Pref.
+      await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
       _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+      _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
       if (Pref.clashAutoAdapt) {
         _resetAdaptersForNetworkChange();
       }
     }));
     if (_clashStatusSub != null) return;
     _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
-      if (!Pref.clashAutoAdapt) return;
+      final prefEnabled = Pref.clashAutoAdapt;
+      // Pref can change outside the status stream; push to native when needed.
+      if (_lastClashAutoAdaptPref != prefEnabled) {
+        _lastClashAutoAdaptPref = prefEnabled;
+        unawaited(ClashCompat.setAutoAdaptEnabled(prefEnabled));
+      }
+      if (!prefEnabled) {
+        // Ensure adapters leave the "skip proxy" path when adapt is off.
+        if (_lastClashVpnRouting != false) {
+          _lastClashVpnRouting = false;
+          _resetAdaptersForNetworkChange();
+        }
+        return;
+      }
       final routing = ClashCompat.isClashVpnRouting;
       if (_lastClashVpnRouting == routing) return;
       _lastClashVpnRouting = routing;

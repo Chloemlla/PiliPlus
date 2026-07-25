@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' show max;
 
@@ -677,7 +678,8 @@ List<SettingsModel> get extraSettings => [
     switchModel: SwitchModel.split(
       defaultVal: true,
       setKey: SettingBoxKey.clashAutoAdapt,
-      onChanged: (_) {
+      onChanged: (value) {
+        unawaited(ClashCompat.setAutoAdaptEnabled(value));
         Request.resetAdaptersForClashAdapt();
       },
     ),
@@ -685,7 +687,7 @@ List<SettingsModel> get extraSettings => [
   const SplitModel(
     normalModel: NormalModel.split(
       title: '设置代理',
-      subtitle: '设置代理 host:port（Clash VPN 活跃时自动忽略）',
+      subtitle: '设置代理 host:port（Clash VPN 活跃且自动适配开启时自动忽略）',
       leading: Icon(Icons.airplane_ticket_outlined),
     ),
     switchModel: SwitchModel.split(
