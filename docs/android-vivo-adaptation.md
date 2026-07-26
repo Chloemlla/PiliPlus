@@ -53,6 +53,21 @@ what still matters for this product and what changed on 2026-07-17.
 - Continuous playback must stay on typed mediaPlayback FGS paths.
 - No untyped FGS components in host Manifest.
 
+### 7b. Media notification / MediaSession (API 30–37)
+- `NativeMediaService` posts a standard `Notification.MediaStyle` with
+  `MediaSession` token (no custom RemoteViews).
+- Android 12+ (`S`): `setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE)`
+  so the media FGS notification is not delayed in the shade.
+- Channel: `IMPORTANCE_LOW`, no sound/vibration/badge (transport controls only).
+- PendingIntents for content / actions: `FLAG_IMMUTABLE` (API 23+).
+- Seek / scrubber: `ACTION_SEEK_TO` only when non-live and `durationMs > 0`;
+  player duration write-back via Flutter `onDurationChange`.
+- Android 13+ runtime `POST_NOTIFICATIONS` is requested by the first-launch
+  permission gate (media notification posts are no-ops without it on OEM builds).
+- Android 14+: FGS type required — already `mediaPlayback`.
+- Android 17: sustained media needs `mediaPlayback` FGS while-in-use capability;
+  PiliPlus keeps playback on that typed service path.
+
 ### 8. Notifications / media permissions
 - Declares `POST_NOTIFICATIONS`.
 - First-launch Android permission gate requests notification / photos / videos /
@@ -94,13 +109,14 @@ what still matters for this product and what changed on 2026-07-17.
 - Seal package queries instead of QUERY_ALL_PACKAGES
 - Flutter edge-to-edge enablement
 
-## Code touchpoints (2026-07-17)
+## Code touchpoints (2026-07-17 / 2026-07-24)
 
 - `android/app/src/main/AndroidManifest.xml`
 - `android/app/src/main/res/xml/network_security_config.xml`
 - `android/app/src/main/res/values*/styles.xml`
 - `android/app/src/main/kotlin/.../QrScannerActivity.kt`
 - `android/app/src/main/kotlin/.../SealDownloadChannel.kt`
+- `android/app/src/main/kotlin/.../NativeMediaService.kt` (FGS immediate + channel)
 
 ## Verification checklist
 
@@ -110,8 +126,11 @@ what still matters for this product and what changed on 2026-07-17.
 - HTTPS API traffic works with cleartext denied by default.
 - Seal open/share of a content URI still succeeds with grant + ClipData.
 - Background media notification / media buttons still control playback.
+- API 31–33: media FGS notification appears promptly; scrubber when duration > 0.
+- API 33+: denying POST_NOTIFICATIONS does not crash playback; re-grant restores shade controls.
 - Bilibili deeplink VIEW filters still open MainActivity.
 
 ## Refresh log
 
 - 2026-07-17: Mapped Lumen Android 11-17 Vivo notes onto PiliPlus; enabled predictive back; added network security config + intent matching flags; fixed UCrop exported; hardened Seal URI grants; documented N/A product differences.
+- 2026-07-24: Media notification API 11–17: FGS immediate behavior (S+), silent LOW channel, seekable MediaStyle duration write-back; documented POST_NOTIFICATIONS / mediaPlayback while-in-use expectations.

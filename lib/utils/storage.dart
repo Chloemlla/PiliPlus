@@ -109,7 +109,7 @@ abstract final class GStorage {
       orderStore: localCache,
     );
 
-    if (setting.get(SettingBoxKey.saveReply, defaultValue: false) as bool) {
+    if (setting.get(SettingBoxKey.saveReply, defaultValue: true) as bool) {
       reply = await openAndroidMmkvBackedBox<Uint8List>(
         name: 'reply',
         keyComparator: _intStrDescKeyComparator,

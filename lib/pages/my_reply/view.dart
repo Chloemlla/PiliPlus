@@ -45,7 +45,7 @@ class _MyReplyState extends State<MyReply> with DynMixin {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('我的评论'),
+        title: const Text('收藏的评论'),
         actions: [
           if (kDebugMode)
             IconButton(
@@ -53,8 +53,8 @@ class _MyReplyState extends State<MyReply> with DynMixin {
               onPressed: () => showConfirmDialog(
                 context: context,
                 title: const Text('Clear Local Storage?'),
-                onConfirm: () {
-                  GStorage.reply!.clear();
+                onConfirm: () async {
+                  await GStorage.replyCacheStore.clear();
                   _replies.clear();
                   setState(() {});
                 },
@@ -94,7 +94,9 @@ class _MyReplyState extends State<MyReply> with DynMixin {
                     ),
                   ),
                 )
-              : const HttpError(),
+              : const HttpError(
+                  errMsg: '暂无收藏的评论\n可在评论更多菜单中收藏',
+                ),
         ],
       ),
     );
@@ -124,6 +126,9 @@ class _MyReplyState extends State<MyReply> with DynMixin {
   }
 
   void _onDelete(int index) {
+    if (index < 0 || index >= _replies.length) return;
+    final id = _replies[index].id.toString();
+    GStorage.replyCacheStore.delete(id);
     _replies.removeAt(index);
     setState(() {});
   }
@@ -180,7 +185,7 @@ class _MyReplyState extends State<MyReply> with DynMixin {
   }
 
   Future<void> _onImport(List<dynamic> list) async {
-    await GStorage.reply!.putAll({
+    await GStorage.replyCacheStore.putAll({
       for (var e in list)
         e['id'].toString(): (ReplyInfo.create()..mergeFromProto3Json(e))
             .writeToBuffer(),

@@ -80,6 +80,17 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
         }
       },
     ),
+    (
+      icon: Icons.star_outline,
+      title: '收藏的评论',
+      onTap: () {
+        if (GStorage.reply != null) {
+          Get.toNamed('/myReply');
+        } else {
+          SmartDialog.showToast('请先开启「设置 → 其它设置 → 记录评论」并重启应用');
+        }
+      },
+    ),
   ];
 
   @override

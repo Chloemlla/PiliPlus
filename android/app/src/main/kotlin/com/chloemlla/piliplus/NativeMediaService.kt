@@ -245,6 +245,12 @@ class NativeMediaService : Service() {
             .setOngoing(state.playing)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setCategory(Notification.CATEGORY_TRANSPORT)
+            .apply {
+                // Android 12+: show media FGS notification immediately (avoid shade delay).
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+                }
+            }
             .setStyle(
                 Notification.MediaStyle()
                     .setMediaSession(mediaSession?.sessionToken)
@@ -339,10 +345,17 @@ class NativeMediaService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             "PiliPlus media playback",
+            // LOW: silent media transport; still visible in shade / media center.
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Media playback controls"
+            description = "Media playback controls (Android 11–17 mediaPlayback FGS)"
             setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
+            // Media controls should stay visible when DND is on for transport UX.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                setAllowBubbles(false)
+            }
         }
         manager.createNotificationChannel(channel)
     }

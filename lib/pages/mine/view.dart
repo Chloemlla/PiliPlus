@@ -169,9 +169,9 @@ class _MediaPageState extends CommonPageState<MinePage>
             iconSize: iconSize,
             padding: padding,
             style: style,
-            tooltip: '评论记录',
+            tooltip: '收藏的评论',
             onPressed: () => Get.toNamed('/myReply'),
-            icon: const Icon(Icons.message_outlined),
+            icon: const Icon(Icons.star_outline),
           ),
         Obx(
           () {

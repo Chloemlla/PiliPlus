@@ -22,9 +22,11 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/reply.dart';
 import 'package:pili_plus/http/video.dart';
 import 'package:pili_plus/models/common/image_type.dart';
+import 'package:pili_plus/models/common/setting_type.dart';
 import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
 import 'package:pili_plus/pages/member/widget/medal_widget.dart';
 import 'package:pili_plus/pages/save_panel/view.dart';
+import 'package:pili_plus/pages/setting/common_setting.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/reply/widgets/zan_grpc.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -1017,35 +1019,7 @@ class ReplyItemGrpc extends StatelessWidget {
               ),
             ),
           ),
-          if (kDebugMode && GStorage.reply != null) ...[
-            ListTile(
-              onTap: () {
-                Get.back();
-                GStorage.reply!.put(
-                  item.id.toString(),
-                  (item.deepCopy()
-                        ..unknownFields.clear()
-                        ..replies.clear()
-                        ..clearTrackInfo())
-                      .writeToBuffer(),
-                );
-              },
-              title: Text(
-                'save to local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
-            ListTile(
-              onTap: () {
-                Get.back();
-                onDelete();
-                GStorage.reply!.delete(item.id.toString());
-              },
-              title: Text(
-                'remove from local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
+          if (kDebugMode && GStorage.reply != null)
             ListTile(
               onTap: () {
                 Get.back();
@@ -1056,16 +1030,17 @@ class ReplyItemGrpc extends StatelessWidget {
                           ..replies.clear()
                           ..clearTrackInfo())
                         .writeToBuffer();
-                GStorage.reply!.putAll({
+                GStorage.replyCacheStore.putAll({
                   for (var i = oid; i < oid + 1000; i++) i.toString(): data,
                 });
               },
+              minLeadingWidth: 0,
+              leading: const Icon(Icons.bug_report_outlined, size: 19),
               title: Text(
                 'save to local (x1000)',
                 style: style.copyWith(color: colorScheme.primary),
               ),
             ),
-          ],
           if (ownerMid == upMid || ownerMid == item.member.mid)
             ListTile(
               onTap: () async {
@@ -1198,6 +1173,60 @@ class ReplyItemGrpc extends StatelessWidget {
             leading: const Icon(Icons.save_alt, size: 19),
             title: Text('保存评论', style: style),
           ),
+          if (GStorage.reply != null)
+            ListTile(
+              onTap: () async {
+                Get.back();
+                final key = item.id.toString();
+                if (GStorage.reply!.containsKey(key)) {
+                  await GStorage.replyCacheStore.delete(key);
+                  SmartDialog.showToast('已取消收藏');
+                  // MyReply uses replyLevel 0; refresh local list only there.
+                  if (replyLevel == 0) {
+                    onDelete();
+                  }
+                } else {
+                  await GStorage.replyCacheStore.put(
+                    key,
+                    (item.deepCopy()
+                          ..unknownFields.clear()
+                          ..replies.clear()
+                          ..clearTrackInfo())
+                        .writeToBuffer(),
+                  );
+                  SmartDialog.showToast('已收藏');
+                }
+              },
+              minLeadingWidth: 0,
+              leading: Icon(
+                GStorage.reply!.containsKey(item.id.toString())
+                    ? Icons.star
+                    : Icons.star_outline,
+                size: 19,
+              ),
+              title: Text(
+                GStorage.reply!.containsKey(item.id.toString())
+                    ? '取消收藏'
+                    : '收藏评论',
+                style: style,
+              ),
+            )
+          else
+            ListTile(
+              onTap: () {
+                Get.back();
+                SmartDialog.showToast('请先开启「设置 → 其它设置 → 记录评论」并重启应用');
+                Get.to(
+                  () => const CommonSetting(
+                    settingType: SettingType.extraSetting,
+                    highlightSettingsId: SettingBoxKey.saveReply,
+                  ),
+                );
+              },
+              minLeadingWidth: 0,
+              leading: const Icon(Icons.star_outline, size: 19),
+              title: Text('收藏评论', style: style),
+            ),
           if (kDebugMode || item.mid == ownerMid)
             ListTile(
               onTap: () {
