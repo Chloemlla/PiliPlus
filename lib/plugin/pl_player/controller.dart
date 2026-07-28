@@ -111,6 +111,17 @@ class PlPlayerController with BlockConfigMixin {
   final RxDouble _playbackSpeed = Pref.playSpeedDefault.obs;
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
+  /// 键盘快捷键倍速提示（Z/X/C），显示于播放器内中下部
+  final RxDouble keyboardSpeedToast = RxDouble(0.0);
+  Timer? _keyboardSpeedTimer;
+  void showKeyboardSpeedToast(double speed) {
+    keyboardSpeedToast.value = speed;
+    _keyboardSpeedTimer?.cancel();
+    _keyboardSpeedTimer = Timer(const Duration(seconds: 1), () {
+      keyboardSpeedToast.value = 0.0;
+    });
+  }
+
   final RxDouble volume = RxDouble(
     PlatformUtils.isDesktop ? Pref.desktopVolume : 1.0,
   );
@@ -754,6 +765,7 @@ class PlPlayerController with BlockConfigMixin {
     final opt = {
       'video-sync': Pref.videoSync,
       if (Platform.isAndroid) 'ao': Pref.audioOutput,
+      'stream-lavf-o': 'reconnect=1',
       'volume':
           (PlatformUtils.isMobile ? Pref.playerVolume : volume.value * 100)
               .toString(),
@@ -1074,6 +1086,15 @@ class PlPlayerController with BlockConfigMixin {
           _retryInterruptedNetworkStream(
             playAfterRefresh: playerStatus.isPlaying,
           );
+        } else if (event.contains('Invalid NAL unit size') ||
+            event.contains('Error splitting the input into NAL') ||
+            event.contains('Stream ends prematurely')) {
+          EasyThrottle.throttle(
+            'controllerStream.nal.error',
+            const Duration(milliseconds: 5000),
+            refreshPlayer,
+          );
+          Utils.reportError(event);
         } else if (event.startsWith('Could not open codec')) {
           SmartDialog.showToast('无法加载解码器, $event，可能会切换至软解');
         } else if (!onlyPlayAudio.value) {
@@ -1632,6 +1653,7 @@ class PlPlayerController with BlockConfigMixin {
       AndroidHelper$ToDart.onUserLeaveHint = null;
     }
     _timer?.cancel();
+    _keyboardSpeedTimer?.cancel();
     // _position.close();
     // _playerEventSubs?.cancel();
     // _sliderPosition.close();

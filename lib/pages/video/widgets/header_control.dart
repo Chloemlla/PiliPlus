@@ -146,6 +146,23 @@ mixin TimeBatteryMixin<T extends StatefulWidget> on State<T> {
   List<Widget>? get timeBatteryWidgets {
     if (_showCurrTime) {
       return [
+        ValueListenableBuilder<String?>(
+          valueListenable: shutdownTimerService.countdownText,
+          builder: (context, countdownText, child) {
+            if (countdownText == null) {
+              return const SizedBox.shrink();
+            }
+            return Row(
+              children: [
+                Text(
+                  countdownText,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                const SizedBox(width: 10),
+              ],
+            );
+          },
+        ),
         if (_showBatteryLevel) ...[
           Obx(() {
             final batteryLevel = _batteryLevel.value;
@@ -391,17 +408,26 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(MdiIcons.folderDownloadOutline, size: 20),
                   title: const Text('离线缓存', style: titleStyle),
                 ),
-                ListTile(
-                  dense: true,
-                  onTap: () {
-                    Get.back();
-                    shutdownTimerService.showScheduleExitDialog(
-                      this.context,
-                      isFullScreen: isFullScreen,
-                    );
-                  },
-                  leading: const Icon(Icons.hourglass_top_outlined, size: 20),
-                  title: const Text('定时关闭', style: titleStyle),
+                ValueListenableBuilder<String?>(
+                  valueListenable: shutdownTimerService.countdownText,
+                  builder: (context, countdownText, child) => ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      shutdownTimerService.showScheduleExitDialog(
+                        this.context,
+                        isFullScreen: isFullScreen,
+                      );
+                    },
+                    leading: const Icon(
+                      Icons.hourglass_top_outlined,
+                      size: 20,
+                    ),
+                    title: const Text('定时关闭', style: titleStyle),
+                    subtitle: countdownText == null
+                        ? null
+                        : Text('剩余 $countdownText', style: subTitleStyle),
+                  ),
                 ),
                 if (!isFileSource) ...[
                   ListTile(
@@ -680,17 +706,23 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(Icons.image_outlined, size: 20),
                   title: const Text('保存封面', style: titleStyle),
                 ),
-              ListTile(
-                dense: true,
-                onTap: () {
-                  Get.back();
-                  shutdownTimerService.showScheduleExitDialog(
-                    this.context,
-                    isFullScreen: isFullScreen,
-                  );
-                },
-                leading: const Icon(Icons.hourglass_top_outlined, size: 20),
-                title: const Text('定时关闭', style: titleStyle),
+              ValueListenableBuilder<String?>(
+                valueListenable: shutdownTimerService.countdownText,
+                builder: (context, countdownText, child) => ListTile(
+                  dense: true,
+                  onTap: () {
+                    Get.back();
+                    shutdownTimerService.showScheduleExitDialog(
+                      this.context,
+                      isFullScreen: isFullScreen,
+                    );
+                  },
+                  leading: const Icon(Icons.hourglass_top_outlined, size: 20),
+                  title: const Text('定时关闭', style: titleStyle),
+                  subtitle: countdownText == null
+                      ? null
+                      : Text('剩余 $countdownText', style: subTitleStyle),
+                ),
               ),
               if (!isFileSource) ...[
                 ListTile(

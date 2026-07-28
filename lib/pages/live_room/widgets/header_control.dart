@@ -239,6 +239,21 @@ Obx(
             ),
             icon: const Icon(size: 18, Icons.schedule, color: Colors.white),
           ),
+          ValueListenableBuilder<String?>(
+            valueListenable: shutdownTimerService.countdownText,
+            builder: (context, countdownText, child) {
+              if (countdownText == null || !isFullScreen) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Text(
+                  countdownText,
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                ),
+              );
+            },
+          ),
           if (plPlayerController.videoPlayerController case final player?)
             SizedBox.square(
               dimension: 30,
