@@ -1,34 +1,35 @@
 import 'dart:math';
 
-import 'package:pili_plus/common/style.dart';
-import 'package:pili_plus/common/widgets/custom_icon.dart';
-import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
-import 'package:pili_plus/common/widgets/pair.dart';
-import 'package:pili_plus/common/widgets/scroll_behavior.dart'
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/custom_icon.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
+import 'package:PiliPlus/common/widgets/pair.dart';
+import 'package:PiliPlus/common/widgets/scroll_behavior.dart'
     show NoOverscrollIndicator;
-import 'package:pili_plus/common/widgets/scroll_physics.dart';
-import 'package:pili_plus/common/widgets/sliver/sliver_floating_header.dart';
-import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
-import 'package:pili_plus/http/constants.dart';
-import 'package:pili_plus/http/dynamics.dart';
-import 'package:pili_plus/http/loading_state.dart';
-import 'package:pili_plus/models/common/reply/reply_option_type.dart';
-import 'package:pili_plus/models/dynamics/result.dart';
-import 'package:pili_plus/pages/common/dyn/common_dyn_page.dart';
-import 'package:pili_plus/pages/common/dyn/reaction/controller.dart';
-import 'package:pili_plus/pages/common/dyn/reaction/view.dart';
-import 'package:pili_plus/pages/dynamics/widgets/author_panel.dart';
-import 'package:pili_plus/pages/dynamics/widgets/dynamic_panel.dart';
-import 'package:pili_plus/pages/dynamics_create/view.dart';
-import 'package:pili_plus/pages/dynamics_detail/controller.dart';
-import 'package:pili_plus/pages/dynamics_repost/view.dart';
-import 'package:pili_plus/utils/extension/get_ext.dart';
-import 'package:pili_plus/utils/grid.dart';
-import 'package:pili_plus/utils/num_utils.dart';
-import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:pili_plus/utils/request_utils.dart';
-import 'package:pili_plus/utils/share_utils.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_to_box_adapter.dart';
+import 'package:PiliPlus/common/widgets/tap_region_surface.dart';
+import 'package:PiliPlus/http/constants.dart';
+import 'package:PiliPlus/http/dynamics.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/reply/reply_option_type.dart';
+import 'package:PiliPlus/models/dynamics/result.dart';
+import 'package:PiliPlus/pages/common/dyn/common_dyn_page.dart';
+import 'package:PiliPlus/pages/common/dyn/reaction/controller.dart';
+import 'package:PiliPlus/pages/common/dyn/reaction/view.dart';
+import 'package:PiliPlus/pages/dynamics/widgets/author_panel.dart';
+import 'package:PiliPlus/pages/dynamics/widgets/dynamic_panel.dart';
+import 'package:PiliPlus/pages/dynamics_create/view.dart';
+import 'package:PiliPlus/pages/dynamics_detail/controller.dart';
+import 'package:PiliPlus/pages/dynamics_repost/view.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
+import 'package:PiliPlus/utils/grid.dart';
+import 'package:PiliPlus/utils/num_utils.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/request_utils.dart';
+import 'package:PiliPlus/utils/share_utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -105,15 +106,18 @@ class _DynamicDetailPageState
     );
   }
 
+  dynamic _scrollable;
+
   @override
   void dispose() {
+    _scrollable = null;
     refreshController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final child = Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: _buildAppBar(),
       body: Padding(
@@ -130,6 +134,10 @@ class _DynamicDetailPageState
         position: fabAnimation,
         child: _buildBottom(),
       ),
+    );
+    return SelectionTapRegionSurface(
+      isScrolling: () => _scrollable?.shouldIgnorePointer ?? false,
+      child: child,
     );
   }
 
@@ -410,26 +418,33 @@ class _DynamicDetailPageState
     return child;
   }
 
+  Widget _buildDynPanel() {
+    return SliverToBoxWithOffsetAdapter(
+      offset: 55,
+      onVisibilityChanged: controller.showTitle.call,
+      child: Builder(
+        builder: (context) {
+          _scrollable = Scrollable.maybeOf(context);
+          return DynamicPanel(
+            item: controller.dynItem,
+            isDetail: true,
+            isDetailPortraitW: isPortrait,
+            onSetPubSetting: controller.onSetPubSetting,
+            onEdit: _onEdit,
+            onSetReplySubject: controller.onSetReplySubject,
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildPortrait(double padding) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: padding),
       child: NestedScrollView(
         scrollBehavior: const NoOverscrollIndicator(),
         headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverToBoxWithOffsetAdapter(
-              offset: 55,
-              onVisibilityChanged: controller.showTitle.call,
-              child: DynamicPanel(
-                item: controller.dynItem,
-                isDetail: true,
-                isDetailPortraitW: isPortrait,
-                onSetPubSetting: controller.onSetPubSetting,
-                onEdit: _onEdit,
-                onSetReplySubject: controller.onSetReplySubject,
-              ),
-            ),
-          ];
+          return [_buildDynPanel()];
         },
         body: Column(
           children: [
@@ -456,18 +471,7 @@ class _DynamicDetailPageState
                   left: padding,
                   bottom: this.padding.bottom + 100,
                 ),
-                sliver: SliverToBoxWithOffsetAdapter(
-                  offset: 55,
-                  onVisibilityChanged: controller.showTitle.call,
-                  child: DynamicPanel(
-                    item: controller.dynItem,
-                    isDetail: true,
-                    isDetailPortraitW: isPortrait,
-                    onSetPubSetting: controller.onSetPubSetting,
-                    onEdit: _onEdit,
-                    onSetReplySubject: controller.onSetReplySubject,
-                  ),
-                ),
+                sliver: _buildDynPanel(),
               ),
             ],
           ),
