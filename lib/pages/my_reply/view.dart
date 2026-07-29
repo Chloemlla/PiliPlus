@@ -36,7 +36,7 @@ class _MyReplyState extends State<MyReply> with DynMixin {
 
   void _initReply() {
     _replies
-      ..assignAll(GStorage.reply!.values.map(ReplyInfo.fromBuffer))
+      ..assignAll(GStorage.replyCacheStore.values.map(ReplyInfo.fromBuffer))
       ..sort((a, b) => b.ctime.compareTo(a.ctime)); // rpid not aligned;
   }
 

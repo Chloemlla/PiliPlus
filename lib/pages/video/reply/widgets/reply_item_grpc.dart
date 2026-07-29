@@ -1014,35 +1014,7 @@ class ReplyItemGrpc extends StatelessWidget {
               ),
             ),
           ),
-          if (kDebugMode && GStorage.reply != null) ...[
-            ListTile(
-              onTap: () {
-                Get.back();
-                GStorage.reply!.put(
-                  item.id.toString(),
-                  (item.deepCopy()
-                        ..unknownFields.clear()
-                        ..replies.clear()
-                        ..clearTrackInfo())
-                      .writeToBuffer(),
-                );
-              },
-              title: Text(
-                'save to local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
-            ListTile(
-              onTap: () {
-                Get.back();
-                onDelete();
-                GStorage.reply!.delete(item.id.toString());
-              },
-              title: Text(
-                'remove from local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
+          if (kDebugMode && GStorage.replyCacheStore.isEnabled)
             ListTile(
               onTap: () {
                 Get.back();
@@ -1053,16 +1025,17 @@ class ReplyItemGrpc extends StatelessWidget {
                           ..replies.clear()
                           ..clearTrackInfo())
                         .writeToBuffer();
-                GStorage.reply!.putAll({
+                GStorage.replyCacheStore.putAll({
                   for (var i = oid; i < oid + 1000; i++) i.toString(): data,
                 });
               },
+              minLeadingWidth: 0,
+              leading: const Icon(Icons.bug_report_outlined, size: 19),
               title: Text(
                 'save to local (x1000)',
                 style: style.copyWith(color: colorScheme.primary),
               ),
             ),
-          ],
           if (ownerMid == upMid || ownerMid == item.member.mid)
             ListTile(
               onTap: () async {
@@ -1195,16 +1168,43 @@ class ReplyItemGrpc extends StatelessWidget {
             leading: const Icon(Icons.save_alt, size: 19),
             title: Text('保存评论', style: style),
           ),
-          if (kDebugMode || item.mid == ownerMid)
-            ListTile(
-              onTap: () {
-                Get.back();
-                onCheckReply?.call(item);
-              },
-              minLeadingWidth: 0,
-              leading: const Icon(CustomIcons.shield_reply, size: 19),
-              title: Text('检查评论', style: style),
+          ListTile(
+            onTap: () async {
+              Get.back();
+              final key = item.id.toString();
+              if (GStorage.replyCacheStore.containsKey(key)) {
+                await GStorage.replyCacheStore.delete(key);
+                SmartDialog.showToast('已取消收藏');
+                // MyReply uses replyLevel 0; refresh local list only there.
+                if (replyLevel == 0) {
+                  onDelete();
+                }
+              } else {
+                await GStorage.replyCacheStore.put(
+                  key,
+                  (item.deepCopy()
+                        ..unknownFields.clear()
+                        ..replies.clear()
+                        ..clearTrackInfo())
+                      .writeToBuffer(),
+                );
+                SmartDialog.showToast('已收藏');
+              }
+            },
+            minLeadingWidth: 0,
+            leading: Icon(
+              GStorage.replyCacheStore.containsKey(item.id.toString())
+                  ? Icons.star
+                  : Icons.star_outline,
+              size: 19,
             ),
+            title: Text(
+              GStorage.replyCacheStore.containsKey(item.id.toString())
+                  ? '取消收藏'
+                  : '收藏评论',
+              style: style,
+            ),
+          ),
         ],
       ),
     );

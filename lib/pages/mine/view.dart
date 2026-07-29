@@ -164,7 +164,7 @@ class _MediaPageState extends CommonPageState<MinePage>
           ),
           msgBadge(_mainController),
         ],
-        if (GStorage.reply != null)
+        if (GStorage.replyCacheStore.isEnabled)
           IconButton(
             iconSize: iconSize,
             padding: padding,

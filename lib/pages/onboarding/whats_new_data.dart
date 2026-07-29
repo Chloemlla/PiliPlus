@@ -49,6 +49,17 @@ abstract final class WhatsNewData {
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.star_outline,
+      title: '评论收藏与查看入口',
+      subtitle: '现在可以在评论更多菜单中收藏评论，并在我的页打开收藏列表。',
+      bullets: [
+        '收藏评论仅保存在本地，不会调用 Bilibili 收藏夹接口。',
+        '收藏列表保留评论表情、图片与跳转来源，支持导入、导出和取消收藏。',
+        '可在「设置 → 其它设置 → 记录评论」开启或关闭本地评论记录。',
+      ],
+      tip: '打开评论更多菜单，选择「收藏评论」即可保存。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.palette_outlined,
       title: '空状态动态色插画',
       subtitle: '列表 / 缓存等空状态改用 undraw 风格矢量插画，填充色绑定 Material ColorScheme。',
