@@ -102,6 +102,7 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
   final AndroidMmkvStoreBackend _store;
   final AndroidMmkvLoadMode _loadMode;
   final Map<dynamic, E> _cache = <dynamic, E>{};
+
   /// Encoded keys present on disk but not yet decoded into [_cache] (lazy mode).
   final Set<String> _pendingEncodedKeys = <String>{};
   final StreamController<BoxEvent> _events =
@@ -154,7 +155,12 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     _checkOpen();
     final encoded = _encodeMap(entries, _valueEncoder);
     if (encoded == null) return false;
+
+    final previous = _store.exportBox(name);
     if (!_store.replaceBox(name, jsonEncode(encoded))) {
+      if (previous == null || !_store.replaceBox(name, previous)) {
+        return false;
+      }
       return false;
     }
 
@@ -293,7 +299,9 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
       );
     }
 
+    final snapshot = _store.exportBox(name);
     if (!_store.putAllRaw(name, encoded)) {
+      _restoreSnapshot(snapshot);
       return Future.error(StateError('MMKV putAll failed for $name'));
     }
 
@@ -358,7 +366,9 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     }
     if (encodedKeys.isEmpty) return Future.value();
 
+    final snapshot = _store.exportBox(name);
     if (!_store.removeAllRaw(name, encodedKeys)) {
+      _restoreSnapshot(snapshot);
       return Future.error(StateError('MMKV deleteAll failed for $name'));
     }
 
@@ -493,6 +503,12 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
         continue;
       }
       _materializeKey(logical);
+    }
+  }
+
+  void _restoreSnapshot(String? snapshot) {
+    if (snapshot != null) {
+      _store.replaceBox(name, snapshot);
     }
   }
 
@@ -828,7 +844,6 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 
-
   static final _id_exportKeys = _class.staticMethodId(
     r'exportKeys',
     r'(Ljava/lang/String;)Ljava/lang/String;',
@@ -957,7 +972,6 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 
-
   static final _id_getString = _class.staticMethodId(
     r'getString',
     r'(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;',
@@ -1057,7 +1071,6 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 
-
   static final _id_putAllStrings = _class.staticMethodId(
     r'putAllStrings',
     r'(Ljava/lang/String;Ljava/lang/String;)Z',
@@ -1147,7 +1160,6 @@ abstract final class _AndroidMmkvBindings {
       jKey.release();
     }
   }
-
 
   static final _id_removeValues = _class.staticMethodId(
     r'removeValues',
@@ -1266,4 +1278,3 @@ abstract final class _AndroidMmkvBindings {
     }
   }
 }
-

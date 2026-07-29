@@ -15,7 +15,7 @@ final class BoundedStringKeyLru {
     final persisted = raw is List
         ? raw.map((item) => item.toString()).toList()
         : <String>[];
-    final existing = existingKeys.toSet();
+    final existing = existingKeys.toList(growable: false);
     final next = <String>[];
     final seen = <String>{};
     for (final key in persisted) {
@@ -28,9 +28,7 @@ final class BoundedStringKeyLru {
         next.add(key);
       }
     }
-    _order
-      ..clear()
-      ..addAll(next);
+    _order.addAll(next);
   }
 
   final Box<dynamic> _orderStore;
@@ -80,6 +78,28 @@ final class BoundedStringKeyLru {
     await _persist();
   }
 
+  /// Returns keys that must be deleted before writing [incomingKeys] while
+  /// keeping the newest [maxEntries] keys in deterministic iteration order.
+  List<String> keysToEvictForWrite(Iterable<String> incomingKeys) {
+    final incoming = incomingKeys.toList(growable: false);
+    final next = _orderAfterTouch(incoming);
+    final retained = next.skip(_overflowStart(next.length)).toSet();
+    return _order
+        .where((key) => !retained.contains(key))
+        .toList(growable: false);
+  }
+
+  /// Returns the incoming keys that fit after the write, in write order.
+  List<String> keysToKeepForWrite(Iterable<String> incomingKeys) {
+    final incoming = incomingKeys.toList(growable: false);
+    final incomingSet = incoming.toSet();
+    final next = _orderAfterTouch(incoming);
+    return next
+        .skip(_overflowStart(next.length))
+        .where(incomingSet.contains)
+        .toList(growable: false);
+  }
+
   /// Returns keys that must be deleted to keep [maxEntries].
   List<String> keysToEvict({int incoming = 0}) {
     final overflow = _order.length + incoming - maxEntries;
@@ -88,4 +108,19 @@ final class BoundedStringKeyLru {
   }
 
   Future<void> _persist() => _orderStore.put(orderKey, List<String>.of(_order));
+
+  List<String> _orderAfterTouch(Iterable<String> incomingKeys) {
+    final next = List<String>.of(_order);
+    for (final key in incomingKeys) {
+      next
+        ..remove(key)
+        ..add(key);
+    }
+    return next;
+  }
+
+  int _overflowStart(int length) {
+    final start = length - maxEntries;
+    return start > 0 ? start : 0;
+  }
 }

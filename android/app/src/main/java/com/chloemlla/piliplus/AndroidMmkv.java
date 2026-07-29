@@ -50,7 +50,7 @@ public final class AndroidMmkv {
     }
 
     @Nullable
-    public static String exportBox(@NonNull String name) {
+    public static synchronized String exportBox(@NonNull String name) {
         try {
             MMKV mmkv = box(name);
             if (mmkv == null) return null;
@@ -119,36 +119,40 @@ public final class AndroidMmkv {
         }
     }
 
-    public static boolean replaceBox(@NonNull String name, @NonNull String json) {
+    public static synchronized boolean replaceBox(@NonNull String name, @NonNull String json) {
         String previous = exportBox(name);
         try {
             MMKV mmkv = box(name);
-            if (mmkv == null) return false;
+            if (mmkv == null || previous == null) return false;
 
             JSONObject entries = new JSONObject(json);
-            if (writeEntries(mmkv, entries)) return true;
-            return previous != null && writeEntries(mmkv, new JSONObject(previous)) && false;
+            if (restoreEntries(mmkv, entries)) return true;
+            restoreEntries(mmkv, new JSONObject(previous));
         } catch (Throwable ignored) {
-            if (previous != null) {
-                try {
-                    MMKV mmkv = box(name);
-                    if (mmkv != null) writeEntries(mmkv, new JSONObject(previous));
-                } catch (Throwable restoreIgnored) {
-                    // The caller still receives failure; the export remains available for diagnosis.
+            try {
+                MMKV mmkv = box(name);
+                if (mmkv != null && previous != null) {
+                    restoreEntries(mmkv, new JSONObject(previous));
                 }
+            } catch (Throwable restoreIgnored) {
+                // The caller still receives failure; the export remains available for diagnosis.
             }
-            return false;
         }
+        return false;
     }
 
-    private static boolean writeEntries(@NonNull MMKV mmkv, @NonNull JSONObject entries) {
-        mmkv.clearAll();
-        for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
-            String key = it.next();
-            if (!mmkv.encode(key, entries.optString(key))) return false;
+    private static boolean restoreEntries(@NonNull MMKV mmkv, @NonNull JSONObject entries) {
+        try {
+            mmkv.clearAll();
+            for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
+                String key = it.next();
+                if (!mmkv.encode(key, entries.optString(key))) return false;
+            }
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
-        mmkv.sync();
-        return true;
     }
 
     public static boolean putString(
@@ -164,18 +168,24 @@ public final class AndroidMmkv {
         }
     }
 
-    public static boolean putAllStrings(@NonNull String name, @NonNull String json) {
+    public static synchronized boolean putAllStrings(@NonNull String name, @NonNull String json) {
+        String previous = exportBox(name);
         try {
             MMKV mmkv = box(name);
-            if (mmkv == null) return false;
+            if (mmkv == null || previous == null) return false;
 
             JSONObject entries = new JSONObject(json);
             for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
                 String key = it.next();
-                if (!mmkv.encode(key, entries.optString(key))) return false;
+                if (!mmkv.encode(key, entries.optString(key))) {
+                    restoreEntries(mmkv, new JSONObject(previous));
+                    return false;
+                }
             }
+            mmkv.sync();
             return true;
         } catch (Throwable ignored) {
+            restoreBox(name, previous);
             return false;
         }
     }
@@ -191,10 +201,11 @@ public final class AndroidMmkv {
         }
     }
 
-    public static boolean removeValues(@NonNull String name, @NonNull String keysJson) {
+    public static synchronized boolean removeValues(@NonNull String name, @NonNull String keysJson) {
+        String previous = exportBox(name);
         try {
             MMKV mmkv = box(name);
-            if (mmkv == null) return false;
+            if (mmkv == null || previous == null) return false;
 
             JSONArray keys = new JSONArray(keysJson);
             String[] keyArray = new String[keys.length()];
@@ -202,9 +213,21 @@ public final class AndroidMmkv {
                 keyArray[i] = keys.getString(i);
             }
             mmkv.removeValuesForKeys(keyArray);
+            mmkv.sync();
             return true;
         } catch (Throwable ignored) {
+            restoreBox(name, previous);
             return false;
+        }
+    }
+
+    private static void restoreBox(@NonNull String name, @Nullable String previous) {
+        if (previous == null) return;
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv != null) restoreEntries(mmkv, new JSONObject(previous));
+        } catch (Throwable ignored) {
+            // Keep the original operation failure visible to the caller.
         }
     }
 

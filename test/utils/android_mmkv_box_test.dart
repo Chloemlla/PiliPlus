@@ -130,22 +130,77 @@ void main() {
     },
   );
 
-  test('failed batch putAll leaves cache and backend unchanged', () async {
-    final store = _MemoryAndroidMmkvStore();
-    final box = AndroidMmkvBackedBox<dynamic>('atomic_batch', store: store);
-    await box.putAll(const {'first': 1, 'second': 2});
-    final before = store.exportBox('atomic_batch');
-    store.failNextPutAll = true;
+  test(
+    'failed batch putAll leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_batch', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      events.clear();
+      final before = store.exportBox('atomic_batch');
+      store.failNextPutAll = true;
 
-    await expectLater(
-      box.putAll(const {'first': 10, 'third': 3}),
-      throwsA(isA<StateError>()),
-    );
+      await expectLater(
+        box.putAll(const {'first': 10, 'third': 3}),
+        throwsA(isA<StateError>()),
+      );
 
-    expect(box.toMap(), const {'first': 1, 'second': 2});
-    expect(store.exportBox('atomic_batch'), before);
-    await box.close();
-  });
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_batch'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
+
+  test(
+    'failed batch deleteAll leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_delete', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      events.clear();
+      final before = store.exportBox('atomic_delete');
+      store.failNextRemoveAll = true;
+
+      await expectLater(
+        box.deleteAll(const ['first', 'second']),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_delete'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
+
+  test(
+    'failed whole-box replacement leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_replace', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      events.clear();
+      final before = store.exportBox('atomic_replace');
+      store.failNextReplace = true;
+
+      expect(
+        box.replaceAllFrom(const {'replacement': 3}),
+        isFalse,
+      );
+
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_replace'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
 
   test('putAll and deleteAll use incremental batch ops', () async {
     final store = _MemoryAndroidMmkvStore();
@@ -340,6 +395,7 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   final bool clearSucceeds;
   bool failNextReplace = false;
   bool failNextPutAll = false;
+  bool failNextRemoveAll = false;
   int exportCount = 0;
   int exportKeysCount = 0;
   int replaceCount = 0;
@@ -388,6 +444,7 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
   bool putAllRaw(String name, Map<String, String> entries) {
     if (failNextPutAll) {
       failNextPutAll = false;
+      (_boxes[name] ??= {}).addAll(entries);
       return false;
     }
     putAllCount++;
@@ -403,6 +460,16 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   @override
   bool removeAllRaw(String name, Iterable<String> keys) {
+    if (failNextRemoveAll) {
+      failNextRemoveAll = false;
+      final box = _boxes[name];
+      if (box != null) {
+        for (final key in keys) {
+          box.remove(key);
+        }
+      }
+      return false;
+    }
     removeAllCount++;
     final box = _boxes[name];
     if (box == null) return true;

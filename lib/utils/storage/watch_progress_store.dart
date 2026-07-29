@@ -22,17 +22,26 @@ final class WatchProgressStore {
   final BoundedStringKeyLru _lru;
 
   static Iterable<String> _seedKeys(Box<dynamic> orderStore, Box<int> box) {
+    final boxKeys = box.keys.map((key) => key.toString()).toList();
     final raw = orderStore.get(LocalCacheKey.watchProgressWriteOrder);
-    if (raw is List && raw.isNotEmpty) {
-      return raw
-          .map((item) => item.toString())
-          .where(box.containsKey);
-    }
-    // Fallback only when no order yet (first run / migration).
-    return box.keys.map((key) => key.toString());
+    if (raw is! List || raw.isEmpty) return boxKeys;
+
+    final seeded = raw
+        .map((item) => item.toString())
+        .where(box.containsKey)
+        .toList();
+    final seen = seeded.toSet();
+    return [...seeded, ...boxKeys.where(seen.add)];
   }
 
   int? get(String key) => _box.get(key);
+
+  Future<void> trim() async {
+    final evict = _lru.keysToEvict();
+    if (evict.isEmpty) return;
+    await _box.deleteAll(evict);
+    await _lru.removeAll(evict);
+  }
 
   Future<void> put(String key, int progress) async {
     final evict = _lru.keysToEvict(incoming: _box.containsKey(key) ? 0 : 1);

@@ -29,18 +29,35 @@ final class ReplyCacheStore {
     Box<dynamic> orderStore,
     Box<Uint8List> box,
   ) {
+    final boxKeys = box.keys.map((key) => key.toString()).toList();
     final raw = orderStore.get(LocalCacheKey.replyWriteOrder);
-    if (raw is List && raw.isNotEmpty) {
-      return raw
-          .map((item) => item.toString())
-          .where(box.containsKey);
-    }
-    return box.keys.map((key) => key.toString());
+    if (raw is! List || raw.isEmpty) return boxKeys;
+
+    final seeded = raw
+        .map((item) => item.toString())
+        .where(box.containsKey)
+        .toList();
+    final seen = seeded.toSet();
+    return [...seeded, ...boxKeys.where(seen.add)];
   }
 
   bool get isEnabled => _box != null;
 
+  bool containsKey(String key) => _box?.containsKey(key) ?? false;
+
   Iterable<Uint8List> get values => _box?.values ?? const [];
+
+  Future<void> trim() async {
+    final box = _box;
+    final lru = _lru;
+    if (box == null || lru == null) return;
+
+    final evict = lru.keysToEvict();
+    if (evict.isNotEmpty) {
+      await box.deleteAll(evict);
+      await lru.removeAll(evict);
+    }
+  }
 
   Future<void> put(String key, Uint8List value) async {
     final box = _box;
@@ -61,14 +78,17 @@ final class ReplyCacheStore {
     final lru = _lru;
     if (box == null || lru == null || values.isEmpty) return;
 
-    final newKeys = values.keys.where((key) => !box.containsKey(key)).length;
-    final evict = lru.keysToEvict(incoming: newKeys);
+    final evict = lru.keysToEvictForWrite(values.keys);
     if (evict.isNotEmpty) {
       await box.deleteAll(evict);
       await lru.removeAll(evict);
     }
-    await box.putAll(values);
-    await lru.touchAll(values.keys);
+    final keptKeys = lru.keysToKeepForWrite(values.keys);
+    if (keptKeys.isEmpty) return;
+    await box.putAll({
+      for (final key in keptKeys) key: values[key]!,
+    });
+    await lru.touchAll(keptKeys);
   }
 
   Future<void> delete(String key) async {

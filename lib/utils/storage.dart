@@ -108,6 +108,7 @@ abstract final class GStorage {
       watchProgress,
       orderStore: localCache,
     );
+    await watchProgressStore.trim();
 
     if (setting.get(SettingBoxKey.saveReply, defaultValue: true) as bool) {
       reply = await openAndroidMmkvBackedBox<Uint8List>(
@@ -129,6 +130,7 @@ abstract final class GStorage {
       reply,
       orderStore: localCache,
     );
+    await replyCacheStore.trim();
   }
 
   static String exportAllSettings() {
@@ -277,4 +279,3 @@ abstract final class GStorage {
     }
   }
 }
-

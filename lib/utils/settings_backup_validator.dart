@@ -14,6 +14,16 @@ abstract final class SettingsBackupValidator {
     }
   }
 
+  static void validateBackup(
+    Map<String, dynamic> backup, {
+    required Map<dynamic, dynamic> currentSettings,
+    required Map<dynamic, dynamic> currentVideo,
+  }) {
+    validateSchemaVersion(backup);
+    validateSection(backup, 'setting', currentSettings);
+    validateSection(backup, 'video', currentVideo);
+  }
+
   static Map<dynamic, dynamic> validateSection(
     Map<String, dynamic> backup,
     String boxName,

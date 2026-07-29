@@ -52,6 +52,19 @@ void main() {
     expect(lru.keysToEvict(incoming: 1), ['a']);
   });
 
+  test('BoundedStringKeyLru keeps unrelated order-store entries', () async {
+    await orderBox.put('unrelated', 'preserve');
+    final lru = BoundedStringKeyLru(
+      orderStore: orderBox,
+      orderKey: 'order',
+      maxEntries: 2,
+      existingKeys: const ['a'],
+    );
+
+    expect(lru.order, ['a']);
+    expect(orderBox.get('unrelated'), 'preserve');
+  });
+
   test('WatchProgressStore evicts oldest writes beyond maxEntries', () async {
     final store = WatchProgressStore(
       progressBox,
@@ -64,7 +77,11 @@ void main() {
     await store.put('3', 30);
     await store.put('4', 40);
 
-    expect(progressBox.keys.map((key) => key.toString()).toSet(), {'2', '3', '4'});
+    expect(progressBox.keys.map((key) => key.toString()).toSet(), {
+      '2',
+      '3',
+      '4',
+    });
     expect(store.get('1'), isNull);
     expect(store.get('4'), 40);
     expect(
@@ -73,37 +90,105 @@ void main() {
     );
   });
 
-  test('WatchProgressStore refresh keeps existing key without eviction', () async {
+  test(
+    'WatchProgressStore refresh keeps existing key without eviction',
+    () async {
+      final store = WatchProgressStore(
+        progressBox,
+        orderStore: orderBox,
+        maxEntries: 2,
+      );
+      await store.put('1', 10);
+      await store.put('2', 20);
+      await store.put('1', 11);
+      expect(progressBox.length, 2);
+      expect(store.get('1'), 11);
+      expect(
+        orderBox.get(LocalCacheKey.watchProgressWriteOrder),
+        ['2', '1'],
+      );
+    },
+  );
+
+  test('WatchProgressStore trims migrated entries beyond maxEntries', () async {
+    await progressBox.putAll(const {'1': 10, '2': 20, '3': 30, '4': 40});
+    await orderBox.put(LocalCacheKey.watchProgressWriteOrder, [
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
+
     final store = WatchProgressStore(
       progressBox,
       orderStore: orderBox,
-      maxEntries: 2,
+      maxEntries: 3,
     );
-    await store.put('1', 10);
-    await store.put('2', 20);
-    await store.put('1', 11);
-    expect(progressBox.length, 2);
-    expect(store.get('1'), 11);
-    expect(
-      orderBox.get(LocalCacheKey.watchProgressWriteOrder),
-      ['2', '1'],
-    );
+    await store.trim();
+
+    expect(progressBox.keys.map((key) => key.toString()).toSet(), {
+      '2',
+      '3',
+      '4',
+    });
+    expect(orderBox.get(LocalCacheKey.watchProgressWriteOrder), [
+      '2',
+      '3',
+      '4',
+    ]);
   });
 
-  test('ReplyCacheStore evicts oldest writes beyond maxEntries', () async {
+  test('ReplyCacheStore trims migrated entries beyond maxEntries', () async {
+    await replyBox.putAll({
+      for (var i = 1; i <= 3; i++) '$i': Uint8List.fromList([i]),
+    });
+    await orderBox.put(LocalCacheKey.replyWriteOrder, ['1', '2', '3']);
+
     final store = ReplyCacheStore(
       replyBox,
       orderStore: orderBox,
       maxEntries: 2,
     );
-    await store.put('r1', Uint8List.fromList([1]));
-    await store.put('r2', Uint8List.fromList([2]));
-    await store.put('r3', Uint8List.fromList([3]));
+    await store.trim();
 
-    expect(replyBox.keys.map((key) => key.toString()).toSet(), {'r2', 'r3'});
-    expect(
-      orderBox.get(LocalCacheKey.replyWriteOrder),
-      ['r2', 'r3'],
+    expect(replyBox.keys.map((key) => key.toString()).toSet(), {'2', '3'});
+    expect(orderBox.get(LocalCacheKey.replyWriteOrder), ['2', '3']);
+  });
+
+  test('ReplyCacheStore keeps newest writes from an oversized batch', () async {
+    final store = ReplyCacheStore(
+      replyBox,
+      orderStore: orderBox,
+      maxEntries: 3,
     );
+
+    await store.putAll({
+      for (var i = 1; i <= 5; i++) 'r$i': Uint8List.fromList([i]),
+    });
+
+    expect(replyBox.keys.map((key) => key.toString()).toSet(), {
+      'r3',
+      'r4',
+      'r5',
+    });
+    expect(orderBox.get(LocalCacheKey.replyWriteOrder), ['r3', 'r4', 'r5']);
+  });
+
+  test('ReplyCacheStore safely no-ops when disabled', () async {
+    final store = ReplyCacheStore(
+      null,
+      orderStore: orderBox,
+    );
+
+    expect(store.isEnabled, isFalse);
+    expect(store.containsKey('reply'), isFalse);
+    expect(store.values, isEmpty);
+    await store.put('reply', Uint8List.fromList([1]));
+    await store.putAll({
+      'reply': Uint8List.fromList([1]),
+    });
+    await store.delete('reply');
+    await store.clear();
+    expect(store.values, isEmpty);
   });
 }
