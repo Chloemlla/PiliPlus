@@ -1,3 +1,6 @@
+// `rawText` stays public while its backing field remains private for patched SDK compatibility.
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:flutter/widgets.dart' show WidgetSpan;
 
 class EmoteSpan extends WidgetSpan {
