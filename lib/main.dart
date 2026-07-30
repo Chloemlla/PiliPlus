@@ -395,7 +395,7 @@ class MyApp extends StatelessWidget {
       child = AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Theme.of(context).brightness.reverse,
+          statusBarIconBrightness: Theme.of(context).brightness,
         ),
         child: child,
       );
