@@ -106,7 +106,7 @@ class _DynamicDetailPageState
     );
   }
 
-  dynamic _scrollable;
+  ScrollableState? _scrollable;
 
   @override
   void dispose() {
@@ -122,12 +122,7 @@ class _DynamicDetailPageState
       appBar: _buildAppBar(),
       body: Padding(
         padding: EdgeInsets.only(left: padding.left, right: padding.right),
-        child: isPortrait
-            ? refreshIndicator(
-                onRefresh: controller.onRefresh,
-                child: _buildBody(),
-              )
-            : _buildBody(),
+        child: _buildBody(),
       ),
       floatingActionButtonLocation: floatingActionButtonLocation,
       floatingActionButton: SlideTransition(
@@ -136,6 +131,7 @@ class _DynamicDetailPageState
       ),
     );
     return SelectionTapRegionSurface(
+      /// apply `lib/scripts/scrollable.patch`
       isScrolling: () => _scrollable?.shouldIgnorePointer ?? false,
       child: child,
     );

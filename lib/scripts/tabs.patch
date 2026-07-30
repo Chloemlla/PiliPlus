@@ -1,0 +1,24 @@
+diff --git a/packages/flutter/lib/src/material/tabs.dart b/packages/flutter/lib/src/material/tabs.dart
+index 87a611a6f60..acf799edbd3 100644
+--- a/packages/flutter/lib/src/material/tabs.dart
++++ b/packages/flutter/lib/src/material/tabs.dart
+@@ -2222,8 +2222,11 @@ class TabBarView extends StatefulWidget {
+     this.dragStartBehavior = DragStartBehavior.start,
+     this.viewportFraction = 1.0,
+     this.clipBehavior = Clip.hardEdge,
++    this.scrollDirection = Axis.horizontal,
+   });
+ 
++  final Axis scrollDirection;
++
+   /// This widget's selection and animation state.
+   ///
+   /// If [TabController] is not provided, then the value of [DefaultTabController.of]
+@@ -2522,6 +2525,7 @@ class _TabBarViewState extends State<TabBarView> {
+     return NotificationListener<ScrollNotification>(
+       onNotification: _handleScrollNotification,
+       child: PageView(
++        scrollDirection: widget.scrollDirection,
+         dragStartBehavior: widget.dragStartBehavior,
+         clipBehavior: widget.clipBehavior,
+         controller: _pageController,

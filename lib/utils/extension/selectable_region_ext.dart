@@ -1,7 +1,6 @@
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show Selectable;
 
 extension SelectableRegionStateExt on SelectableRegionState {
   void addLaunchMenuIfNeeded(
@@ -29,11 +28,8 @@ extension SelectableRegionStateExt on SelectableRegionState {
       ?.getSelectedContent()
       ?.plainText;
 
-  bool get isUncollapsed =>
-      ((this as dynamic).selectionDelegate as StaticSelectionContainerDelegate)
-          .value
-          .status ==
-      .uncollapsed;
+  /// apply `lib/scripts/selectable_region.patch`
+  bool get isUncollapsed => selectionDelegate.value.status == .uncollapsed;
 
   void onMenuPressed(
     ValueChanged<String> callback, {
