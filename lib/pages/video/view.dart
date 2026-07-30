@@ -55,7 +55,6 @@ import 'package:pili_plus/services/shutdown_timer_service.dart'
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
-import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/max_screen_size.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
