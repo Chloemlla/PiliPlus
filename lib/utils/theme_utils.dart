@@ -73,6 +73,7 @@ abstract final class ThemeUtils {
         backgroundColor: colorScheme.surface,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
+          systemStatusBarContrastEnforced: false,
           statusBarBrightness: isDark ? Brightness.light : Brightness.dark,
           statusBarIconBrightness: isDark ? Brightness.dark : Brightness.light,
         ),

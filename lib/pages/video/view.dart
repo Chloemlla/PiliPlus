@@ -506,6 +506,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                         systemOverlayStyle: Platform.isAndroid
                             ? SystemUiOverlayStyle(
                                 statusBarColor: Colors.transparent,
+                                systemStatusBarContrastEnforced: false,
                                 statusBarIconBrightness: themeData.brightness,
                                 systemNavigationBarIconBrightness:
                                     themeData.brightness.reverse,

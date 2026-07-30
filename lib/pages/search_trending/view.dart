@@ -66,6 +66,7 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
               foregroundColor: flag ? null : Colors.white,
               systemOverlayStyle: SystemUiOverlayStyle(
                 statusBarColor: Colors.transparent,
+                systemStatusBarContrastEnforced: false,
                 statusBarBrightness: theme.brightness == Brightness.light
                     ? Brightness.dark
                     : Brightness.light,

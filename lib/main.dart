@@ -194,6 +194,7 @@ Future<void> _main() async {
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
         statusBarColor: Colors.transparent,
+        systemStatusBarContrastEnforced: false,
         systemNavigationBarContrastEnforced: false,
       ),
     );
@@ -395,6 +396,7 @@ class MyApp extends StatelessWidget {
       child = AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
+          systemStatusBarContrastEnforced: false,
           statusBarIconBrightness: Theme.of(context).brightness,
         ),
         child: child,
