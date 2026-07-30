@@ -64,12 +64,13 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
                 alpha: scrollRatio,
               ),
               foregroundColor: flag ? null : Colors.white,
-              systemOverlayStyle: flag
-                  ? null
-                  : const SystemUiOverlayStyle(
-                      statusBarBrightness: .dark,
-                      statusBarIconBrightness: .light,
-                    ),
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarBrightness: theme.brightness == Brightness.light
+                    ? Brightness.dark
+                    : Brightness.light,
+                statusBarIconBrightness: theme.brightness,
+              ),
               shape: scrollRatio == 1
                   ? Border(
                       bottom: BorderSide(
