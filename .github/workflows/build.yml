@@ -95,6 +95,7 @@ jobs:
 
   android:
     name: Release Android
+    needs: quality
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_android == 'true' }}
     runs-on: ubuntu-latest
     permissions:
