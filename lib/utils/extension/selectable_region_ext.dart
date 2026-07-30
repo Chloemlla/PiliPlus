@@ -24,9 +24,8 @@ extension SelectableRegionStateExt on SelectableRegionState {
   }
 
   // Patched getters from lib/scripts/selectable_region.patch; dynamic keeps analyzer green before patch applies.
-  String? get selectedText => ((this as dynamic).selectable as Selectable?)
-      ?.getSelectedContent()
-      ?.plainText;
+  String? get selectedText =>
+      (this as dynamic).selectable?.getSelectedContent()?.plainText as String?;
 
   /// apply `lib/scripts/selectable_region.patch`
   bool get isUncollapsed => selectionDelegate.value.status == .uncollapsed;
