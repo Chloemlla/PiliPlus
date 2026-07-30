@@ -391,6 +391,15 @@ class MyApp extends StatelessWidget {
     if (PlatformUtils.isDesktop) {
       child = BackDetector(onBack: _onBack, child: child);
     }
+    if (Platform.isAndroid) {
+      child = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Theme.of(context).brightness.reverse,
+        ),
+        child: child,
+      );
+    }
     return CrashReportStartupGate(
       initialReport: startupCrashReport,
       child: child,

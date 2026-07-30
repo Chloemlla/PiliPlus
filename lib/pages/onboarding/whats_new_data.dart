@@ -39,7 +39,7 @@ abstract final class WhatsNewData {
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
       subtitle:
-          '你第一次打开这个构建。本版本为空状态接入跟随主题的动态色插画，并保留设置搜索定位、Scan Kit / Clash / Seal 等能力。',
+          '你第一次打开这个构建。本版本修复 Android 状态栏主题跟随，并保留评论收藏、动态色插画、Scan Kit / Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -47,6 +47,18 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.brightness_6_outlined,
+      title: 'Android 状态栏跟随主题',
+      subtitle: '顶部系统状态栏现在会随应用亮色、暗色或跟随系统模式同步更新。',
+      platformHint: 'Android',
+      bullets: [
+        '亮色模式保持透明背景，并使用深色状态栏图标以保证可读性。',
+        '暗色模式保持透明背景，并使用浅色状态栏图标以保证可读性。',
+        '应用内切换主题或系统主题变化后会立即更新，不再固定显示为黑色。',
+      ],
+      tip: '底部系统导航栏行为保持不变。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.star_outline,
