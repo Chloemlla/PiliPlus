@@ -93,10 +93,14 @@ class _QuickRulesChips extends StatelessWidget {
                       ? null
                       : () async {
                           final success = await service.addQuickRule(quick);
-                          if (success && context.mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('已添加"${quick.keyword}"高亮规则'),
+                                content: Text(
+                                  success
+                                      ? '已添加"${quick.keyword}"高亮规则'
+                                      : '高亮规则已达 ${DanmakuHighlightService.maxRules} 条上限',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -243,13 +247,15 @@ class _RuleCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                         ],
-                        if (rule.priority != 0)
+                        if (rule.priority != 0) ...[
                           Text(
                             '优先级: ${rule.priority}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: cs.onSurfaceVariant,
                             ),
                           ),
+                          const SizedBox(width: 6),
+                        ],
                         Text(
                           rule.color.label,
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -474,7 +480,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     final keyword = _keywordController.text.trim();
     if (keyword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -486,7 +492,10 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
       return;
     }
 
-    if (!isEditing && widget.service.hasKeyword(keyword)) {
+    if (widget.service.hasKeyword(
+      keyword,
+      excludingId: widget.existingRule?.id,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('该关键词已存在'),
@@ -496,10 +505,25 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
       return;
     }
 
+    if (_isRegex) {
+      try {
+        RegExp(keyword, caseSensitive: false);
+      } on FormatException {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('正则表达式格式无效'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     final priority = int.tryParse(_priorityController.text) ?? 0;
 
     final rule = DanmakuHighlightRule(
-      id: widget.existingRule?.id ??
+      id:
+          widget.existingRule?.id ??
           'rule-${DateTime.now().microsecondsSinceEpoch}',
       keyword: keyword,
       isRegex: _isRegex,
@@ -509,10 +533,23 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
       createdAt: widget.existingRule?.createdAt ?? DateTime.now(),
     );
 
-    if (isEditing) {
-      widget.service.updateRule(rule);
-    } else {
-      widget.service.addRule(rule);
+    final success = isEditing
+        ? await widget.service.updateRule(rule)
+        : await widget.service.addRule(rule);
+
+    if (!mounted) return;
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isEditing
+                ? '高亮规则保存失败，请重试'
+                : '高亮规则已达 ${DanmakuHighlightService.maxRules} 条上限',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
 
     Navigator.of(context).pop();
@@ -545,7 +582,7 @@ class _EmptyView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '点击右上角添加按钮，'
+              '点击右下角添加按钮，'
               '或使用快速添加来创建关键词高亮规则。',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(

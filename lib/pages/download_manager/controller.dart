@@ -31,11 +31,9 @@ class DownloadManagerController extends GetxController {
   void onInit() {
     super.onInit();
     _service = Get.find<DownloadManagerService>();
-    ever(_service.tasks, (_) => update());
-    ever(_service.selectedIds, (_) => update());
-    ever(_service.isSelectionMode, (_) => update());
-    ever(_service.stats, (_) => update());
   }
+
+  Future<void> refreshStatus() => _service.refreshStatus();
 
   void enterSelectionMode() => _service.enterSelectionMode();
 

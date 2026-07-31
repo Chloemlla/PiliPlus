@@ -192,7 +192,7 @@ void main() {
         totalBytes: 1000,
         createdAt: DateTime.now(),
       );
-      expect(task1.formattedSize, '500 B / 1 KB');
+      expect(task1.formattedSize, '500 B / 1000 B');
 
       final task2 = DownloadTask(
         requestId: 'req_2',
@@ -248,55 +248,70 @@ void main() {
     });
 
     test('should return correct status labels', () {
-      expect(DownloadTask(
-        requestId: 'req_1',
-        bvid: 'BV123456',
-        title: 'Test',
-        quality: '',
-        format: 'video',
-        status: DownloadStatus.waiting,
-        createdAt: DateTime.now(),
-      ).statusLabel, '等待中');
+      expect(
+        DownloadTask(
+          requestId: 'req_1',
+          bvid: 'BV123456',
+          title: 'Test',
+          quality: '',
+          format: 'video',
+          status: DownloadStatus.waiting,
+          createdAt: DateTime.now(),
+        ).statusLabel,
+        '等待中',
+      );
 
-      expect(DownloadTask(
-        requestId: 'req_2',
-        bvid: 'BV123456',
-        title: 'Test',
-        quality: '',
-        format: 'video',
-        status: DownloadStatus.downloading,
-        createdAt: DateTime.now(),
-      ).statusLabel, '下载中');
+      expect(
+        DownloadTask(
+          requestId: 'req_2',
+          bvid: 'BV123456',
+          title: 'Test',
+          quality: '',
+          format: 'video',
+          status: DownloadStatus.downloading,
+          createdAt: DateTime.now(),
+        ).statusLabel,
+        '下载中',
+      );
 
-      expect(DownloadTask(
-        requestId: 'req_3',
-        bvid: 'BV123456',
-        title: 'Test',
-        quality: '',
-        format: 'video',
-        status: DownloadStatus.paused,
-        createdAt: DateTime.now(),
-      ).statusLabel, '已暂停');
+      expect(
+        DownloadTask(
+          requestId: 'req_3',
+          bvid: 'BV123456',
+          title: 'Test',
+          quality: '',
+          format: 'video',
+          status: DownloadStatus.paused,
+          createdAt: DateTime.now(),
+        ).statusLabel,
+        '已暂停',
+      );
 
-      expect(DownloadTask(
-        requestId: 'req_4',
-        bvid: 'BV123456',
-        title: 'Test',
-        quality: '',
-        format: 'video',
-        status: DownloadStatus.completed,
-        createdAt: DateTime.now(),
-      ).statusLabel, '已完成');
+      expect(
+        DownloadTask(
+          requestId: 'req_4',
+          bvid: 'BV123456',
+          title: 'Test',
+          quality: '',
+          format: 'video',
+          status: DownloadStatus.completed,
+          createdAt: DateTime.now(),
+        ).statusLabel,
+        '已完成',
+      );
 
-      expect(DownloadTask(
-        requestId: 'req_5',
-        bvid: 'BV123456',
-        title: 'Test',
-        quality: '',
-        format: 'video',
-        status: DownloadStatus.failed,
-        createdAt: DateTime.now(),
-      ).statusLabel, '失败');
+      expect(
+        DownloadTask(
+          requestId: 'req_5',
+          bvid: 'BV123456',
+          title: 'Test',
+          quality: '',
+          format: 'video',
+          status: DownloadStatus.failed,
+          createdAt: DateTime.now(),
+        ).statusLabel,
+        '失败',
+      );
     });
 
     test('should copyWith create new instance with updated fields', () {

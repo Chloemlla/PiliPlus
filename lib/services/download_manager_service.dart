@@ -28,7 +28,7 @@ class DownloadManagerService extends GetxService {
   final stats = DownloadStats.empty().obs;
 
   /// Whether Seal is installed.
-  final isSealInstalled = true.obs;
+  final isSealInstalled = Platform.isAndroid.obs;
 
   bool _listening = false;
 
@@ -36,13 +36,39 @@ class DownloadManagerService extends GetxService {
   void onInit() {
     super.onInit();
     _ensureListening();
+    unawaited(refreshStatus());
   }
 
   void _ensureListening() {
     if (!Platform.isAndroid || _listening) return;
     _listening = true;
     _channel.setMethodCallHandler(_onMethodCall);
-    _channel.invokeMethod<void>('readyForStatus').catchError((Object _) {});
+  }
+
+  /// Refresh the Seal availability state and flush queued status broadcasts.
+  Future<void> refreshStatus() async {
+    if (!Platform.isAndroid) {
+      isSealInstalled.value = false;
+      return;
+    }
+
+    try {
+      isSealInstalled.value =
+          await _channel.invokeMethod<bool>('isInstalled') ?? false;
+      if (isSealInstalled.value) {
+        await _channel.invokeMethod<void>('readyForStatus');
+      }
+    } on PlatformException catch (error) {
+      isSealInstalled.value = false;
+      if (kDebugMode) {
+        debugPrint('Failed to refresh Seal state: ${error.message}');
+      }
+    } on MissingPluginException catch (error) {
+      isSealInstalled.value = false;
+      if (kDebugMode) {
+        debugPrint('Seal channel is unavailable: $error');
+      }
+    }
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
@@ -113,7 +139,9 @@ class DownloadManagerService extends GetxService {
       totalBytes: 0,
       errorMessage: status.userFacingErrorMessage,
       createdAt: DateTime.now(),
-      completedAt: mappedStatus == DownloadStatus.completed ? DateTime.now() : null,
+      completedAt: mappedStatus == DownloadStatus.completed
+          ? DateTime.now()
+          : null,
       taskId: status.taskId,
       contentUri: status.contentUri,
       displayName: status.displayName,
@@ -134,7 +162,9 @@ class DownloadManagerService extends GetxService {
       downloadedBytes: _extractDownloadedBytes(status),
       totalBytes: _extractTotalBytes(status),
       errorMessage: status.userFacingErrorMessage,
-      completedAt: newStatus == DownloadStatus.completed ? DateTime.now() : null,
+      completedAt: newStatus == DownloadStatus.completed
+          ? DateTime.now()
+          : null,
       contentUri: status.contentUri ?? existing.contentUri,
       displayName: status.displayName ?? existing.displayName,
     );
@@ -237,30 +267,34 @@ class DownloadManagerService extends GetxService {
   /// Pause a task.
   Future<void> pauseTask(DownloadTask task) async {
     if (!task.canPause) return;
-    await _sendTaskAction(task, 'pause');
-    _updateTaskStatus(task.requestId, DownloadStatus.paused);
+    if (await _sendTaskAction(task, 'pause')) {
+      _updateTaskStatus(task.requestId, DownloadStatus.paused);
+    }
   }
 
   /// Resume a task.
   Future<void> resumeTask(DownloadTask task) async {
     if (!task.canResume) return;
-    await _sendTaskAction(task, 'resume');
-    _updateTaskStatus(task.requestId, DownloadStatus.downloading);
+    if (await _sendTaskAction(task, 'resume')) {
+      _updateTaskStatus(task.requestId, DownloadStatus.downloading);
+    }
   }
 
   /// Retry a failed task.
   Future<void> retryTask(DownloadTask task) async {
     if (!task.canRetry) return;
-    await _sendTaskAction(task, 'retry');
-    _updateTaskStatus(task.requestId, DownloadStatus.waiting);
+    if (await _sendTaskAction(task, 'retry')) {
+      _updateTaskStatus(task.requestId, DownloadStatus.waiting);
+    }
   }
 
   /// Delete a task.
   Future<void> deleteTask(DownloadTask task) async {
-    await _sendTaskAction(task, 'delete');
-    tasks.removeWhere((t) => t.requestId == task.requestId);
-    selectedIds.remove(task.requestId);
-    _refreshStats();
+    if (await _sendTaskAction(task, 'delete')) {
+      tasks.removeWhere((t) => t.requestId == task.requestId);
+      selectedIds.remove(task.requestId);
+      _refreshStats();
+    }
   }
 
   /// Open completed task file.
@@ -306,23 +340,31 @@ class DownloadManagerService extends GetxService {
 
   /// Batch retry failed selected tasks.
   Future<void> retryFailedSelected() async {
-    for (final task in selectedTasks.where((t) => t.status == DownloadStatus.failed)) {
+    for (final task in selectedTasks.where(
+      (t) => t.status == DownloadStatus.failed,
+    )) {
       await retryTask(task);
     }
   }
 
-  Future<void> _sendTaskAction(DownloadTask task, String action) async {
+  Future<bool> _sendTaskAction(DownloadTask task, String action) async {
     try {
       await _channel.invokeMethod<void>('taskAction', {
         'requestId': task.requestId,
         'taskId': task.taskId,
         'action': action,
       });
+      return true;
     } on PlatformException catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to send task action $action: ${e.message}');
       }
+    } on MissingPluginException catch (e) {
+      if (kDebugMode) {
+        debugPrint('Seal task action $action is unavailable: $e');
+      }
     }
+    return false;
   }
 
   void _updateTaskStatus(String requestId, DownloadStatus newStatus) {
@@ -350,13 +392,13 @@ class DownloadStats {
   });
 
   factory DownloadStats.empty() => const DownloadStats(
-        total: 0,
-        completed: 0,
-        downloading: 0,
-        waiting: 0,
-        failed: 0,
-        totalBytes: 0,
-      );
+    total: 0,
+    completed: 0,
+    downloading: 0,
+    waiting: 0,
+    failed: 0,
+    totalBytes: 0,
+  );
 
   final int total;
   final int completed;

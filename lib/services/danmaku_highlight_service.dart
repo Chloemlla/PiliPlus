@@ -17,8 +17,11 @@ class DanmakuHighlightService extends GetxService {
   /// Non-regex rules indexed by lowercase keyword for O(1) lookup.
   final _keywordIndex = <String, DanmakuHighlightRule>{};
 
-  /// Regex rules to match sequentially.
-  final _regexRules = <DanmakuHighlightRule>[];
+  /// Active rules in descending priority order.
+  final _activeRules = <DanmakuHighlightRule>[];
+
+  /// Pre-normalized keywords for substring matching.
+  final _normalizedKeywords = <String, String>{};
 
   @override
   void onInit() {
@@ -27,15 +30,17 @@ class DanmakuHighlightService extends GetxService {
   }
 
   void _loadRules() {
-    final raw = GStorage.localCache.get(_boxKey);
+    final raw = GStorage.setting.get(_boxKey);
     if (raw is List) {
       final loaded = <DanmakuHighlightRule>[];
       for (final item in raw) {
         if (item is Map) {
           try {
-            loaded.add(DanmakuHighlightRule.fromJson(
-              Map<String, dynamic>.from(item),
-            ));
+            loaded.add(
+              DanmakuHighlightRule.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            );
           } catch (e) {
             if (kDebugMode) {
               debugPrint('Failed to load highlight rule: $e');
@@ -44,107 +49,105 @@ class DanmakuHighlightService extends GetxService {
         }
       }
       loaded.sort((a, b) => b.priority.compareTo(a.priority));
+      if (loaded.length > maxRules) {
+        loaded.removeRange(maxRules, loaded.length);
+      }
       rules.value = loaded;
-      _compilePatterns();
     }
+    _compilePatterns();
   }
 
   Future<void> _saveRules() async {
-    final data = rules.map((r) => r.toJson()).toList();
-    await GStorage.localCache.put(_boxKey, data);
     _compilePatterns();
+    final data = rules.map((r) => r.toJson()).toList();
+    await GStorage.setting.put(_boxKey, data);
   }
 
   void _compilePatterns() {
     _compiledPatterns.clear();
     _keywordIndex.clear();
-    _regexRules.clear();
+    _activeRules.clear();
+    _normalizedKeywords.clear();
 
-    final activeRules = rules.where((r) => r.enabled).toList();
+    final activeRules = rules.where((r) => r.enabled).toList()
+      ..sort((a, b) => b.priority.compareTo(a.priority));
     for (final rule in activeRules) {
+      final keyword = rule.keyword.trim();
+      if (keyword.isEmpty) continue;
+
       if (rule.isRegex) {
         try {
           _compiledPatterns[rule.id] = RegExp(
-            rule.keyword,
+            keyword,
             caseSensitive: false,
           );
-          _regexRules.add(rule);
+          _activeRules.add(rule);
         } catch (e) {
           if (kDebugMode) {
             debugPrint('Invalid regex pattern: ${rule.keyword}');
           }
         }
       } else {
-        _keywordIndex[rule.keyword.toLowerCase()] = rule;
+        final normalizedKeyword = keyword.toLowerCase();
+        _keywordIndex.putIfAbsent(normalizedKeyword, () => rule);
+        _normalizedKeywords[rule.id] = normalizedKeyword;
+        _activeRules.add(rule);
       }
     }
   }
 
   /// Apply highlights to danmaku text.
   /// Returns the highlight color if matched, null otherwise.
-  HighlightColor? applyHighlight(String text) {
-    if (rules.isEmpty) return null;
-
-    // O(1) lookup for exact match (case-insensitive)
-    final lowerText = text.toLowerCase();
-    final exactMatch = _keywordIndex[lowerText];
-    if (exactMatch != null) {
-      return exactMatch.color;
-    }
-
-    // Sequential regex match (O(m) where m = regex rules count, capped at 50)
-    for (final rule in _regexRules) {
-      try {
-        final regex = _compiledPatterns[rule.id];
-        if (regex != null && regex.hasMatch(text)) {
-          return rule.color;
-        }
-      } catch (_) {
-        // Skip invalid regex
-      }
-    }
-
-    return null;
-  }
+  HighlightColor? applyHighlight(String text) => getMatchingRule(text)?.color;
 
   /// Get the highlight rule that matches the text (for glow/border effect).
   DanmakuHighlightRule? getMatchingRule(String text) {
-    if (rules.isEmpty) return null;
+    if (_activeRules.isEmpty) return null;
 
     final lowerText = text.toLowerCase();
     final exactMatch = _keywordIndex[lowerText];
-    if (exactMatch != null) return exactMatch;
-
-    for (final rule in _regexRules) {
-      final regex = _compiledPatterns[rule.id];
-      if (regex != null && regex.hasMatch(text)) {
-        return rule;
+    for (final rule in _activeRules) {
+      if (exactMatch != null && rule.priority <= exactMatch.priority) {
+        return exactMatch;
       }
+
+      final normalizedKeyword = _normalizedKeywords[rule.id];
+      final matches = rule.isRegex
+          ? _compiledPatterns[rule.id]?.hasMatch(text) == true
+          : normalizedKeyword != null && lowerText.contains(normalizedKeyword);
+      if (matches) return rule;
     }
 
-    return null;
+    return exactMatch;
   }
 
   /// Add a new rule.
   Future<bool> addRule(DanmakuHighlightRule rule) async {
     if (rules.length >= maxRules) return false;
-    if (rule.keyword.trim().isEmpty) return false;
+    final keyword = rule.keyword.trim();
+    if (keyword.isEmpty || hasKeyword(keyword)) return false;
 
     rules
-      ..add(rule)
+      ..add(rule.copyWith(keyword: keyword))
       ..sort((a, b) => b.priority.compareTo(a.priority));
     await _saveRules();
     return true;
   }
 
   /// Update an existing rule.
-  Future<void> updateRule(DanmakuHighlightRule rule) async {
-    final index = rules.indexWhere((r) => r.id == rule.id);
-    if (index >= 0) {
-      rules[index] = rule;
-      rules.sort((a, b) => b.priority.compareTo(a.priority));
-      await _saveRules();
+  Future<bool> updateRule(DanmakuHighlightRule rule) async {
+    final keyword = rule.keyword.trim();
+    if (keyword.isEmpty || hasKeyword(keyword, excludingId: rule.id)) {
+      return false;
     }
+
+    final index = rules.indexWhere((r) => r.id == rule.id);
+    if (index < 0) return false;
+
+    rules[index] = rule.copyWith(keyword: keyword);
+    rules.sort((a, b) => b.priority.compareTo(a.priority));
+    await _saveRules();
+    return true;
   }
 
   /// Delete a rule by id.
@@ -177,9 +180,12 @@ class DanmakuHighlightService extends GetxService {
   }
 
   /// Check if a keyword already exists.
-  bool hasKeyword(String keyword) {
+  bool hasKeyword(String keyword, {String? excludingId}) {
+    final normalizedKeyword = keyword.trim().toLowerCase();
     return rules.any(
-      (r) => r.keyword.toLowerCase() == keyword.toLowerCase(),
+      (r) =>
+          r.id != excludingId &&
+          r.keyword.trim().toLowerCase() == normalizedKeyword,
     );
   }
 

@@ -51,8 +51,7 @@ class DownloadTask {
   final bool extractAudio;
 
   bool get isAudio => format == 'audio';
-  bool get canPause =>
-      status == DownloadStatus.downloading || status == DownloadStatus.waiting;
+  bool get canPause => status.isActive;
   bool get canResume => status == DownloadStatus.paused;
   bool get canRetry => status == DownloadStatus.failed;
   bool get canOpen =>

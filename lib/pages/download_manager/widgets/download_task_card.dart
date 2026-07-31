@@ -114,7 +114,8 @@ class DownloadTaskCard extends StatelessWidget {
                                 color: cs.onSurfaceVariant,
                               ),
                             ),
-                          ] else if (task.status == DownloadStatus.completed) ...[
+                          ] else if (task.status ==
+                              DownloadStatus.completed) ...[
                             Text(
                               '已存储',
                               style: theme.textTheme.bodySmall?.copyWith(
@@ -174,7 +175,8 @@ class _StatusIndicator extends StatelessWidget {
     final color = _statusColor(cs);
     final icon = _statusIcon;
 
-    if (status == DownloadStatus.downloading || status == DownloadStatus.waiting) {
+    if (status == DownloadStatus.downloading ||
+        status == DownloadStatus.waiting) {
       return SizedBox(
         width: 32,
         height: 32,
@@ -296,80 +298,92 @@ class _ActionButton extends StatelessWidget {
     final items = <PopupMenuEntry<String>>[];
 
     if (task.canPause) {
-      items.add(const PopupMenuItem(
-        value: 'pause',
-        child: Row(
-          children: [
-            Icon(Icons.pause_rounded, size: 20),
-            SizedBox(width: 8),
-            Text('暂停'),
-          ],
+      items.add(
+        const PopupMenuItem(
+          value: 'pause',
+          child: Row(
+            children: [
+              Icon(Icons.pause_rounded, size: 20),
+              SizedBox(width: 8),
+              Text('暂停'),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     if (task.canResume) {
-      items.add(const PopupMenuItem(
-        value: 'resume',
-        child: Row(
-          children: [
-            Icon(Icons.play_arrow_rounded, size: 20),
-            SizedBox(width: 8),
-            Text('继续'),
-          ],
+      items.add(
+        const PopupMenuItem(
+          value: 'resume',
+          child: Row(
+            children: [
+              Icon(Icons.play_arrow_rounded, size: 20),
+              SizedBox(width: 8),
+              Text('继续'),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     if (task.canRetry) {
-      items.add(const PopupMenuItem(
-        value: 'retry',
-        child: Row(
-          children: [
-            Icon(Icons.refresh_rounded, size: 20),
-            SizedBox(width: 8),
-            Text('重试'),
-          ],
+      items.add(
+        const PopupMenuItem(
+          value: 'retry',
+          child: Row(
+            children: [
+              Icon(Icons.refresh_rounded, size: 20),
+              SizedBox(width: 8),
+              Text('重试'),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     if (task.canOpen) {
       items
-        ..add(const PopupMenuItem(
-          value: 'open',
-          child: Row(
-            children: [
-              Icon(Icons.folder_open_rounded, size: 20),
-              SizedBox(width: 8),
-              Text('打开文件'),
-            ],
+        ..add(
+          const PopupMenuItem(
+            value: 'open',
+            child: Row(
+              children: [
+                Icon(Icons.folder_open_rounded, size: 20),
+                SizedBox(width: 8),
+                Text('打开文件'),
+              ],
+            ),
           ),
-        ))
-        ..add(const PopupMenuItem(
-          value: 'share',
-          child: Row(
-            children: [
-              Icon(Icons.share_rounded, size: 20),
-              SizedBox(width: 8),
-              Text('分享'),
-            ],
+        )
+        ..add(
+          const PopupMenuItem(
+            value: 'share',
+            child: Row(
+              children: [
+                Icon(Icons.share_rounded, size: 20),
+                SizedBox(width: 8),
+                Text('分享'),
+              ],
+            ),
           ),
-        ));
+        );
     }
 
     items
       ..add(const PopupMenuDivider())
-      ..add(const PopupMenuItem(
-        value: 'delete',
-        child: Row(
-          children: [
-            Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
-            SizedBox(width: 8),
-            Text('删除', style: TextStyle(color: Colors.red)),
-          ],
+      ..add(
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
+              SizedBox(width: 8),
+              Text('删除', style: TextStyle(color: Colors.red)),
+            ],
+          ),
         ),
-      ));
+      );
 
     return items;
   }

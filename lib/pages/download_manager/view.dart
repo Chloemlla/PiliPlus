@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/pages/download_manager/controller.dart';
 import 'package:pili_plus/pages/download_manager/widgets/download_task_card.dart';
-import 'package:pili_plus/services/download_manager_service.dart';
 
 /// Main page for managing Seal download tasks.
 class DownloadManagerPage extends StatelessWidget {
@@ -69,10 +68,7 @@ class DownloadManagerPage extends StatelessWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () {
-                // Trigger refresh - tasks are already reactive
-                Get.find<DownloadManagerService>().tasks.refresh();
-              },
+              onPressed: controller.refreshStatus,
               tooltip: '刷新',
             ),
           ],
@@ -96,19 +92,21 @@ class _TaskListView extends StatelessWidget {
           child: Obx(() {
             final tasks = controller.tasks;
             return RefreshIndicator(
-              onRefresh: () async {
-                Get.find<DownloadManagerService>().tasks.refresh();
-              },
+              onRefresh: controller.refreshStatus,
               child: ListView.builder(
                 padding: const EdgeInsets.only(top: 8, bottom: 80),
                 itemCount: tasks.length,
                 itemBuilder: (context, index) {
                   final task = tasks[index];
-                  return Obx(() => DownloadTaskCard(
-                        task: task,
-                        controller: controller,
-                        isSelected: controller.selectedIds.contains(task.requestId),
-                      ));
+                  return Obx(
+                    () => DownloadTaskCard(
+                      task: task,
+                      controller: controller,
+                      isSelected: controller.selectedIds.contains(
+                        task.requestId,
+                      ),
+                    ),
+                  );
                 },
               ),
             );
@@ -130,7 +128,7 @@ class _StatsBar extends StatelessWidget {
     final cs = theme.colorScheme;
 
     return Obx(() {
-      final stats = Get.find<DownloadManagerService>().stats.value;
+      final stats = controller.stats;
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -256,8 +254,9 @@ class _BatchActionsBar extends StatelessWidget {
         children: [
           Expanded(
             child: Obx(() {
-              final hasActive = controller.selectedTasks
-                  .any((t) => t.status.isActive);
+              final hasActive = controller.selectedTasks.any(
+                (t) => t.status.isActive,
+              );
               return OutlinedButton.icon(
                 onPressed: hasActive ? controller.pauseSelected : null,
                 icon: const Icon(Icons.pause_rounded, size: 18),
@@ -268,8 +267,9 @@ class _BatchActionsBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Obx(() {
-              final hasPaused = controller.selectedTasks
-                  .any((t) => t.canResume);
+              final hasPaused = controller.selectedTasks.any(
+                (t) => t.canResume,
+              );
               return OutlinedButton.icon(
                 onPressed: hasPaused ? controller.resumeSelected : null,
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
@@ -280,8 +280,7 @@ class _BatchActionsBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Obx(() {
-              final hasFailed = controller.selectedTasks
-                  .any((t) => t.canRetry);
+              final hasFailed = controller.selectedTasks.any((t) => t.canRetry);
               return OutlinedButton.icon(
                 onPressed: hasFailed ? controller.retryFailedSelected : null,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
