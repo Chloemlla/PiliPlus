@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/playlist_export_data.dart';
 import 'package:pili_plus/services/playlist_import_service.dart';
-import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 class PlaylistImportPage extends StatefulWidget {
   const PlaylistImportPage({super.key});
@@ -16,6 +16,7 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
   ImportDestination _destination = ImportDestination.watchLater;
   ValidationResult? _validationResult;
   PlaylistExportData? _previewData;
+  String? _sourceContent;
   bool _isImporting = false;
 
   @override
@@ -27,11 +28,10 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
         title: const Text('导入播放列表'),
         actions: [
           TextButton(
-            onPressed: _isImporting ? null : _import,
+            onPressed: _isImporting || _previewData == null ? null : _import,
             child: _isImporting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                ? const SizedBox.square(
+                    dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Text('导入'),
@@ -41,162 +41,59 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Import destination
           Text('导入位置', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-
-          RadioListTile<ImportDestination>(
-            value: ImportDestination.watchLater,
+          RadioGroup<ImportDestination>(
             groupValue: _destination,
-            onChanged: (value) {
-              setState(() {
-                _destination = value!;
-              });
-            },
-            title: const Text('稍后再看'),
-            subtitle: const Text('添加到"稍后再看"列表'),
-            secondary: const Icon(Icons.watch_later_outlined),
+            onChanged: _isImporting
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _destination = value);
+                    }
+                  },
+            child: Column(
+              children: const [
+                RadioListTile<ImportDestination>(
+                  value: ImportDestination.watchLater,
+                  title: Text('稍后再看'),
+                  subtitle: Text('跳过当前稍后再看中已有的 BVID'),
+                  secondary: Icon(Icons.watch_later_outlined),
+                ),
+                RadioListTile<ImportDestination>(
+                  value: ImportDestination.importedFavorite,
+                  title: Text('“已导入”收藏夹'),
+                  subtitle: Text('自动创建或复用专用收藏夹，并跳过重复视频'),
+                  secondary: Icon(Icons.folder_copy_outlined),
+                ),
+              ],
+            ),
           ),
-
-          RadioListTile<ImportDestination>(
-            value: ImportDestination.createNew,
-            groupValue: _destination,
-            onChanged: (value) {
-              setState(() {
-                _destination = value!;
-              });
-            },
-            title: const Text('创建新收藏夹'),
-            subtitle: const Text('创建新的收藏夹并导入'),
-            secondary: const Icon(Icons.create_new_folder_outlined),
-          ),
-
-          RadioListTile<ImportDestination>(
-            value: ImportDestination.specified,
-            groupValue: _destination,
-            onChanged: (value) {
-              setState(() {
-                _destination = value!;
-              });
-            },
-            title: const Text('指定收藏夹'),
-            subtitle: const Text('添加到已存在的收藏夹'),
-            secondary: const Icon(Icons.folder_outlined),
-          ),
-
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-
-          // Import source
           Text('选择来源', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-
           ListTile(
-            leading: const Icon(Icons.file_open),
+            enabled: !_isImporting,
+            leading: const Icon(Icons.file_open_outlined),
             title: const Text('从文件导入'),
-            subtitle: const Text('选择 JSON 播放列表文件'),
-            onTap: _isImporting ? null : _pickFile,
+            subtitle: const Text('选择 PiliPlus 导出的 JSON 文件'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _pickFile,
           ),
-
           const SizedBox(height: 16),
-
-          // Preview section
-          if (_validationResult != null) ...[
-            Card(
-              color: _validationResult!.isValid
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                  : theme.colorScheme.errorContainer.withValues(alpha: 0.3),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _validationResult!.isValid
-                              ? Icons.check_circle
-                              : Icons.error,
-                          color: _validationResult!.isValid
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _validationResult!.isValid
-                                ? '文件有效'
-                                : '文件无效',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: _validationResult!.isValid
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(_validationResult!.message),
-                    if (_validationResult!.previewInfo != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        _validationResult!.previewInfo!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-
-          if (_previewData != null) ...[
+          if (_validationResult case final validation?)
+            _buildValidationCard(theme, validation),
+          if (_previewData case final preview?) ...[
             const SizedBox(height: 16),
-            Text('预览', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Card(
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _previewData!.videos.length.clamp(0, 5),
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final video = _previewData!.videos[index];
-                  return ListTile(
-                    leading: const Icon(Icons.play_circle_outline),
-                    title: Text(
-                      video.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(video.bvid),
-                    trailing: video.duration != null
-                        ? Text('${video.duration! ~/ 60}:${(video.duration! % 60).toString().padLeft(2, '0')}')
-                        : null,
-                  );
-                },
-              ),
-            ),
-            if (_previewData!.videos.length > 5) ...[
-              const SizedBox(height: 8),
-              Text(
-                '... 还有 ${_previewData!.videos.length - 5} 个视频',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
-              ),
-            ],
+            _buildPreview(theme, preview),
           ],
-
           const SizedBox(height: 24),
-
-          // Notes
           Card(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.5,
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -220,9 +117,9 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• 仅支持 PiliPlus 导出的 JSON 格式\n'
-                    '• 重复的视频将被跳过\n'
-                    '• 部分元数据可能无法完全保留',
+                    '• 仅支持 PiliPlus JSON 播放列表\n'
+                    '• 文件内和目标列表中的重复 BVID 会被跳过\n'
+                    '• 追番/追剧 season 条目仅用于备份，不会作为视频导入',
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -234,77 +131,167 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
     );
   }
 
+  Widget _buildValidationCard(
+    ThemeData theme,
+    ValidationResult validation,
+  ) {
+    final isValid = validation.isValid;
+    return Card(
+      color:
+          (isValid
+                  ? theme.colorScheme.primaryContainer
+                  : theme.colorScheme.errorContainer)
+              .withValues(alpha: 0.3),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isValid ? Icons.check_circle_outline : Icons.error_outline,
+                  color: isValid
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.error,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isValid ? '文件有效' : '文件无效',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: isValid
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(validation.message),
+            if (validation.previewInfo case final previewInfo?) ...[
+              const SizedBox(height: 4),
+              Text(
+                previewInfo,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreview(ThemeData theme, PlaylistExportData preview) {
+    final previewCount = preview.videos.length > 5 ? 5 : preview.videos.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('预览', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: previewCount,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final item = preview.videos[index];
+              return ListTile(
+                leading: Icon(
+                  item.isVideo
+                      ? Icons.play_circle_outline
+                      : Icons.live_tv_outlined,
+                ),
+                title: Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(item.referenceLabel),
+                trailing: item.duration == null
+                    ? null
+                    : Text(_formatDuration(item.duration!)),
+              );
+            },
+          ),
+        ),
+        if (preview.videos.length > previewCount) ...[
+          const SizedBox(height: 8),
+          Text(
+            '还有 ${preview.videos.length - previewCount} 个条目未显示',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.pickFile(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: const ['json'],
       );
-
-      if (result != null) {
-        final content = await result.xFile.readAsString();
-        await _validateAndPreview(content);
+      if (result == null) {
+        return;
       }
-    } catch (e) {
-      SmartDialog.showToast('读取文件失败: $e');
+      final content = await result.xFile.readAsString();
+      _validateAndPreview(content);
+    } catch (error) {
+      SmartDialog.showToast('读取文件失败: $error');
     }
   }
 
-  Future<void> _validateAndPreview(String content) async {
-    // First try to validate as JSON
-    var result = PlaylistImportService.validateJson(content);
-
-    if (result.isValid) {
-      try {
-        // Parse and show preview
-        final data = PlaylistExportData.fromJson(
-          Map<String, dynamic>.from(
-            (content is Map) ? content :
-              (content is String) ?
-                (result.previewInfo != null ? {} : {})
-                : {}
-          ),
-        );
-        setState(() {
-          _validationResult = result;
-          _previewData = data;
-        });
-        return;
-      } catch (_) {}
-    }
-
+  void _validateAndPreview(String content) {
+    final validation = PlaylistImportService.validateJson(content);
     setState(() {
-      _validationResult = result;
-      _previewData = null;
+      _sourceContent = validation.isValid ? content : null;
+      _validationResult = validation;
+      _previewData = validation.playlistData;
     });
   }
 
   Future<void> _import() async {
-    if (_previewData == null) {
+    final sourceContent = _sourceContent;
+    if (sourceContent == null) {
       SmartDialog.showToast('请先选择有效的播放列表文件');
       return;
     }
 
-    setState(() {
-      _isImporting = true;
-    });
-
+    setState(() => _isImporting = true);
     try {
-      // For demo purposes, show success
-      // In real implementation, this would call PlaylistImportService.importPlaylist
-      await Future.delayed(const Duration(seconds: 1));
-
-      SmartDialog.showToast('成功导入 ${_previewData!.videos.length} 个视频');
-
-      if (mounted) {
-        Navigator.pop(context);
+      final result = await PlaylistImportService.importPlaylist(
+        jsonString: sourceContent,
+        destination: _destination,
+      );
+      if (result case Success(:final response)) {
+        SmartDialog.showToast(response.summary);
+        if (mounted) {
+          Navigator.of(context).pop(response);
+        }
+      } else {
+        final message = result.toString();
+        SmartDialog.showToast(message.isEmpty ? '导入失败' : message);
       }
-    } catch (e) {
-      SmartDialog.showToast('导入失败: $e');
+    } catch (error) {
+      SmartDialog.showToast('导入失败: $error');
     } finally {
-      setState(() {
-        _isImporting = false;
-      });
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
     }
+  }
+
+  static String _formatDuration(int duration) {
+    final minutes = duration ~/ 60;
+    final seconds = (duration % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }
