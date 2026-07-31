@@ -39,7 +39,7 @@ abstract final class WhatsNewData {
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
       subtitle:
-          '你第一次打开这个构建。本版本修复 Android 状态栏主题跟随，并保留评论收藏、动态色插画、Scan Kit / Clash / Seal 等能力。',
+          '你第一次打开这个构建。本版本修复返回主页后的左侧空白栏与 Android 状态栏主题跟随，并保留评论收藏、动态色插画、Scan Kit / Clash / Seal 等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -50,15 +50,16 @@ abstract final class WhatsNewData {
     ),
     const ImprovementsGuidePageData(
       icon: Icons.brightness_6_outlined,
-      title: 'Android 状态栏跟随主题',
-      subtitle: '顶部系统状态栏现在会随应用亮色、暗色或跟随系统模式同步更新。',
+      title: 'Android 页面返回与状态栏',
+      subtitle: '主页导航布局与顶部系统状态栏现在都会按返回后的当前窗口和主题重新同步。',
       platformHint: 'Android',
       bullets: [
+        '从横屏、视频或沉浸式页面返回竖屏主页后，不再残留挤压正文的左侧空白栏。',
         '亮色模式保持透明背景，并按所选外观使用浅色状态栏图标。',
         '暗色模式保持透明背景，并按所选外观使用深色状态栏图标。',
         '应用内切换主题或系统主题变化后会立即更新，不再固定显示为黑色。',
       ],
-      tip: '底部系统导航栏行为保持不变。',
+      tip: '宽屏横屏与手动启用的侧边栏仍保持原有布局。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.star_outline,

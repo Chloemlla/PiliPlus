@@ -47,12 +47,14 @@ class _MainAppState extends PopScopeState<MainApp>
         TrayListener {
   final _mainController = Get.put(MainController());
   late final _settings = GStorage.settingsStore;
-  late EdgeInsets _padding;
   late ColorScheme _colorScheme;
   Brightness? _brightness;
 
   @override
   bool get initCanPop => false;
+
+  bool get _shouldUseBottomNav =>
+      !_mainController.useSideBar && MediaQuery.sizeOf(context).isPortrait;
 
   @override
   void initState() {
@@ -79,7 +81,6 @@ class _MainAppState extends PopScopeState<MainApp>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _padding = MediaQuery.viewPaddingOf(context);
     _colorScheme = ColorScheme.of(context);
     final brightness = _colorScheme.brightness;
     NetworkImgLayer.reduce =
@@ -90,14 +91,20 @@ class _MainAppState extends PopScopeState<MainApp>
         windowManager.setBrightness(brightness);
       }
     }
-    if (!_mainController.useSideBar) {
-      _mainController.useBottomNav = MediaQuery.sizeOf(context).isPortrait;
-    }
+    _mainController.useBottomNav = _shouldUseBottomNav;
   }
 
   @override
   void didPopNext() {
     addObserverMobile(this);
+    _mainController.useBottomNav = _shouldUseBottomNav;
+    // Orientation and system-bar restoration may settle after the route pops.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _mainController.useBottomNav = _shouldUseBottomNav;
+      });
+    });
     _mainController
       ..checkUnreadDynamic()
       ..checkDefaultSearch(true)
@@ -384,7 +391,7 @@ class _MainAppState extends PopScopeState<MainApp>
     return bottomNav;
   }
 
-  Widget _sideBar() {
+  Widget _sideBar(EdgeInsets viewPadding) {
     if (_mainController.navigationBars.length > 1) {
       if (context.isTablet && _mainController.optTabletNav) {
         return Padding(
@@ -393,7 +400,7 @@ class _MainAppState extends PopScopeState<MainApp>
             context: context,
             removeRight: true,
             child: DrawerTheme(
-              data: DrawerThemeData(width: 130 + _padding.left),
+              data: DrawerThemeData(width: 130 + viewPadding.left),
               child: Obx(
                 () => NavigationDrawer(
                   /// apply `lib/scripts/navigation_drawer.patch`
@@ -446,13 +453,20 @@ class _MainAppState extends PopScopeState<MainApp>
     }
     return Container(
       width: 80,
-      margin: .only(top: 12 + _padding.top, left: _padding.left),
+      margin: .only(
+        top: 12 + viewPadding.top,
+        left: viewPadding.left,
+      ),
       child: userAndSearchVertical(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final useBottomNav = _shouldUseBottomNav;
+    _mainController.useBottomNav = useBottomNav;
+
     Widget child;
     if (_mainController.mainTabBarView) {
       child = TabBarView(
@@ -460,7 +474,7 @@ class _MainAppState extends PopScopeState<MainApp>
         physics: const NeverScrollableScrollPhysics(),
 
         /// apply `lib/scripts/tabs.patch`
-        scrollDirection: _mainController.useBottomNav ? .horizontal : .vertical,
+        scrollDirection: useBottomNav ? .horizontal : .vertical,
         children: _mainController.navigationBars.map((i) => i.page).toList(),
       );
     } else {
@@ -474,7 +488,7 @@ class _MainAppState extends PopScopeState<MainApp>
     Widget? sideBar;
     Widget? bottomNav;
     final EdgeInsets padding;
-    if (_mainController.useBottomNav) {
+    if (useBottomNav) {
       bottomNav = _bottomNav;
       if (bottomNav != null) {
         bottomNav = MediaQuery.removePadding(
@@ -483,11 +497,8 @@ class _MainAppState extends PopScopeState<MainApp>
           child: bottomNav,
         );
       }
-      padding = .only(
-        top: _padding.top,
-        left: _padding.left,
-        right: _padding.right,
-      );
+      // A stale landscape inset here becomes a full-height blank side strip.
+      padding = .only(top: viewPadding.top);
     } else {
       sideBar = DecoratedBox(
         decoration: BoxDecoration(
@@ -497,9 +508,9 @@ class _MainAppState extends PopScopeState<MainApp>
             ),
           ),
         ),
-        child: _sideBar(),
+        child: _sideBar(viewPadding),
       );
-      padding = .only(top: _padding.top, right: _padding.right);
+      padding = .only(top: viewPadding.top, right: viewPadding.right);
     }
 
     child = Material(
