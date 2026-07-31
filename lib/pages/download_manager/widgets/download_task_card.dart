@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pili_plus/models/download/download_task.dart';
 import 'package:pili_plus/pages/download_manager/controller.dart';
 
@@ -39,19 +38,20 @@ class DownloadTaskCard extends StatelessWidget {
         },
         onLongPress: () {
           if (!isSelectionMode) {
-            controller.enterSelectionMode();
-            controller.toggleSelection(task.requestId);
+            controller
+              ..enterSelectionMode()
+              ..toggleSelection(task.requestId);
           }
           onLongPress?.call();
         },
-        child: Container(
-          decoration: isSelected
-              ? BoxDecoration(
-                  border: Border(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: isSelected
+                ? Border(
                     left: BorderSide(color: cs.primary, width: 3),
-                  ),
-                )
-              : null,
+                  )
+                : null,
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -335,39 +335,41 @@ class _ActionButton extends StatelessWidget {
     }
 
     if (task.canOpen) {
-      items.add(const PopupMenuItem(
-        value: 'open',
-        child: Row(
-          children: [
-            Icon(Icons.folder_open_rounded, size: 20),
-            SizedBox(width: 8),
-            Text('打开文件'),
-          ],
-        ),
-      ));
-      items.add(const PopupMenuItem(
-        value: 'share',
-        child: Row(
-          children: [
-            Icon(Icons.share_rounded, size: 20),
-            SizedBox(width: 8),
-            Text('分享'),
-          ],
-        ),
-      ));
+      items
+        ..add(const PopupMenuItem(
+          value: 'open',
+          child: Row(
+            children: [
+              Icon(Icons.folder_open_rounded, size: 20),
+              SizedBox(width: 8),
+              Text('打开文件'),
+            ],
+          ),
+        ))
+        ..add(const PopupMenuItem(
+          value: 'share',
+          child: Row(
+            children: [
+              Icon(Icons.share_rounded, size: 20),
+              SizedBox(width: 8),
+              Text('分享'),
+            ],
+          ),
+        ));
     }
 
-    items.add(const PopupMenuDivider());
-    items.add(PopupMenuItem(
-      value: 'delete',
-      child: Row(
-        children: [
-          Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
-          const SizedBox(width: 8),
-          const Text('删除', style: TextStyle(color: Colors.red)),
-        ],
-      ),
-    ));
+    items
+      ..add(const PopupMenuDivider())
+      ..add(const PopupMenuItem(
+        value: 'delete',
+        child: Row(
+          children: [
+            Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
+            SizedBox(width: 8),
+            Text('删除', style: TextStyle(color: Colors.red)),
+          ],
+        ),
+      ));
 
     return items;
   }

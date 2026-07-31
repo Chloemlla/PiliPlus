@@ -4,10 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/models/download/download_task.dart';
 import 'package:pili_plus/pages/video/seal_download_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
-
-import '../models/download/download_task.dart';
 
 /// Service that bridges Seal download status to PiliPlus.
 ///
@@ -26,7 +25,7 @@ class DownloadManagerService extends GetxService {
   final isSelectionMode = false.obs;
 
   /// Stats: completed, downloading, waiting, failed counts.
-  final stats = _DownloadStats.empty().obs;
+  final stats = DownloadStats.empty().obs;
 
   /// Whether Seal is installed.
   final isSealInstalled = true.obs;
@@ -189,7 +188,7 @@ class DownloadManagerService extends GetxService {
       }
     }
 
-    stats.value = _DownloadStats(
+    stats.value = DownloadStats(
       total: tasks.length,
       completed: completed,
       downloading: downloading,
@@ -340,8 +339,8 @@ class DownloadManagerService extends GetxService {
   }
 }
 
-class _DownloadStats {
-  const _DownloadStats({
+class DownloadStats {
+  const DownloadStats({
     required this.total,
     required this.completed,
     required this.downloading,
@@ -350,7 +349,7 @@ class _DownloadStats {
     required this.totalBytes,
   });
 
-  factory _DownloadStats.empty() => const _DownloadStats(
+  factory DownloadStats.empty() => const DownloadStats(
         total: 0,
         completed: 0,
         downloading: 0,

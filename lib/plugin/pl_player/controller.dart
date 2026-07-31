@@ -1867,7 +1867,7 @@ class PlPlayerController with BlockConfigMixin {
     _sessionWatchedSeconds = 0;
 
     // Get author info from media item if available
-    final mediaItem = videoPlayerServiceHandler?._currentMediaItem;
+    final mediaItem = videoPlayerServiceHandler?.currentMediaItem;
     _sessionAuthorName = mediaItem?.artist ?? '';
     _sessionAuthorMid = 0; // Not available from media item
 
@@ -1883,7 +1883,7 @@ class PlPlayerController with BlockConfigMixin {
     if (_sessionStartTime == null || _bvid == null || cid == null) return;
     if (isLive) return; // Don't track live streams
 
-    final title = videoPlayerServiceHandler?._currentMediaItem?.title ?? '';
+    final title = videoPlayerServiceHandler?.currentMediaItem?.title ?? '';
     final now = DateTime.now();
     final elapsedSeconds = now.difference(_sessionStartTime!).inSeconds;
 

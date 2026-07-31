@@ -143,8 +143,8 @@ class _RulesList extends StatelessWidget {
               color: cs.onError,
             ),
           ),
-          confirmDismiss: (_) async {
-            return await showDialog<bool>(
+          confirmDismiss: (_) {
+            return showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: const Text('确认删除'),

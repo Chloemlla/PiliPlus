@@ -10,7 +10,7 @@ class DownloadManagerController extends GetxController {
   List<DownloadTask> get tasks => _service.tasks;
 
   /// Stats.
-  _DownloadStats get stats => _service.stats.value;
+  DownloadStats get stats => _service.stats.value;
 
   /// Selection mode.
   bool get isSelectionMode => _service.isSelectionMode.value;
@@ -69,5 +69,3 @@ class DownloadManagerController extends GetxController {
 
   Future<void> openSealReleases() => _service.openSealReleases();
 }
-
-typedef _DownloadStats = ({int total, int completed, int downloading, int waiting, int failed, String formattedStorageUsed});

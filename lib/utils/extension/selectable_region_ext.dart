@@ -1,6 +1,7 @@
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SelectionStatus;
 
 extension SelectableRegionStateExt on SelectableRegionState {
   void addLaunchMenuIfNeeded(

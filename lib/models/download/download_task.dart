@@ -51,10 +51,12 @@ class DownloadTask {
   final bool extractAudio;
 
   bool get isAudio => format == 'audio';
-  bool get canPause => status == downloading || status == waiting;
-  bool get canResume => status == paused;
-  bool get canRetry => status == failed;
-  bool get canOpen => status == completed && contentUri?.isNotEmpty == true;
+  bool get canPause =>
+      status == DownloadStatus.downloading || status == DownloadStatus.waiting;
+  bool get canResume => status == DownloadStatus.paused;
+  bool get canRetry => status == DownloadStatus.failed;
+  bool get canOpen =>
+      status == DownloadStatus.completed && contentUri?.isNotEmpty == true;
 
   String get formattedSize {
     if (totalBytes <= 0) return '--';

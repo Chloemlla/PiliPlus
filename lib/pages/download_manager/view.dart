@@ -14,13 +14,13 @@ class DownloadManagerPage extends StatelessWidget {
       init: DownloadManagerController(),
       builder: (controller) {
         return Scaffold(
-          appBar: _buildAppBar(context, controller),
+          appBar: _buildAppBar(controller),
           body: Obx(() {
             if (!controller.isSealInstalled) {
               return _SealNotInstalledView(controller: controller);
             }
             if (controller.tasks.isEmpty) {
-              return _EmptyView();
+              return const _EmptyView();
             }
             return _TaskListView(controller: controller);
           }),
@@ -35,51 +35,50 @@ class DownloadManagerPage extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    DownloadManagerController controller,
-  ) {
-    final theme = Theme.of(context);
-    return Obx(() {
-      final isSelectionMode = controller.isSelectionMode;
-      final selectedCount = controller.selectedCount;
+  PreferredSizeWidget _buildAppBar(DownloadManagerController controller) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: Obx(() {
+        final isSelectionMode = controller.isSelectionMode;
+        final selectedCount = controller.selectedCount;
 
-      if (isSelectionMode) {
+        if (isSelectionMode) {
+          return AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: controller.exitSelectionMode,
+            ),
+            title: Text('已选择 $selectedCount 项'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                onPressed: controller.selectAll,
+                tooltip: '全选',
+              ),
+              IconButton(
+                icon: const Icon(Icons.deselect),
+                onPressed: controller.deselectAll,
+                tooltip: '取消全选',
+              ),
+            ],
+          );
+        }
+
         return AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: controller.exitSelectionMode,
-          ),
-          title: Text('已选择 $selectedCount 项'),
+          title: const Text('下载管理'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.select_all),
-              onPressed: controller.selectAll,
-              tooltip: '全选',
-            ),
-            IconButton(
-              icon: const Icon(Icons.deselect),
-              onPressed: controller.deselectAll,
-              tooltip: '取消全选',
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                // Trigger refresh - tasks are already reactive
+                Get.find<DownloadManagerService>().tasks.refresh();
+              },
+              tooltip: '刷新',
             ),
           ],
         );
-      }
-
-      return AppBar(
-        title: const Text('下载管理'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              // Trigger refresh - tasks are already reactive
-              Get.find<DownloadManagerService>().tasks.refresh();
-            },
-            tooltip: '刷新',
-          ),
-        ],
-      );
-    });
+      }),
+    );
   }
 }
 
@@ -90,9 +89,6 @@ class _TaskListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     return Column(
       children: [
         _StatsBar(controller: controller),
@@ -273,9 +269,9 @@ class _BatchActionsBar extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final hasPaused = controller.selectedTasks
-                  .any((t) => t.status == t.status); // Always enabled
+                  .any((t) => t.canResume);
               return OutlinedButton.icon(
-                onPressed: controller.resumeSelected,
+                onPressed: hasPaused ? controller.resumeSelected : null,
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: const Text('继续'),
               );
@@ -285,9 +281,9 @@ class _BatchActionsBar extends StatelessWidget {
           Expanded(
             child: Obx(() {
               final hasFailed = controller.selectedTasks
-                  .any((t) => t.status == t.status); // For demo, always enabled
+                  .any((t) => t.canRetry);
               return OutlinedButton.icon(
-                onPressed: controller.retryFailedSelected,
+                onPressed: hasFailed ? controller.retryFailedSelected : null,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('重试'),
               );
@@ -388,6 +384,8 @@ class _SealNotInstalledView extends StatelessWidget {
 }
 
 class _EmptyView extends StatelessWidget {
+  const _EmptyView();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

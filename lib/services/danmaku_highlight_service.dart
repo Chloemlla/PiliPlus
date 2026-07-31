@@ -130,8 +130,9 @@ class DanmakuHighlightService extends GetxService {
     if (rules.length >= maxRules) return false;
     if (rule.keyword.trim().isEmpty) return false;
 
-    rules.add(rule);
-    rules.sort((a, b) => b.priority.compareTo(a.priority));
+    rules
+      ..add(rule)
+      ..sort((a, b) => b.priority.compareTo(a.priority));
     await _saveRules();
     return true;
   }
@@ -162,7 +163,7 @@ class DanmakuHighlightService extends GetxService {
   }
 
   /// Add a quick rule.
-  Future<bool> addQuickRule(DanmakuQuickRule quickRule) async {
+  Future<bool> addQuickRule(DanmakuQuickRule quickRule) {
     final rule = DanmakuHighlightRule(
       id: 'quick-${DateTime.now().microsecondsSinceEpoch}',
       keyword: quickRule.keyword,
