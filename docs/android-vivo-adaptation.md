@@ -130,7 +130,20 @@ what still matters for this product and what changed on 2026-07-17.
 - API 33+: denying POST_NOTIFICATIONS does not crash playback; re-grant restores shade controls.
 - Bilibili deeplink VIEW filters still open MainActivity.
 
+### Media notification verification record (2026-07-31)
+
+- Source review confirmed the standard `MediaSession` / `MediaStyle` path keeps
+  `ACTION_SEEK_TO` gated by non-live `durationMs > 0`, writes buffered position,
+  uses optimistic seek state, and drops short-lived stale position ticks.
+- GitHub Actions run `30550668539` completed Analyze/Test and the Android release
+  build successfully with the notification adaptation and progress code present.
+- Physical-device OEM checks remain a release QA item: expanded scrubber + drag
+  seek should be sampled on AOSP/Pixel, Vivo/OriginOS and one additional OEM.
+  This record does not claim hardware execution; rewind/fast-forward remain the
+  documented fallback where an OEM hides the standard scrubber.
+
 ## Refresh log
 
 - 2026-07-17: Mapped Lumen Android 11-17 Vivo notes onto PiliPlus; enabled predictive back; added network security config + intent matching flags; fixed UCrop exported; hardened Seal URI grants; documented N/A product differences.
 - 2026-07-24: Media notification API 11–17: FGS immediate behavior (S+), silent LOW channel, seekable MediaStyle duration write-back; documented POST_NOTIFICATIONS / mediaPlayback while-in-use expectations.
+- 2026-07-31: Recorded source/CI verification and kept physical-device OEM validation as an explicit release QA item rather than assuming it was executed.

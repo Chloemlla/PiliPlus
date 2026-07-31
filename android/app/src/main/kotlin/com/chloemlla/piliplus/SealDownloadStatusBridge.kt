@@ -34,6 +34,8 @@ object SealDownloadStatusBridge {
     private const val EXTRA_CONTENT_URI = "content_uri"
     private const val EXTRA_DISPLAY_NAME = "display_name"
     private const val EXTRA_MIME_TYPE = "mime_type"
+    private const val EXTRA_STRIP_RESULT = "strip_result"
+    private const val EXTRA_STRIP_MESSAGE = "strip_message"
     private const val PROTOCOL_VERSION = 1
     private const val MAX_QUEUED = 32
 
@@ -156,6 +158,8 @@ object SealDownloadStatusBridge {
             "content_uri" to data.getStringExtra(EXTRA_CONTENT_URI),
             "display_name" to data.getStringExtra(EXTRA_DISPLAY_NAME),
             "mime_type" to data.getStringExtra(EXTRA_MIME_TYPE),
+            "strip_result" to data.getStringExtra(EXTRA_STRIP_RESULT),
+            "strip_message" to data.getStringExtra(EXTRA_STRIP_MESSAGE),
         )
     }
 }

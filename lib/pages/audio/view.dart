@@ -34,8 +34,8 @@ import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
-import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide DraggableScrollableSheet;
@@ -595,7 +595,10 @@ class _AudioPageState extends State<AudioPage> {
         Get.back();
         if (!isCurr) {
           _controller.playMode.value = playMode;
-          GStorage.setting.put(SettingBoxKey.audioPlayMode, playMode.index);
+          Persistence.background(
+            GStorage.settingsStore.setAudioPlayMode(playMode),
+            label: 'audio play mode',
+          );
         }
       },
       child: Column(

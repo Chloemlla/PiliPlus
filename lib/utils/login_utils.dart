@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/user.dart';
 import 'package:pili_plus/main.dart';
@@ -11,6 +12,7 @@ import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/utils/web_cookie_sync.dart';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' show Digest;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
@@ -18,6 +20,26 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract final class LoginUtils {
+  static Future<void> initializeSession() async {
+    Request.installAccountManager();
+    Accounts.configureSessionHandlers(
+      activateAccount: Request.buvidActive,
+      onMainLogin: onLoginMain,
+      onMainLogout: onLogoutMain,
+    );
+    await Accounts.refresh();
+    await setWebCookie();
+
+    if (Accounts.main.isLogin) {
+      final coin = Pref.userInfoCache?.money;
+      if (coin == null) {
+        await syncCoin();
+      } else {
+        GlobalData().coins = coin;
+      }
+    }
+  }
+
   static Future<void> syncCoin() async {
     final res = await UserHttp.getCoin();
     if (res case Success(:final response)) {
@@ -33,26 +55,19 @@ abstract final class LoginUtils {
     final webManager = web.CookieManager.instance(
       webViewEnvironment: webViewEnvironment,
     );
-    await Future.wait(
-      cookies.map(
-        (cookie) async {
-          try {
-            await webManager.setCookie(
-              url: web.WebUri('https://www.bilibili.com/'),
-              name: cookie.name,
-              value: cookie.value,
-              path: cookie.path ?? '/',
-              domain: cookie.domain,
-              isSecure: cookie.secure,
-              isHttpOnly: cookie.httpOnly,
-            );
-          } catch (error) {
-            throw StateError(
-              'Failed to sync WebView cookie ${cookie.name}: $error',
-            );
-          }
-        },
-      ),
+    await WebCookieSync.writeAll(
+      cookies,
+      write: (origin, cookie) async {
+        await webManager.setCookie(
+          url: web.WebUri(origin.toString()),
+          name: cookie.name,
+          value: cookie.value,
+          path: cookie.path ?? '/',
+          domain: cookie.domain,
+          isSecure: cookie.secure,
+          isHttpOnly: cookie.httpOnly,
+        );
+      },
     );
   }
 

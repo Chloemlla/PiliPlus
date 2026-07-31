@@ -33,6 +33,7 @@ import 'package:pili_plus/utils/app_sign.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/recommend_filter.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -569,12 +570,15 @@ abstract final class VideoHttp {
     if (res.data['code'] == 0) {
       try {
         final replyInfo = RequestUtils.replyCast(res.data['data']['reply']);
-        GStorage.replyCacheStore.put(
-          replyInfo.id.toString(),
-          (replyInfo.deepCopy()
-                ..unknownFields.clear()
-                ..clearTrackInfo())
-              .writeToBuffer(),
+        Persistence.background(
+          GStorage.replyCacheStore.put(
+            replyInfo.id.toString(),
+            (replyInfo.deepCopy()
+                  ..unknownFields.clear()
+                  ..clearTrackInfo())
+                .writeToBuffer(),
+          ),
+          label: 'reply cache add',
         );
         return Success(replyInfo);
       } catch (e, s) {
@@ -602,7 +606,10 @@ abstract final class VideoHttp {
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
-      GStorage.replyCacheStore.delete(rpid.toString());
+      Persistence.background(
+        GStorage.replyCacheStore.delete(rpid.toString()),
+        label: 'reply cache delete',
+      );
       return const Success(null);
     } else {
       return const Error('请退出账号后重新登录');
@@ -1084,4 +1091,3 @@ abstract final class VideoHttp {
     return Error(res.data['message']);
   }
 }
-

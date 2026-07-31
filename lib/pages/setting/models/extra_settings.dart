@@ -322,6 +322,18 @@ List<SettingsModel> get extraSettings => [
     },
   ),
   NormalModel(
+    title: '下载管理',
+    subtitle: '管理 Seal 下载任务',
+    leading: const Icon(Icons.download_outlined),
+    onTap: (context, setState) => Get.toNamed('/downloadManager'),
+  ),
+  NormalModel(
+    title: '弹幕高亮',
+    subtitle: '设置关键词高亮规则',
+    leading: const Icon(Icons.highlight),
+    onTap: (context, setState) => Get.toNamed('/danmakuHighlight'),
+  ),
+  NormalModel(
     title: '横向滑动阈值',
     getSubtitle: () => '当前:「${Pref.touchSlopH}」，系统默认值: $deviceTouchSlop',
     onTap: _showTouchSlopDialog,

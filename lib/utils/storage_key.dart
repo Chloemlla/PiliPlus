@@ -263,7 +263,17 @@ abstract final class LocalCacheKey {
       timeStamp = 'timeStamp',
       buvid = 'buvid',
       watchProgressWriteOrder = 'watchProgressWriteOrder',
-      replyWriteOrder = 'replyWriteOrder';
+      replyWriteOrder = 'replyWriteOrder',
+      favoriteReplyWriteOrder = 'favoriteReplyWriteOrder',
+      favoriteReplyMigrationV1 = 'favoriteReplyMigrationV1',
+          // PiP Persistent Mode
+          pipVideoBvid =
+          'pipVideoBvid',
+      pipVideoCid = 'pipVideoCid',
+      pipVideoPosition = 'pipVideoPosition',
+      pipVideoTitle = 'pipVideoTitle',
+      pipVideoCover = 'pipVideoCover',
+      autoEnterPipOnMinimize = 'autoEnterPipOnMinimize';
 }
 
 abstract final class VideoBoxKey {
@@ -276,6 +286,3 @@ abstract final class VideoBoxKey {
       speedsList = 'speedsList',
       cacheVideoFit = 'cacheVideoFit';
 }
-
-
-

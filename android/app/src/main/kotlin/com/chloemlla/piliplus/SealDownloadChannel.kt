@@ -106,10 +106,11 @@ internal class SealDownloadChannel(
         val useCookies = call.argument<Boolean>("useCookies")
         val cookiesRequired = call.argument<Boolean>("cookiesRequired") ?: false
         val hasCookies = !cookies.isNullOrBlank()
-        // Protocol v2 when strip or cookie extras present; Seal accepts 1..2.
-        // Always send v2 for strip/cookie paths; otherwise keep v1 for pure legacy callers.
+        // Strip concat/status semantics require v3; cookie-only remains v2.
         val protocolVersion =
-            if (stripSegments || keepSections.isNotEmpty() || hasCookies) {
+            if (stripSegments || keepSections.isNotEmpty()) {
+                PROTOCOL_VERSION_V3
+            } else if (hasCookies) {
                 PROTOCOL_VERSION_V2
             } else {
                 PROTOCOL_VERSION
@@ -257,6 +258,7 @@ internal class SealDownloadChannel(
         const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
         const val PROTOCOL_VERSION = 1
         const val PROTOCOL_VERSION_V2 = 2
+        const val PROTOCOL_VERSION_V3 = 3
         const val EXTRA_PROTOCOL_VERSION = "protocol_version"
         const val EXTRA_URL = "url"
         const val EXTRA_URLS = "urls"

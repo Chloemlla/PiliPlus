@@ -19,7 +19,6 @@ import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_svg/svg.dart';
@@ -164,15 +163,14 @@ class _MediaPageState extends CommonPageState<MinePage>
           ),
           msgBadge(_mainController),
         ],
-        if (GStorage.replyCacheStore.isEnabled)
-          IconButton(
-            iconSize: iconSize,
-            padding: padding,
-            style: style,
-            tooltip: '收藏的评论',
-            onPressed: () => Get.toNamed('/myReply'),
-            icon: const Icon(Icons.star_outline),
-          ),
+        IconButton(
+          iconSize: iconSize,
+          padding: padding,
+          style: style,
+          tooltip: '收藏的评论',
+          onPressed: () => Get.toNamed('/myReply'),
+          icon: const Icon(Icons.star_outline),
+        ),
         Obx(
           () {
             final anonymity = MineController.anonymity.value;

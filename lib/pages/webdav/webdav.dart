@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/pages/webdav/webdav_backup_transaction.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -68,25 +70,35 @@ class WebDav {
       final path = '$_webdavDirectory/$_fileName';
       final tempPath = '$path.tmp.${DateTime.now().millisecondsSinceEpoch}';
       final backupPath = '$path.bak';
-      try {
-        await _client!.write(tempPath, utf8.encode(data));
-        final uploaded = await _client!.read(tempPath);
-        if (utf8.decode(uploaded) != data) {
-          throw const FormatException('WebDAV upload verification failed');
-        }
-        try {
-          await _client!.copy(path, backupPath, true);
-        } catch (_) {
-          // The official backup remains untouched when no previous file exists.
-        }
-        await _client!.rename(tempPath, path, true);
-        SmartDialog.showToast('备份成功');
-      } catch (_) {
-        try {
-          await _client!.remove(tempPath);
-        } catch (_) {}
-        rethrow;
-      }
+      await replaceWebDavBackup(
+        officialPath: path,
+        temporaryPath: tempPath,
+        backupPath: backupPath,
+        data: utf8.encode(data),
+        write: (path, data) async {
+          await _client!.write(path, data);
+        },
+        read: _client!.read,
+        exists: (path) async {
+          try {
+            await _client!.readProps(path);
+            return true;
+          } on DioException catch (error) {
+            if (error.response?.statusCode == 404) return false;
+            rethrow;
+          }
+        },
+        copy: (source, destination, overwrite) async {
+          await _client!.copy(source, destination, overwrite);
+        },
+        rename: (source, destination, overwrite) async {
+          await _client!.rename(source, destination, overwrite);
+        },
+        remove: (path) async {
+          await _client!.remove(path);
+        },
+      );
+      SmartDialog.showToast('备份成功');
     } catch (e) {
       SmartDialog.showToast('备份失败: $e');
     }

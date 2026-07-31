@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models/user/danmaku_rule_adapter.dart';
 import 'package:pili_plus/models/user/info.dart';
+import 'package:pili_plus/services/crash/crash_reporter.dart';
 import 'package:pili_plus/utils/android/android_mmkv_box.dart';
 import 'package:pili_plus/utils/android/android_mmkv_storage_codec.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -15,8 +16,11 @@ import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/set_int_adapter.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/settings_backup_validator.dart';
+import 'package:pili_plus/utils/storage/favorite_reply_migration.dart';
+import 'package:pili_plus/utils/storage/favorite_reply_store.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage/reply_cache_store.dart';
+import 'package:pili_plus/utils/storage/settings_import_transaction.dart';
 import 'package:pili_plus/utils/storage/settings_store.dart';
 import 'package:pili_plus/utils/storage/watch_progress_store.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -31,9 +35,11 @@ abstract final class GStorage {
   static late final Box<dynamic> video;
   static late final Box<int> watchProgress;
   static late final Box<Uint8List>? reply;
+  static late final Box<Uint8List> favoriteReply;
   static late final SettingsStore settingsStore;
   static late final WatchProgressStore watchProgressStore;
   static late final ReplyCacheStore replyCacheStore;
+  static late final FavoriteReplyStore favoriteReplyStore;
 
   static Future<void> init() async {
     Hive.init(path.join(appSupportDirPath, 'hive'));
@@ -110,22 +116,33 @@ abstract final class GStorage {
     );
     await watchProgressStore.trim();
 
-    if (setting.get(SettingBoxKey.saveReply, defaultValue: true) as bool) {
-      reply = await openAndroidMmkvBackedBox<Uint8List>(
-        name: 'reply',
-        keyComparator: _intStrDescKeyComparator,
-        loadMode: AndroidMmkvLoadMode.lazy,
-        openHive: () => Hive.openBox<Uint8List>(
-          'reply',
-          keyComparator: _intStrDescKeyComparator,
-          compactionStrategy: (entries, deletedEntries) {
-            return deletedEntries > 10;
-          },
-        ),
-      );
-    } else {
-      reply = null;
-    }
+    favoriteReply = await _openReplyBox('favoriteReply');
+    favoriteReplyStore = FavoriteReplyStore(
+      favoriteReply,
+      orderStore: localCache,
+    );
+    await favoriteReplyStore.trim();
+
+    final shouldSaveReply =
+        setting.get(SettingBoxKey.saveReply, defaultValue: true) as bool;
+    final shouldMigrateFavorites =
+        localCache.get(LocalCacheKey.favoriteReplyMigrationV1) != true;
+    reply = await prepareLegacyReplyStorage(
+      shouldSaveReply: shouldSaveReply,
+      shouldMigrateFavorites: shouldMigrateFavorites,
+      openLegacyBox: () => _openReplyBox('reply'),
+      destination: favoriteReplyStore,
+      markerStore: localCache,
+      onError: (error, stackTrace, {required operation, required reason}) {
+        CrashReporter.recordErrorSync(
+          error,
+          stackTrace,
+          module: 'storage',
+          operation: operation,
+          reason: reason,
+        );
+      },
+    );
     replyCacheStore = ReplyCacheStore(
       reply,
       orderStore: localCache,
@@ -159,38 +176,52 @@ abstract final class GStorage {
     final importedWebDavPassword = settingData.remove(
       SettingBoxKey.webdavPassword,
     );
-    final settingSnapshot = setting.toMap();
-    final videoSnapshot = video.toMap();
     final webDavPasswordSnapshot = SettingSecretStore.read(
       SettingBoxKey.webdavPassword,
     );
 
-    try {
-      await setting.clear();
-      await setting.putAll(settingData);
-      await video.clear();
-      await video.putAll(videoData);
-      if (importedWebDavPassword != null) {
-        SettingSecretStore.write(
-          SettingBoxKey.webdavPassword,
-          importedWebDavPassword.toString(),
-        );
-      }
-    } catch (_) {
-      await setting.clear();
-      await setting.putAll(settingSnapshot);
-      await video.clear();
-      await video.putAll(videoSnapshot);
-      if (webDavPasswordSnapshot == null) {
-        SettingSecretStore.delete(SettingBoxKey.webdavPassword);
-      } else {
+    await replaceSettingsSections(
+      setting: SettingsImportTarget(
+        read: setting.toMap,
+        clear: () async {
+          await setting.clear();
+        },
+        writeAll: setting.putAll,
+      ),
+      settingValues: settingData,
+      video: SettingsImportTarget(
+        read: video.toMap,
+        clear: () async {
+          await video.clear();
+        },
+        writeAll: video.putAll,
+      ),
+      videoValues: videoData,
+      applySupplemental: importedWebDavPassword == null
+          ? null
+          : () => Future<void>.sync(
+              () => SettingSecretStore.write(
+                SettingBoxKey.webdavPassword,
+                importedWebDavPassword.toString(),
+              ),
+            ),
+      restoreSupplemental: () => Future<void>.sync(() {
+        if (webDavPasswordSnapshot == null) {
+          SettingSecretStore.delete(SettingBoxKey.webdavPassword);
+          return;
+        }
         SettingSecretStore.write(
           SettingBoxKey.webdavPassword,
           webDavPasswordSnapshot,
         );
-      }
-      rethrow;
-    }
+      }),
+      verifySupplemental: () {
+        if (SettingSecretStore.read(SettingBoxKey.webdavPassword) !=
+            webDavPasswordSnapshot) {
+          throw StateError('Settings secret rollback verification failed');
+        }
+      },
+    );
   }
 
   static Map<dynamic, dynamic> sanitizeSettingsForExport(
@@ -230,6 +261,7 @@ abstract final class GStorage {
       Accounts.account.compact(),
       watchProgress.compact(),
       ?reply?.compact(),
+      favoriteReply.compact(),
     ]);
   }
 
@@ -243,21 +275,45 @@ abstract final class GStorage {
       Accounts.account.close(),
       watchProgress.close(),
       ?reply?.close(),
+      favoriteReply.close(),
     ]);
   }
 
-  static Future<List<void>> clear() {
-    return Future.wait([
+  static Future<void> clear() async {
+    // Clear the bounded stores before their shared order metadata box. Running
+    // these clears beside localCache.clear() can recreate stale LRU keys after
+    // the cache box has already been emptied.
+    await Future.wait([
+      replyCacheStore.clear(),
+      favoriteReplyStore.clear(),
+    ]);
+    await Future.wait([
       userInfo.clear(),
       historyWord.clear(),
-      localCache.clear(),
       setting.clear(),
       video.clear(),
       Accounts.clear(),
       Future<void>.sync(SettingSecretStore.clear),
       watchProgress.clear(),
-      ?reply?.clear(),
     ]);
+    await localCache.clear();
+    // A full clear must not resurrect a closed legacy reply box on restart.
+    await localCache.put(LocalCacheKey.favoriteReplyMigrationV1, true);
+  }
+
+  static Future<Box<Uint8List>> _openReplyBox(String name) {
+    return openAndroidMmkvBackedBox<Uint8List>(
+      name: name,
+      keyComparator: _intStrDescKeyComparator,
+      loadMode: AndroidMmkvLoadMode.lazy,
+      openHive: () => Hive.openBox<Uint8List>(
+        name,
+        keyComparator: _intStrDescKeyComparator,
+        compactionStrategy: (entries, deletedEntries) {
+          return deletedEntries > 10;
+        },
+      ),
+    );
   }
 
   static int _intStrDescKeyComparator(dynamic k1, dynamic k2) {

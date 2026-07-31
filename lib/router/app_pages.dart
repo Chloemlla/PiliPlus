@@ -4,8 +4,10 @@ import 'package:pili_plus/pages/audio/view.dart';
 import 'package:pili_plus/pages/blacklist/view.dart';
 import 'package:pili_plus/pages/bubble/view.dart';
 import 'package:pili_plus/pages/danmaku_block/view.dart';
+import 'package:pili_plus/pages/danmaku_highlight/view.dart';
 import 'package:pili_plus/pages/dlna/view.dart';
 import 'package:pili_plus/pages/download/view.dart';
+import 'package:pili_plus/pages/download_manager/view.dart';
 import 'package:pili_plus/pages/dynamics/view.dart';
 import 'package:pili_plus/pages/dynamics_create_vote/view.dart';
 import 'package:pili_plus/pages/dynamics_detail/view.dart';
@@ -179,5 +181,7 @@ class Routes {
     GetPage(name: '/ssWeb', page: () => const MemberSSWeb()),
     GetPage(name: '/memberGuard', page: () => const MemberGuard()),
     GetPage(name: '/bubble', page: () => const BubblePage()),
+    GetPage(name: '/downloadManager', page: () => const DownloadManagerPage()),
+    GetPage(name: '/danmakuHighlight', page: () => const DanmakuHighlightPage()),
   ];
 }

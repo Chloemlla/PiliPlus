@@ -603,10 +603,11 @@ index 59de8bae20b..2084a40b24d 100644
 -          globalPosition: details.globalPosition,
 -        );
 -        if (lastSecondaryTapDownPositionWasOnActiveSelection) {
-+        // final bool lastSecondaryTapDownPositionWasOnActiveSelection = _positionIsOnActiveSelection(
-+        //   globalPosition: details.globalPosition,
-+        // );
-+        if (_selectionDelegate.value.selectionRects.isNotEmpty) {
++        final bool lastSecondaryTapDownPositionWasOnActiveSelection =
++            _positionIsOnActiveSelection(
++              globalPosition: details.globalPosition,
++            );
++        if (lastSecondaryTapDownPositionWasOnActiveSelection) {
            // Restore _lastSecondaryTapDownPosition since it may be cleared if a user
            // accesses contextMenuAnchors.
            _lastSecondaryTapDownPosition = details.globalPosition;

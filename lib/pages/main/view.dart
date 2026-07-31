@@ -23,7 +23,6 @@ import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
-import 'package:pili_plus/utils/storage_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -144,7 +143,7 @@ class _MainAppState extends PopScopeState<MainApp>
   @override
   void onWindowMaximize() {
     Persistence.background(
-      _settings.putSetting(SettingBoxKey.isWindowMaximized, true),
+      _settings.setWindowMaximized(true),
       label: 'window maximized state',
     );
   }
@@ -152,7 +151,7 @@ class _MainAppState extends PopScopeState<MainApp>
   @override
   void onWindowUnmaximize() {
     Persistence.background(
-      _settings.putSetting(SettingBoxKey.isWindowMaximized, false),
+      _settings.setWindowMaximized(false),
       label: 'window restored state',
     );
   }
@@ -163,10 +162,7 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Offset offset = await windowManager.getPosition();
-    await _settings.putSetting(SettingBoxKey.windowPosition, [
-      offset.dx,
-      offset.dy,
-    ]);
+    await _settings.setWindowPosition(left: offset.dx, top: offset.dy);
   }
 
   @override
@@ -175,10 +171,12 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Rect bounds = await windowManager.getBounds();
-    await _settings.putSettings({
-      SettingBoxKey.windowSize: [bounds.width, bounds.height],
-      SettingBoxKey.windowPosition: [bounds.left, bounds.top],
-    });
+    await _settings.setWindowBounds(
+      width: bounds.width,
+      height: bounds.height,
+      left: bounds.left,
+      top: bounds.top,
+    );
   }
 
   @override

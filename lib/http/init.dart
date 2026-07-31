@@ -6,11 +6,8 @@ import 'package:pili_plus/http/api.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/network_security_policy.dart';
 import 'package:pili_plus/http/retry_interceptor.dart';
-import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_manager/account_mgr.dart';
-import 'package:pili_plus/utils/global_data.dart';
-import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/log_redactor.dart';
 import 'package:pili_plus/utils/clash_compat.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
@@ -30,6 +27,7 @@ class Request {
 
   static final Request _instance = Request._internal();
   static late AccountManager accountManager;
+  static bool _accountManagerInstalled = false;
   static final _enableHttp2 = Pref.enableHttp2;
   static late final Dio dio;
   static Dio? _http11Dio;
@@ -37,21 +35,11 @@ class Request {
       _http11Dio ??= _enableHttp2 ? _cloneHttp11Dio() : dio;
   factory Request() => _instance;
 
-  /// 设置cookie
-  static Future<void> setCookie() async {
+  static void installAccountManager() {
+    if (_accountManagerInstalled) return;
     accountManager = AccountManager();
     dio.interceptors.add(accountManager);
-    await Accounts.refresh();
-    await LoginUtils.setWebCookie();
-
-    if (Accounts.main.isLogin) {
-      final coin = Pref.userInfoCache?.money;
-      if (coin == null) {
-        await LoginUtils.syncCoin();
-      } else {
-        GlobalData().coins = coin;
-      }
-    }
+    _accountManagerInstalled = true;
   }
 
   static Future<void> buvidActive(Account account) async {
@@ -133,7 +121,8 @@ class Request {
     late final String systemProxyHost;
     late final int? systemProxyPort;
     // Clash VPN auto-adapt: traffic already goes through TUN — do not stack HTTP proxy.
-    final skipManualProxy = Pref.clashAutoAdapt &&
+    final skipManualProxy =
+        Pref.clashAutoAdapt &&
         Platform.isAndroid &&
         ClashCompat.isClashVpnRouting;
     if (Pref.enableSystemProxy && !skipManualProxy) {
@@ -291,15 +280,17 @@ class Request {
 
   static void _startClashAutoAdapt() {
     if (!Platform.isAndroid) return;
-    unawaited(ClashCompat.ensureStarted().then((_) async {
-      // Keep native process-binding flag in sync with Pref.
-      await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
-      _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
-      _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
-      if (Pref.clashAutoAdapt) {
-        _resetAdaptersForNetworkChange();
-      }
-    }));
+    unawaited(
+      ClashCompat.ensureStarted().then((_) async {
+        // Keep native process-binding flag in sync with Pref.
+        await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
+        _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+        _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
+        if (Pref.clashAutoAdapt) {
+          _resetAdaptersForNetworkChange();
+        }
+      }),
+    );
     if (_clashStatusSub != null) return;
     _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
       final prefEnabled = Pref.clashAutoAdapt;
@@ -428,4 +419,3 @@ class Request {
     allowMalformed: true,
   );
 }
-

@@ -38,8 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle:
-          '本构建只列近期变化：同步上游界面优化，完善本地评论收藏，并修复返回主页后的布局与 Android 状态栏显示。',
+      subtitle: '本构建只列近期变化：修复主页返回与 Android 系统界面，完善评论收藏、界面交互、数据可靠性和 Seal 去广告成品。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -50,26 +49,27 @@ abstract final class WhatsNewData {
     ),
     const ImprovementsGuidePageData(
       icon: Icons.brightness_6_outlined,
-      title: '主页返回与 Android 状态栏',
-      subtitle: '窗口、方向或主题变化后，主页布局与系统栏会按当前状态重新同步。',
+      title: '主页与 Android 系统界面',
+      subtitle: '主页布局、系统栏与媒体通知会按当前窗口和播放状态正确同步。',
       platformHint: 'Android',
       bullets: [
         '从横屏、视频或沉浸式页面返回竖屏主页后，不再残留挤压正文的左侧空白栏。',
         '状态栏保持透明，图标明暗会随当前页面与主题重新更新。',
+        '非直播内容在真实时长可用时，系统媒体通知可显示并拖动进度；直播或未知时长不会显示误导性 seek。',
         '窗口尺寸或方向变化时会重新判断导航布局，避免沿用旧页面状态。',
       ],
-      tip: '宽屏横屏与手动启用的侧边栏仍保持原有布局。',
+      tip: '宽屏横屏与手动启用的侧边栏仍保持原有布局；少数 OEM 隐藏进度条时仍可用快进/快退。',
     ),
     const ImprovementsGuidePageData(
-      icon: Icons.star_outline,
-      title: '评论收藏与查看入口',
-      subtitle: '评论更多菜单现在支持本地收藏，并可在我的页集中查看。',
+      icon: Icons.bookmarks_outlined,
+      title: '本地评论收藏与选区修复',
+      subtitle: '主动收藏不再与“自动记录评论”混用，评论选区菜单也恢复了安全、准确的行为。',
       bullets: [
-        '收藏数据仅保存在本机，不会调用 Bilibili 收藏夹接口。',
-        '收藏列表保留表情、图片与来源跳转，支持取消收藏。',
-        '支持导入、导出，并可在其它设置中控制本地评论记录。',
+        '关闭“记录评论”后仍可收藏、查看、导入和导出；旧本地数据会无损迁移到独立收藏夹。',
+        '导入按评论 ID 去重，坏条目会跳过并显示摘要；清空与取消收藏会立即刷新列表。',
+        '“加入过滤”遇到空选区不再崩溃；Windows 右键仅在命中当前选区时保留选择。',
       ],
-      tip: '打开评论更多菜单，选择「收藏评论」即可保存。',
+      tip: '入口：评论更多菜单 → 收藏评论；我的 → 收藏的评论。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.dashboard_outlined,
@@ -81,6 +81,28 @@ abstract final class WhatsNewData {
         '动态投票状态更直观，长按文本时的选区绘制更精确。',
       ],
       tip: '这些变化来自近期上游同步，不再重复罗列更早的分支功能。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.storage_outlined,
+      title: '设置与账号数据更稳',
+      subtitle: '高风险设置写入改走类型明确的存储接口，账号别名与后台写入失败也有统一处理。',
+      bullets: [
+        '窗口位置、音量与播放模式会在写入前校验，后台保存失败会进入可诊断的崩溃记录。',
+        '导入或刷新账号时按 canonical key 合并别名，先安全写入再删除过期键。',
+        'CI 恢复导入与页面裸存储写入边界检查，防止同类依赖环和静默写入回归。',
+      ],
+      tip: '这些调整不改变现有设置项位置和账号切换入口。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.content_cut_rounded,
+      title: 'Seal 去广告输出连续成品',
+      subtitle: '多个正片保留区间不再各自产生片段文件，而会经专用流程合并为一个可打开、分享的成品。',
+      bullets: [
+        '仍由 PiliPlus 读取空降助手标记、计算保留区间并展示逐段去除报告。',
+        'Seal 区分普通多片段导出与去广告合并任务，不影响多 P、Cookie 和常规下载。',
+        '若分段合并失败，会清理临时片段后下载完整源并应用同一组保留区间；再次失败只给出可重试错误，不把含广告原片当作成功。',
+      ],
+      tip: '路径：视频菜单 → 下载并去除空降助手标记；设置 → 其它设置。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,

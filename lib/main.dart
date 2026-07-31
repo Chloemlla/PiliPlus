@@ -33,6 +33,7 @@ import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/json_file_handler.dart';
+import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/max_screen_size.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -182,7 +183,7 @@ Future<void> _main() async {
   }
 
   Request();
-  await Request.setCookie();
+  await LoginUtils.initializeSession();
   RequestUtils.syncHistoryStatus();
 
   SmartDialog.config.toast = SmartConfigToast(displayType: .onlyRefresh);

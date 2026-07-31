@@ -305,12 +305,25 @@ class PlPlayerController with BlockConfigMixin {
   void enterPip({bool autoEnter = false}) {
     if (videoPlayerController != null) {
       final state = videoPlayerController!.state;
+      // Get video metadata from controller state or media item
+      String? title;
+      String? cover;
+      if (videoPlayerServiceHandler != null) {
+        final mediaItem = videoPlayerServiceHandler!._currentMediaItem;
+        title = mediaItem?.title;
+        cover = mediaItem?.artUri?.toString();
+      }
       PageUtils.enterPip(
         autoEnter: autoEnter,
         width: state.width == 0 ? width : state.width,
         height: state.height == 0 ? height : state.height,
         isLive: isLive,
         isPlaying: playerStatus.isPlaying,
+        bvid: _bvid,
+        cid: cid,
+        positionMs: position.value * 1000,
+        title: title,
+        cover: cover,
       );
     }
   }

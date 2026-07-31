@@ -67,12 +67,13 @@
             android:theme="@style/QrScannerTheme" />
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode|navigation"
             android:exported="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
+            android:launchIntoPictureInPictureMode="never"
             android:theme="@style/LaunchTheme"
             android:windowSoftInputMode="adjustResize">
 

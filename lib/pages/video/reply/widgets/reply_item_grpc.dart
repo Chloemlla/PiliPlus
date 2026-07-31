@@ -1,3 +1,4 @@
+import 'dart:async' show FutureOr;
 import 'dart:math';
 
 import 'package:pili_plus/common/assets.dart';
@@ -40,6 +41,7 @@ import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -985,7 +987,7 @@ class ReplyItemGrpc extends StatelessWidget {
   Widget morePanel({
     required BuildContext context,
     required ReplyInfo item,
-    required VoidCallback onDelete,
+    required FutureOr<void> Function() onDelete,
     required bool isSubReply,
   }) {
     late String message = item.content.message;
@@ -1030,9 +1032,12 @@ class ReplyItemGrpc extends StatelessWidget {
                           ..replies.clear()
                           ..clearTrackInfo())
                         .writeToBuffer();
-                GStorage.replyCacheStore.putAll({
-                  for (var i = oid; i < oid + 1000; i++) i.toString(): data,
-                });
+                Persistence.background(
+                  GStorage.replyCacheStore.putAll({
+                    for (var i = oid; i < oid + 1000; i++) i.toString(): data,
+                  }),
+                  label: 'debug reply cache fill',
+                );
               },
               minLeadingWidth: 0,
               leading: const Icon(Icons.bug_report_outlined, size: 19),
@@ -1098,7 +1103,7 @@ class ReplyItemGrpc extends StatelessWidget {
                 SmartDialog.dismiss();
                 if (res.isSuccess) {
                   SmartDialog.showToast('删除成功');
-                  onDelete();
+                  await onDelete();
                 } else {
                   SmartDialog.showToast('删除失败, $res');
                 }
@@ -1123,7 +1128,7 @@ class ReplyItemGrpc extends StatelessWidget {
                       banUid: banUid,
                     );
                     if (res.isSuccess) {
-                      onDelete();
+                      await onDelete();
                     }
                     return res;
                   },
@@ -1177,15 +1182,18 @@ class ReplyItemGrpc extends StatelessWidget {
             onTap: () async {
               Get.back();
               final key = item.id.toString();
-              if (GStorage.replyCacheStore.containsKey(key)) {
-                await GStorage.replyCacheStore.delete(key);
-                SmartDialog.showToast('已取消收藏');
-                // MyReply uses replyLevel 0; refresh local list only there.
-                if (replyLevel == 0) {
-                  onDelete();
+              if (GStorage.favoriteReplyStore.containsKey(key)) {
+                // MyReply owns an async controller callback that removes the
+                // store entry and refreshes its list. Other level-0 consumers
+                // (for example SavePanel) do not, so delete through the store.
+                if (replyLevel == 0 && this.onDelete != null) {
+                  await onDelete();
+                } else {
+                  await GStorage.favoriteReplyStore.delete(key);
                 }
+                SmartDialog.showToast('已取消收藏');
               } else {
-                await GStorage.replyCacheStore.put(
+                await GStorage.favoriteReplyStore.put(
                   key,
                   (item.deepCopy()
                         ..unknownFields.clear()
@@ -1198,13 +1206,13 @@ class ReplyItemGrpc extends StatelessWidget {
             },
             minLeadingWidth: 0,
             leading: Icon(
-              GStorage.replyCacheStore.containsKey(item.id.toString())
+              GStorage.favoriteReplyStore.containsKey(item.id.toString())
                   ? Icons.star
                   : Icons.star_outline,
               size: 19,
             ),
             title: Text(
-              GStorage.replyCacheStore.containsKey(item.id.toString())
+              GStorage.favoriteReplyStore.containsKey(item.id.toString())
                   ? '取消收藏'
                   : '收藏评论',
               style: style,

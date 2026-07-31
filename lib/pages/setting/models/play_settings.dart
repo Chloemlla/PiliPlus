@@ -13,6 +13,7 @@ import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -279,9 +280,8 @@ List<SettingsModel> get playSettings => [
     leading: const Icon(Icons.repeat),
     value: () => Pref.playRepeat,
     items: PlayRepeat.values,
-    onSelected: (value, setState) => GStorage.video
-        .put(VideoBoxKey.playRepeat, value.index)
-        .whenComplete(setState),
+    onSelected: (value, setState) =>
+        GStorage.settingsStore.setVideoPlayRepeat(value).whenComplete(setState),
   ),
   const SwitchModel(
     title: '播放器设置仅对当前生效',
@@ -420,12 +420,10 @@ Future<void> _showMaxVolumeDialog(
     value: Pref.maxVolume * 100,
     onChanged: (rawValue) {
       final maxVolume = (rawValue / 100).toPrecision(2);
-      if (Pref.desktopVolume > maxVolume) {
-        GStorage.setting.put(SettingBoxKey.desktopVolume, maxVolume);
-      }
-      GStorage.setting
-          .put(SettingBoxKey.maxVolume, maxVolume)
-          .whenComplete(setState);
+      Persistence.background(
+        GStorage.settingsStore.setMaxVolume(maxVolume).whenComplete(setState),
+        label: 'maximum player volume',
+      );
     },
   );
 }

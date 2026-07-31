@@ -27,6 +27,7 @@ import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/services/pip_persistent_service.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/url_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -200,6 +201,11 @@ abstract final class PageUtils {
     bool autoEnter = false,
     required bool isLive,
     required bool isPlaying,
+    String? bvid,
+    int? cid,
+    int? positionMs,
+    String? title,
+    String? cover,
   }) {
     if (width != null &&
         height != null &&
@@ -212,6 +218,18 @@ abstract final class PageUtils {
         height = 9;
       }
     }
+
+    // Save PiP state for persistence across navigation
+    if (bvid != null && cid != null) {
+      PipPersistentService.instance.savePipState(
+        bvid: bvid,
+        cid: cid,
+        positionMs: positionMs ?? 0,
+        title: title,
+        cover: cover,
+      );
+    }
+
     PiliAndroidHelper.enterPip(
       width ?? 16,
       height ?? 9,

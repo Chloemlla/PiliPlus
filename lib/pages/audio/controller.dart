@@ -18,6 +18,7 @@ import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/video.dart';
 import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/pages/audio/audio_heartbeat_throttle.dart';
 import 'package:pili_plus/pages/common/common_intro_controller.dart'
     show FavMixin;
 import 'package:pili_plus/pages/dynamics_repost/view.dart';
@@ -41,9 +42,9 @@ import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
-import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/video_utils.dart';
@@ -91,7 +92,7 @@ class AudioController extends GetxController
 
   late final Rx<PlayRepeat> playMode = Pref.audioPlayMode.obs;
 
-  int _heartDuration = 0;
+  final _heartbeatThrottle = AudioHeartbeatThrottle();
 
   @override
   late final isLogin = Accounts.main.isLogin;
@@ -130,7 +131,10 @@ class AudioController extends GetxController
     PlPlayerController.instance
       ?..volume.value = volume
       ..videoPlayerController?.setVolume(volume * 100);
-    GStorage.setting.put(SettingBoxKey.desktopVolume, volume.toPrecision(3));
+    Persistence.background(
+      GStorage.settingsStore.setDesktopVolume(volume.toPrecision(3)),
+      label: 'audio desktop volume',
+    );
   }
 
   @override
@@ -221,21 +225,12 @@ class AudioController extends GetxController
       );
     }
 
-    switch (type) {
-      case .playing:
-        if (force || progress - _heartDuration >= 5) {
-          _heartDuration = progress;
-          return send();
-        }
-      case .status:
-        if (force || progress - _heartDuration >= 2) {
-          _heartDuration = progress;
-          return send();
-        }
-      case .completed:
-        return send();
-    }
-    return null;
+    final shouldReport = _heartbeatThrottle.shouldReport(
+      progress,
+      type: type,
+      force: force,
+    );
+    return shouldReport ? send() : null;
   }
 
   Future<void>? onPlay() {
@@ -249,8 +244,7 @@ class AudioController extends GetxController
   Future<void> onSeek(Duration duration) async {
     final target = duration.inSeconds;
     await player?.seek(duration);
-    if (target < _heartDuration) {
-      _heartDuration = target;
+    if (_heartbeatThrottle.resetForBackwardSeek(target)) {
       await makeHeartBeat(target, type: .status, force: true);
     }
   }
@@ -724,7 +718,7 @@ class AudioController extends GetxController
             final nextPart = parts[nextIndex];
             oid = nextPart.oid;
             this.subId = [nextPart.subId];
-            _heartDuration = 0;
+            _heartbeatThrottle.reset();
             _queryPlayUrl().then((res) {
               if (res) {
                 _videoDetailController = null;
@@ -750,7 +744,7 @@ class AudioController extends GetxController
 
   void playIndex(int index, {List<Int64>? subId}) {
     if (index == this.index && subId == null) return;
-    _heartDuration = 0;
+    _heartbeatThrottle.reset();
     this.index = index;
     final audioItem = playlist![index];
     final item = audioItem.item;

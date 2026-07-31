@@ -237,25 +237,15 @@ abstract final class SealDownloadUtils {
     final stripHint = stripSegments && stripReport != null
         ? '正在去除空降助手标记 ${stripReport.removedCount} 段…'
         : null;
-    session.message.value = stripHint ??
+    session.message.value =
+        stripHint ??
         (Pref.sealAutoStart
-            ? (count > 1
-                  ? '已委托 Seal（$count 项），正在自动入队…'
-                  : '已委托 Seal，正在自动入队…')
+            ? (count > 1 ? '已委托 Seal（$count 项），正在自动入队…' : '已委托 Seal，正在自动入队…')
             : (count > 1
                   ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
                   : '已打开 Seal，请在 Seal 中确认下载'));
     // Non-blocking: must not await SmartDialog dismiss Future (R1).
     unawaited(_showOrUpdatePanel(session));
-    if (stripReport != null) {
-      unawaited(Future<void>.delayed(const Duration(milliseconds: 400), () {
-        if (session.phase.value.isBusy ||
-            session.phase.value == SealPanelPhase.completed) {
-          _showStripReportSheet(stripReport!);
-        }
-      }));
-    }
-
     try {
       final args = <String, dynamic>{
         'url': primaryUrl,
@@ -306,9 +296,7 @@ abstract final class SealDownloadUtils {
               ? SealPanelPhase.waitingAuto
               : SealPanelPhase.waitingUi;
           session.message.value = Pref.sealAutoStart
-              ? (count > 1
-                    ? '已委托 Seal（$count 项），正在自动入队…'
-                    : '已委托 Seal，正在自动入队…')
+              ? (count > 1 ? '已委托 Seal（$count 项），正在自动入队…' : '已委托 Seal，正在自动入队…')
               : (count > 1
                     ? '已打开 Seal（$count 项），请在 Seal 中确认下载'
                     : '已打开 Seal，请在 Seal 中确认下载');
@@ -521,7 +509,6 @@ abstract final class SealDownloadUtils {
     final cookieChoice = await _resolveCookiePayload();
     if (cookieChoice == _CookieChoice.canceled) return;
 
-    final reports = <StripRemovalReport>[];
     var launched = 0;
     var stripped = 0;
     var plain = 0;
@@ -541,8 +528,9 @@ abstract final class SealDownloadUtils {
         final prepared = await _prepareStripPlan(
           ctr,
           cidOverride: cid,
-          durationMsOverride:
-              (durSec != null && durSec > 0) ? durSec * 1000 : null,
+          durationMsOverride: (durSec != null && durSec > 0)
+              ? durSec * 1000
+              : null,
           pageLabel: _partLabel(part, i),
           categories: categories,
           askCategories: false,
@@ -556,7 +544,6 @@ abstract final class SealDownloadUtils {
           keepJson = prepared.keepJson;
           report = prepared.report;
           doStrip = true;
-          reports.add(report);
           stripped++;
         } else if (prepared is _StripPrepareFail && forceStrip) {
           failed++;
@@ -591,9 +578,7 @@ abstract final class SealDownloadUtils {
     if (launched == 0) {
       await _showErrorPanel(
         title: '无法委托下载',
-        message: forceStrip
-            ? '所选分 P 均无可用空降助手标记或启动失败'
-            : '未能启动任何 Seal 下载任务',
+        message: forceStrip ? '所选分 P 均无可用空降助手标记或启动失败' : '未能启动任何 Seal 下载任务',
       );
       return;
     }
@@ -604,12 +589,6 @@ abstract final class SealDownloadUtils {
       '${plain > 0 ? '，普通 $plain' : ''}'
       '${failed > 0 ? '，跳过 $failed' : ''}',
     );
-
-    if (reports.isNotEmpty) {
-      unawaited(Future<void>.delayed(const Duration(milliseconds: 400), () {
-        _showCombinedStripReports(reports);
-      }));
-    }
   }
 
   static String _partLabel(Part part, int index) {
@@ -619,85 +598,6 @@ abstract final class SealDownloadUtils {
       return 'P$pageNo · $title';
     }
     return 'P$pageNo';
-  }
-
-  static Future<void> _showCombinedStripReports(
-    List<StripRemovalReport> reports,
-  ) async {
-    if (reports.isEmpty) return;
-    if (reports.length == 1) {
-      await _showStripReportSheet(reports.first);
-      return;
-    }
-    final context = Get.context;
-    if (context == null) return;
-    final totalRemoved =
-        reports.fold<int>(0, (s, r) => s + r.removedCount);
-    final totalDurSec =
-        (reports.fold<int>(0, (s, r) => s + r.removedDurationMs) / 1000)
-            .round();
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      constraints: BoxConstraints(
-        maxWidth: min(640, context.mediaQueryShortestSide),
-        maxHeight: context.mediaQuerySize.height * 0.8,
-      ),
-      builder: (context) {
-        final theme = Theme.of(context);
-        final cs = theme.colorScheme;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  '空降助手去除标记报告',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  '共 ${reports.length} 个分 P，去除 $totalRemoved 段（约 ${totalDurSec}s）',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: reports.length,
-                  itemBuilder: (context, index) {
-                    final r = reports[index];
-                    return ListTile(
-                      dense: true,
-                      title: Text(r.pageLabel ?? '分 P ${index + 1}'),
-                      subtitle: Text(r.summaryLabel),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showStripReportSheet(r),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                child: FilledButton.tonal(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('关闭'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   /// Launch one Seal delegate without re-prompting cookies / multi-P.
@@ -734,9 +634,7 @@ abstract final class SealDownloadUtils {
         : SealPanelPhase.waitingUi;
     session.message.value = stripSegments && stripReport != null
         ? '正在去除空降助手标记 ${stripReport.removedCount} 段…'
-        : (Pref.sealAutoStart
-              ? '已委托 Seal，正在自动入队…'
-              : '已打开 Seal，请在 Seal 中确认下载');
+        : (Pref.sealAutoStart ? '已委托 Seal，正在自动入队…' : '已打开 Seal，请在 Seal 中确认下载');
     unawaited(_showOrUpdatePanel(session));
 
     try {
@@ -818,7 +716,6 @@ abstract final class SealDownloadUtils {
       return false;
     }
   }
-
 
   static int? _resolveDurationMs(VideoDetailController ctr) {
     final fromPlay = ctr.timeLength;
@@ -1506,17 +1403,39 @@ abstract final class SealDownloadUtils {
           message: status.userFacingErrorMessage ?? 'Seal 拒绝了下载请求',
         );
       case 'completed':
+        final stripApplied = status.confirmsAppliedStrip;
+        if (current == SealPanelPhase.completed &&
+            session.hasAppliedStrip &&
+            !stripApplied) {
+          break;
+        }
         session.taskId = status.taskId ?? session.taskId;
+        if (session.stripReport != null && !stripApplied) {
+          session.contentUri = null;
+          session.displayName = null;
+          session.mimeType = null;
+          session.stripApplied = false;
+          session.stripUnconfirmed = true;
+          _finishSession(
+            session,
+            SealPanelPhase.failed,
+            message:
+                status.stripFailureMessage ??
+                'Seal 未确认片段剥离成功，未提供可打开或分享的去广告成品；请在 Seal 中重试',
+          );
+          return;
+        }
         session.contentUri = status.contentUri ?? session.contentUri;
         session.displayName = status.displayName ?? session.displayName;
         session.mimeType = status.mimeType ?? session.mimeType;
         session.phase.value = SealPanelPhase.completed;
-        if (session.stripReport != null) {
+        session.stripApplied = false;
+        session.stripUnconfirmed = false;
+        if (session.stripReport != null && stripApplied) {
+          session.stripApplied = true;
           session.message.value = session.stripReport!.summaryLabel;
           final name = session.displayName;
-          if (name != null &&
-              name.isNotEmpty &&
-              !name.contains('[去广告]')) {
+          if (name != null && name.isNotEmpty && !name.contains('[去广告]')) {
             session.displayName = '$name [去广告]';
           }
         } else {
@@ -1525,7 +1444,7 @@ abstract final class SealDownloadUtils {
               : '下载完成（文件在 Seal 中查看）';
         }
         await _showOrUpdatePanel(session);
-        if (session.stripReport != null) {
+        if (session.hasAppliedStrip) {
           unawaited(_showStripReportSheet(session.stripReport!));
         }
         return;
@@ -1573,7 +1492,6 @@ abstract final class SealDownloadUtils {
     await _showOrUpdatePanel(session);
   }
 
-
   static void _finishSession(
     _SealSession session,
     SealPanelPhase phase, {
@@ -1589,7 +1507,8 @@ abstract final class SealDownloadUtils {
     final task = status.taskId ?? '';
     final uri = status.contentUri ?? '';
     final source = status.source ?? '';
-    return '$request|$task|${status.status}|${status.errorCode ?? ''}|$uri|$source';
+    final stripResult = status.stripResult ?? '';
+    return '$request|$task|${status.status}|${status.errorCode ?? ''}|$uri|$stripResult|$source';
   }
 
   static Future<void> _showErrorPanel({
@@ -1669,7 +1588,6 @@ abstract final class SealDownloadUtils {
       }
     }
   }
-
 
   static Future<void> openContentUri({
     required String uri,
@@ -1766,11 +1684,21 @@ final class _SealSession {
   String? contentUri;
   String? displayName;
   String? mimeType;
+  bool stripApplied = false;
+  bool stripUnconfirmed = false;
+
+  bool get hasAppliedStrip => stripReport != null && stripApplied;
 
   String get kindLabel => extractAudio ? '音频' : '视频';
 
   String get metaLabel {
-    final stripTag = stripReport != null ? ' · 去广告' : '';
+    final stripTag = hasAppliedStrip
+        ? ' · 去广告'
+        : stripUnconfirmed
+        ? ' · 结果未确认'
+        : stripReport != null
+        ? ' · 片段剥离'
+        : '';
     if (itemCount > 1) {
       return '$kindLabel · $mediaTitle (${itemCount}P)$stripTag';
     }
@@ -1808,6 +1736,8 @@ final class SealDownloadStatus {
     this.contentUri,
     this.displayName,
     this.mimeType,
+    this.stripResult,
+    this.stripMessage,
     this.source,
   });
 
@@ -1821,6 +1751,8 @@ final class SealDownloadStatus {
       contentUri: map['content_uri']?.toString(),
       displayName: map['display_name']?.toString(),
       mimeType: map['mime_type']?.toString(),
+      stripResult: map['strip_result']?.toString(),
+      stripMessage: map['strip_message']?.toString(),
       source: map['source']?.toString(),
     );
   }
@@ -1833,10 +1765,20 @@ final class SealDownloadStatus {
   final String? contentUri;
   final String? displayName;
   final String? mimeType;
+  final String? stripResult;
+  final String? stripMessage;
   final String? source;
 
   bool get isTerminal =>
       status == 'completed' || status == 'failed' || status == 'canceled';
+
+  bool get confirmsAppliedStrip =>
+      stripResult?.trim().toLowerCase() == 'applied';
+
+  String? get stripFailureMessage {
+    final message = stripMessage?.trim();
+    return message == null || message.isEmpty ? null : message;
+  }
 
   bool get isAudioHint {
     final mime = mimeType?.toLowerCase() ?? '';
@@ -1860,18 +1802,21 @@ final class SealDownloadStatus {
   String? get userFacingErrorMessage {
     final message = errorMessage?.trim();
     if (message != null && message.isNotEmpty) return message;
+    final stripFailure = stripResult == 'failed' ? stripFailureMessage : null;
+    if (stripFailure != null && stripFailure.isNotEmpty) return stripFailure;
     return switch (errorCode) {
       'disabled' => 'Seal 已关闭外部下载委托',
       'auto_start_denied' => 'Seal 未允许自动开始下载',
       'invalid_url' => '无效的下载链接',
+      'invalid_sections' => '去除片段区间无效，请刷新标记后重试',
       'unsupported_version' => 'Seal 协议版本不兼容',
       'caller_denied' => 'Seal 白名单拒绝了当前应用',
       'queue_rejected' => 'Seal 请求过于频繁，请稍后再试',
       'internal_error' => 'Seal 内部错误',
       'download_failed' => 'Seal 下载失败',
       'canceled' => '已取消 Seal 下载',
-      'cookie_denied' || 'cookies_disabled' =>
-        'Seal 未允许外部 Cookie（请在 Seal → 外部下载中开启）',
+      'cookie_denied' ||
+      'cookies_disabled' => 'Seal 未允许外部 Cookie（请在 Seal → 外部下载中开启）',
       'cookie_invalid' || 'cookies_invalid' => 'Cookie 无效，请重新登录后重试',
       'cookie_too_large' || 'cookies_too_large' => 'Cookie 数据过大',
       'cookies_uri_denied' => '无法将 Cookie 交给 Seal',
@@ -1995,7 +1940,9 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 360),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Style.safeSpace,
+                ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: cs.surfaceContainerHigh,
@@ -2037,10 +1984,11 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
                                     child: Text(
                                       _headline(phase),
                                       key: ValueKey('h-$phase'),
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.25,
-                                      ),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.25,
+                                          ),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -2049,10 +1997,11 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
                                     child: Text(
                                       session.message.value,
                                       key: ValueKey(session.message.value),
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: cs.onSurfaceVariant,
-                                        height: 1.35,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: cs.onSurfaceVariant,
+                                            height: 1.35,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -2091,9 +2040,10 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
                                       session.displayName ?? '已完成文件',
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: cs.onSurfaceVariant,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: cs.onSurfaceVariant,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -2181,7 +2131,10 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
             label: const Text('前往安装 Seal'),
           ),
           const SizedBox(height: 4),
-          TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
+          TextButton(
+            onPressed: () => widget.onClose(),
+            child: const Text('关闭'),
+          ),
         ],
       );
     }
@@ -2218,7 +2171,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
                 color: cs.onSurfaceVariant,
               ),
             ),
-          if (widget.session.stripReport != null) ...[
+          if (widget.session.hasAppliedStrip) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () {
@@ -2233,7 +2186,10 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
             ),
           ],
           const SizedBox(height: 4),
-          TextButton(onPressed: () => widget.onClose(), child: const Text('关闭')),
+          TextButton(
+            onPressed: () => widget.onClose(),
+            child: const Text('关闭'),
+          ),
         ],
       );
     }
@@ -2277,8 +2233,7 @@ class _SealStatusPanelState extends State<_SealStatusPanel>
     return switch (phase) {
       SealPanelPhase.launching ||
       SealPanelPhase.waitingUi ||
-      SealPanelPhase.waitingAuto =>
-        0,
+      SealPanelPhase.waitingAuto => 0,
       SealPanelPhase.accepted => 1,
       SealPanelPhase.completed => 2,
       _ => 0,

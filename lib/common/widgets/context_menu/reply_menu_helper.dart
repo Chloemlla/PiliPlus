@@ -33,7 +33,11 @@ void showReplyCopyDialog(
               buttonItems.add(
                 ContextMenuButtonItem(
                   onPressed: () {
-                    String text = RegExp.escape(state.selectedText!);
+                    final selected = state.selectedText;
+                    if (selected == null || selected.isEmpty) {
+                      return;
+                    }
+                    String text = RegExp.escape(selected);
                     if (ReplyGrpc.enableFilter) text = '|$text';
 
                     showConfirmDialog(
