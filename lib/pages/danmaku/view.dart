@@ -6,6 +6,7 @@ import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/plugin/pl_player/utils/danmaku_options.dart';
+import 'package:pili_plus/services/danmaku_highlight_service.dart';
 import 'package:pili_plus/utils/danmaku_utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:flutter/material.dart';
@@ -40,12 +41,14 @@ class _PlDanmakuState extends State<PlDanmaku> {
   PlPlayerController get playerController => widget.playerController;
 
   late final PlDanmakuController _plDanmakuController;
+  late final DanmakuHighlightService _highlightService;
   DanmakuController<DanmakuExtra>? _controller;
   int latestAddedPosition = -1;
 
   @override
   void initState() {
     super.initState();
+    _highlightService = Get.find<DanmakuHighlightService>();
     _plDanmakuController = PlDanmakuController(
       widget.cid,
       playerController,
@@ -133,12 +136,19 @@ class _PlDanmakuState extends State<PlDanmaku> {
             );
           } catch (_) {}
         } else {
+          // Apply keyword highlighting
+          Color danmakuColor = blockColorful
+              ? Colors.white
+              : DmUtils.decimalToColor(e.color);
+          final highlightColor = _highlightService.applyHighlight(e.content);
+          if (highlightColor != null) {
+            danmakuColor = highlightColor.value;
+          }
+
           _controller!.addDanmaku(
             DanmakuContentItem(
               e.content,
-              color: blockColorful
-                  ? Colors.white
-                  : DmUtils.decimalToColor(e.color),
+              color: danmakuColor,
               type: DmUtils.getPosition(e.mode),
               isColorful:
                   playerController.showVipDanmaku &&

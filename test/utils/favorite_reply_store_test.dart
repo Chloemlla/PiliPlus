@@ -115,6 +115,33 @@ void main() {
     expect(store.containsKey('2'), isFalse);
   });
 
+  test(
+    'completed migration skips the legacy box when recording is disabled',
+    () async {
+      await localCache.put(LocalCacheKey.favoriteReplyMigrationV1, true);
+      final store = FavoriteReplyStore(
+        favoriteBox,
+        orderStore: localCache,
+      );
+      var legacyOpenAttempted = false;
+
+      final automaticRecordBox = await prepareLegacyReplyStorage(
+        shouldSaveReply: false,
+        shouldMigrateFavorites: false,
+        openLegacyBox: () async {
+          legacyOpenAttempted = true;
+          return legacyBox;
+        },
+        destination: store,
+        markerStore: localCache,
+        onError: (_, _, {required operation, required reason}) {},
+      );
+
+      expect(automaticRecordBox, isNull);
+      expect(legacyOpenAttempted, isFalse);
+    },
+  );
+
   test('migration retry never evicts an explicit favorite', () async {
     await favoriteBox.put('9', Uint8List.fromList([9]));
     await localCache.put(LocalCacheKey.favoriteReplyWriteOrder, ['9']);
