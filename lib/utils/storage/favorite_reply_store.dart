@@ -6,12 +6,10 @@ import 'package:pili_plus/utils/storage_key.dart';
 
 final class FavoriteReplyStore extends BoundedUint8ListStore {
   FavoriteReplyStore(
-    Box<Uint8List> box, {
-    required Box<dynamic> orderStore,
+    Box<Uint8List> super.box, {
+    required Box<dynamic> super.orderStore,
     this.maxFavoriteEntries = defaultMaxEntries,
   }) : super(
-         box,
-         orderStore: orderStore,
          orderKey: LocalCacheKey.favoriteReplyWriteOrder,
          maxEntries: maxFavoriteEntries,
        );

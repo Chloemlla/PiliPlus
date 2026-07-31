@@ -6,6 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
 import 'package:pili_plus/utils/storage/favorite_reply_store.dart';
+import 'package:protobuf/protobuf.dart';
 
 final class MyReplyController {
   MyReplyController(this._store);

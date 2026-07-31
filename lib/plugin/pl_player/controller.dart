@@ -33,6 +33,7 @@ import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/plugin/pl_player/utils/stream_error.dart';
 import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/watch_stats_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
@@ -160,6 +161,13 @@ class PlPlayerController with BlockConfigMixin {
   int _heartDuration = 0;
   int? width;
   int? height;
+
+  // Watch stats session tracking
+  DateTime? _sessionStartTime;
+  int _sessionWatchedSeconds = 0;
+  String? _sessionAuthorName;
+  int? _sessionAuthorMid;
+  Timer? _sessionTimer;
 
   late final tryLook = !Accounts.get(AccountType.video).isLogin && Pref.p1080;
 
@@ -309,7 +317,7 @@ class PlPlayerController with BlockConfigMixin {
       String? title;
       String? cover;
       if (videoPlayerServiceHandler != null) {
-        final mediaItem = videoPlayerServiceHandler!._currentMediaItem;
+        final mediaItem = videoPlayerServiceHandler!.currentMediaItem;
         title = mediaItem?.title;
         cover = mediaItem?.artUri?.toString();
       }
@@ -1005,9 +1013,11 @@ class PlPlayerController with BlockConfigMixin {
             }
           }
           playerStatus.value = .playing;
+          _startWatchSession();
         } else {
           _disableAutoEnterPip();
           playerStatus.value = .paused;
+          _stopWatchSession();
         }
 
         videoPlayerServiceHandler?.onStatusChange(
@@ -1667,6 +1677,9 @@ class PlPlayerController with BlockConfigMixin {
     }
     _timer?.cancel();
     _keyboardSpeedTimer?.cancel();
+    _sessionTimer?.cancel();
+    // Record any pending watch stats session
+    _recordWatchSession();
     // _position.close();
     // _playerEventSubs?.cancel();
     // _sliderPosition.close();
@@ -1842,5 +1855,63 @@ class PlPlayerController with BlockConfigMixin {
       return;
     }
     Get.back();
+  }
+
+  // ========== Watch Stats Session Tracking ==========
+
+  /// Start tracking a watch session
+  void _startWatchSession() {
+    if (isLive) return; // Don't track live streams
+
+    _sessionStartTime = DateTime.now();
+    _sessionWatchedSeconds = 0;
+
+    // Get author info from media item if available
+    final mediaItem = videoPlayerServiceHandler?._currentMediaItem;
+    _sessionAuthorName = mediaItem?.artist ?? '';
+    _sessionAuthorMid = 0; // Not available from media item
+
+    // Start periodic session recording (every 30 seconds of playback)
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _recordWatchSession();
+    });
+  }
+
+  /// Record the current watch session to stats
+  void _recordWatchSession() {
+    if (_sessionStartTime == null || _bvid == null || cid == null) return;
+    if (isLive) return; // Don't track live streams
+
+    final title = videoPlayerServiceHandler?._currentMediaItem?.title ?? '';
+    final now = DateTime.now();
+    final elapsedSeconds = now.difference(_sessionStartTime!).inSeconds;
+
+    if (elapsedSeconds > 0) {
+      final sessionSeconds = elapsedSeconds - _sessionWatchedSeconds;
+      if (sessionSeconds > 0) {
+        _sessionWatchedSeconds += sessionSeconds;
+
+        // Record to watch stats service
+        WatchStatsService.instance.recordSession(
+          bvid: _bvid!,
+          title: title,
+          authorName: _sessionAuthorName ?? '',
+          authorMid: _sessionAuthorMid ?? 0,
+          watchedSeconds: sessionSeconds,
+        );
+      }
+    }
+
+    _sessionStartTime = now;
+  }
+
+  /// Stop tracking watch session
+  void _stopWatchSession() {
+    _sessionTimer?.cancel();
+    _sessionTimer = null;
+    _recordWatchSession();
+    _sessionStartTime = null;
+    _sessionWatchedSeconds = 0;
   }
 }

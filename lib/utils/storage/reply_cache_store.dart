@@ -6,14 +6,11 @@ import 'package:pili_plus/utils/storage_key.dart';
 
 final class ReplyCacheStore extends BoundedUint8ListStore {
   ReplyCacheStore(
-    Box<Uint8List>? box, {
-    required Box<dynamic> orderStore,
-    int maxEntries = defaultMaxEntries,
+    Box<Uint8List>? super.box, {
+    required Box<dynamic> super.orderStore,
+    int super.maxEntries = defaultMaxEntries,
   }) : super(
-         box,
-         orderStore: orderStore,
          orderKey: LocalCacheKey.replyWriteOrder,
-         maxEntries: maxEntries,
        );
 
   static const int defaultMaxEntries = 500;

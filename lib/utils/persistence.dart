@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_context.dart';
 import 'package:pili_plus/services/crash/crash_reporter.dart';
 
 abstract final class Persistence {

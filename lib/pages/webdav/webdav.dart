@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
@@ -76,7 +77,7 @@ class WebDav {
         backupPath: backupPath,
         data: utf8.encode(data),
         write: (path, data) async {
-          await _client!.write(path, data);
+          await _client!.write(path, Uint8List.fromList(data));
         },
         read: _client!.read,
         exists: (path) async {

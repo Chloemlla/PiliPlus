@@ -1410,7 +1410,9 @@ abstract final class SealDownloadUtils {
           break;
         }
         session.taskId = status.taskId ?? session.taskId;
-        if (session.stripReport != null && !stripApplied) {
+        if (status.isUnconfirmedCompletedStrip(
+          stripRequested: session.stripReport != null,
+        )) {
           session.contentUri = null;
           session.displayName = null;
           session.mimeType = null;
@@ -1774,6 +1776,9 @@ final class SealDownloadStatus {
 
   bool get confirmsAppliedStrip =>
       stripResult?.trim().toLowerCase() == 'applied';
+
+  bool isUnconfirmedCompletedStrip({required bool stripRequested}) =>
+      status == 'completed' && stripRequested && !confirmsAppliedStrip;
 
   String? get stripFailureMessage {
     final message = stripMessage?.trim();

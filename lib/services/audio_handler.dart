@@ -53,7 +53,8 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     required Duration pushInterval,
     required Duration jumpThreshold,
   }) {
-    final jumped = deltaFromPrevious.abs() >= jumpThreshold ||
+    final jumped =
+        deltaFromPrevious.abs() >= jumpThreshold ||
         deltaFromLastPushed.abs() >= jumpThreshold;
     final due = sinceLastPush == null || sinceLastPush >= pushInterval;
     return !playing || jumped || due;
@@ -79,10 +80,13 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   bool enableBackgroundPlay = Pref.enableBackgroundPlay;
 
   MediaItem? _currentMediaItem;
+  MediaItem? get currentMediaItem => _currentMediaItem;
+
   Duration _lastPosition = Duration.zero;
   Duration _lastPushedPosition = Duration.zero;
   Duration _lastBuffered = Duration.zero;
   DateTime? _lastNativePositionPush;
+
   /// After a seek, ignore stale player position ticks so the scrubber does not
   /// snap back before media_kit reports the new position.
   Duration? _pendingSeekPosition;
@@ -630,7 +634,8 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     // Drop stale ticks after seek so the scrubber does not jump backward.
     if (_pendingSeekPosition != null) {
       final target = _pendingSeekPosition!;
-      final expired = _pendingSeekUntil == null ||
+      final expired =
+          _pendingSeekUntil == null ||
           DateTime.now().isAfter(_pendingSeekUntil!);
       if (!shouldAcceptPositionAfterSeek(
         position: position,

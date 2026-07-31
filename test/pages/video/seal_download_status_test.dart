@@ -21,6 +21,14 @@ void main() {
     });
 
     expect(status.confirmsAppliedStrip, isFalse);
+    expect(
+      status.isUnconfirmedCompletedStrip(stripRequested: true),
+      isTrue,
+    );
+    expect(
+      status.isUnconfirmedCompletedStrip(stripRequested: false),
+      isFalse,
+    );
     expect(status.stripFailureMessage, contains('retry the strip task'));
   });
 

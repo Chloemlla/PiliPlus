@@ -28,7 +28,9 @@ extension SelectableRegionStateExt on SelectableRegionState {
       (this as dynamic).selectable?.getSelectedContent()?.plainText as String?;
 
   /// apply `lib/scripts/selectable_region.patch`
-  bool get isUncollapsed => selectionDelegate.value.status == .uncollapsed;
+  bool get isUncollapsed =>
+      (this as dynamic).selectionDelegate.value.status ==
+      SelectionStatus.uncollapsed;
 
   void onMenuPressed(
     ValueChanged<String> callback, {
