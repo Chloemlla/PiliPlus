@@ -46,48 +46,13 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       resizeToAvoidBottomInset: false,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: Obx(
-          () {
-            final scrollRatio = _scrollRatio.value;
-            final flag = maxWidth > width || scrollRatio >= 0.5;
-            return AppBar(
-              title: Opacity(
-                opacity: scrollRatio,
-                child: Text(
-                  'bilibili热搜',
-                  style: TextStyle(color: flag ? null : Colors.white),
-                ),
-              ),
-              backgroundColor: theme.colorScheme.surface.withValues(
-                alpha: scrollRatio,
-              ),
-              foregroundColor: flag ? null : Colors.white,
-              systemOverlayStyle: SystemUiOverlayStyle(
-                statusBarColor: Colors.transparent,
-                systemStatusBarContrastEnforced: false,
-                statusBarBrightness: theme.brightness == Brightness.light
-                    ? Brightness.dark
-                    : Brightness.light,
-                statusBarIconBrightness: theme.brightness,
-              ),
-              shape: scrollRatio == 1
-                  ? Border(
-                      bottom: BorderSide(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.1),
-                      ),
-                      SliverPadding(
-                        padding: .only(bottom: padding.bottom + 100),
-                        sliver: Obx(
-                          () =>
-                              _buildBody(theme, _controller.loadingState.value),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+      body: Stack(
+        children: [
+          SliverPadding(
+            padding: .only(bottom: padding.bottom + 100),
+            sliver: Obx(
+              () =>
+                  _buildBody(theme, _controller.loadingState.value),
             ),
           ),
           Positioned(
