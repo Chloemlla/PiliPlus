@@ -11,6 +11,7 @@ import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class BlackListPage extends StatefulWidget {
   const BlackListPage({super.key});

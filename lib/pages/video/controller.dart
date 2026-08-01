@@ -76,6 +76,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:media_kit/media_kit.dart' hide Subtitle;
 
 class VideoDetailController extends GetxController

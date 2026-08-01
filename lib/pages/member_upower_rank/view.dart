@@ -12,6 +12,7 @@ import 'package:pili_plus/pages/member_upower_rank/controller.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class UpowerRankPage extends StatefulWidget {
   const UpowerRankPage({

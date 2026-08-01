@@ -71,6 +71,8 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class VideoDetailPageV extends StatefulWidget {
   const VideoDetailPageV({super.key});

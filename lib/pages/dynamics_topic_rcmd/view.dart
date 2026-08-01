@@ -8,6 +8,7 @@ import 'package:pili_plus/pages/dynamics_select_topic/widgets/item.dart';
 import 'package:pili_plus/pages/dynamics_topic_rcmd/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class DynTopicRcmdPage extends StatefulWidget {
   const DynTopicRcmdPage({super.key});

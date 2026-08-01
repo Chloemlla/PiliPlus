@@ -5,6 +5,7 @@ import 'package:pili_plus/pages/log_table/controller.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class LogPage<T> extends StatefulWidget {
   const LogPage({super.key});

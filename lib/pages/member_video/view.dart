@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class MemberVideo extends StatefulWidget {
   const MemberVideo({

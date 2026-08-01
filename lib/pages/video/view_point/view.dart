@@ -9,6 +9,7 @@ import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class ViewPointsPage extends CommonSlidePage {
   const ViewPointsPage({

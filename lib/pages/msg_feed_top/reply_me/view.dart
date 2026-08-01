@@ -16,6 +16,7 @@ import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class ReplyMePage extends StatefulWidget {
   const ReplyMePage({super.key});

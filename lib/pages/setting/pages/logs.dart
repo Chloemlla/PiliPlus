@@ -21,6 +21,7 @@ import 'package:catcher_2/utils/log_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 const _snackBarDisplayDuration = Duration(seconds: 1);
 

@@ -7,6 +7,7 @@ import 'package:pili_plus/pages/fav/video/widgets/item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class FavFolderSortPage extends StatefulWidget {
   const FavFolderSortPage({super.key, required this.favController});

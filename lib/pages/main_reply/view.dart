@@ -18,6 +18,7 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class MainReplyPage extends StatefulWidget {
   const MainReplyPage({super.key});

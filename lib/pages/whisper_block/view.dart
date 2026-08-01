@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class WhisperBlockPage extends StatefulWidget {
   const WhisperBlockPage({

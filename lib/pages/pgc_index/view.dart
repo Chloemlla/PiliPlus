@@ -13,6 +13,8 @@ import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/animated_height.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class PgcIndexPage extends StatefulWidget {
   const PgcIndexPage({super.key, this.indexType});

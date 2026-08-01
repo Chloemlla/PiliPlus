@@ -13,6 +13,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart'
     hide ListTile, SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class BubblePage extends StatefulWidget {
   const BubblePage({super.key, this.categoryId});

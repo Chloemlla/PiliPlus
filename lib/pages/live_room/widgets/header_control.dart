@@ -328,7 +328,7 @@ Obx(
             PlatformUtils.isMobile && !context.mediaQuerySize.isPortrait
             ? 1.0
             : 0.7;
-        return DynDraggableScrollableSheet(
+        return DraggableScrollableSheet(
           minChildSize: 0,
           maxChildSize: maxChildSize,
           snap: true,

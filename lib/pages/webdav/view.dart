@@ -6,6 +6,7 @@ import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class WebDavSettingPage extends StatefulWidget {
   const WebDavSettingPage({super.key, this.showAppBar = true});

@@ -30,6 +30,7 @@ import 'package:get/get.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});

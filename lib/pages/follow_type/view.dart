@@ -10,6 +10,7 @@ import 'package:pili_plus/utils/grid.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 abstract class FollowTypePageState<T extends StatefulWidget> extends State<T> {
   FollowTypeController get controller;

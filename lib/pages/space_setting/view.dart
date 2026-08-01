@@ -6,6 +6,7 @@ import 'package:pili_plus/models_new/space_setting/privacy.dart';
 import 'package:pili_plus/pages/space_setting/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class SpaceSettingPage extends StatefulWidget {
   const SpaceSettingPage({super.key});

@@ -14,6 +14,7 @@ import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class _SettingsModel {
   final SettingType type;

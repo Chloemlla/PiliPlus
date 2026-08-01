@@ -11,6 +11,7 @@ import 'package:pili_plus/pages/live_search/view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class LiveAreaDetailPage extends StatefulWidget {
   const LiveAreaDetailPage({

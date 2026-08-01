@@ -6,6 +6,7 @@ import 'package:pili_plus/pages/share/view.dart' show UserModel;
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key, this.isFromSelect = true});

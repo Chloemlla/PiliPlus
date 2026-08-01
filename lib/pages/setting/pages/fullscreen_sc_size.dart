@@ -11,6 +11,7 @@ import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 const kFullScreenSCWidth = 255.0;
 

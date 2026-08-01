@@ -78,7 +78,7 @@ class CreateDynPanel extends CommonRichTextPubPage {
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
-    builder: (context) => DynDraggableScrollableSheet(
+    builder: (context) => DraggableScrollableSheet(
       snap: true,
       expand: false,
       initialChildSize: 1,

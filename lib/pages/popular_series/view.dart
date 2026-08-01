@@ -15,6 +15,7 @@ import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class PopularSeriesPage extends StatefulWidget {
   const PopularSeriesPage({super.key});

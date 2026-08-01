@@ -11,6 +11,7 @@ import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class WhisperPage extends StatefulWidget {
   const WhisperPage({super.key});

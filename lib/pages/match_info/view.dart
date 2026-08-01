@@ -20,6 +20,7 @@ import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class MatchInfoPage extends StatefulWidget {
   const MatchInfoPage({super.key});

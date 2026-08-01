@@ -6,6 +6,7 @@ import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:dlna_dart/dlna.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class DLNAPage extends StatefulWidget {
   const DLNAPage({super.key});

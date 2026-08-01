@@ -16,6 +16,7 @@ import 'package:pili_plus/utils/request_utils.dart';
 import 'package:flutter/material.dart' hide TextField;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/animated_height.dart';
 
 class RepostPanel extends CommonRichTextPubPage {
   const RepostPanel({
@@ -123,7 +124,7 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel>
       curve: Curves.ease,
       duration: _durtion,
       child: _expanded
-          ? DynDraggableScrollableSheet(
+          ? DraggableScrollableSheet(
               snap: true,
               expand: false,
               minChildSize: 0,

@@ -15,6 +15,7 @@ import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 
 class NoteListPage extends CommonSlidePage {
   const NoteListPage({
