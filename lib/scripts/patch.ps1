@@ -351,7 +351,7 @@ foreach ($revert in $reverts) {
 }
 
 foreach ($patch in $patches) {
-    git apply (Join-Path $RepositoryRootPath $patch)
+    git apply --recount (Join-Path $RepositoryRootPath $patch)
     if ($LASTEXITCODE -eq 0) {
         Write-Host "$patch applied"
     }
