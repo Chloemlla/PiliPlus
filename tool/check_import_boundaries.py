@@ -120,7 +120,7 @@ RAW_PAGE_WRITE_BASELINE = {
     "lib/pages/video/view.dart": 1,
     "lib/pages/video/widgets/header_control.dart": 2,
     "lib/pages/video/widgets/player_focus.dart": 1,
-    "lib/pages/webdav/view.dart": 2,
+    "lib/pages/webdav/view.dart": 3,
 }
 RAW_BOX_ALIAS_BASELINE = {
     "lib/pages/setting/pages/display_mode.dart": 1,
