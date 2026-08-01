@@ -73,7 +73,6 @@
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
-            android:launchIntoPictureInPictureMode="never"
             android:theme="@style/LaunchTheme"
             android:windowSoftInputMode="adjustResize">
 
