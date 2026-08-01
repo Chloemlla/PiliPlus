@@ -143,7 +143,6 @@ class LiveAlertRuleEditorSheet extends StatelessWidget {
                       controller.setMatchTarget(selection.first);
                     },
                     showSelectedIcon: false,
-                    visualDensity: VisualDensity.compact,
                   ),
                 ),
                 const SizedBox(height: 8),

@@ -37,7 +37,6 @@ class _FavNoteChildPageState extends State<FavNoteChildPage>
     super.build(context);
     final theme = Theme.of(context);
     final padding = MediaQuery.viewPaddingOf(context);
-    final bottomH = 50 + padding.bottom;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -59,16 +58,15 @@ class _FavNoteChildPageState extends State<FavNoteChildPage>
         Positioned(
           left: 0,
           right: 0,
-          bottom: -bottomH,
+          bottom: 0,
           child: Obx(
             () => AnimatedSlide(
               offset: _favNoteController.enableMultiSelect.value
-                  ? const Offset(0, -1)
-                  : Offset.zero,
+                  ? Offset.zero
+                  : const Offset(0, 1),
               duration: const Duration(milliseconds: 150),
               child: Container(
-                height: bottomH,
-                padding: padding,
+                padding: EdgeInsets.only(bottom: padding.bottom),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.onInverseSurface,
                   border: Border(
