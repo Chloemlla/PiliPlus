@@ -1,17 +1,8 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/export_import.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
-=======
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
->>>>>>> upstream/main
     show ReplyInfo;
 import 'package:pili_plus/pages/my_reply/controller.dart';
 import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
@@ -54,13 +45,9 @@ class _MyReplyState extends State<MyReply> with DynMixin {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     final replies = _controller.replies;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-=======
-    return SimpleScaffold(
->>>>>>> upstream/main
       appBar: AppBar(
         title: Text('收藏的评论（${_controller.count}）'),
         actions: [

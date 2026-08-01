@@ -16,16 +16,11 @@ library;
 
 import 'dart:ui' as ui show TextHeightBehavior;
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/text/paragraph.dart';
 import 'package:pili_plus/common/widgets/flutter/text/rich_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Text, RichText;
 import 'package:flutter/rendering.dart' hide RenderParagraph;
-=======
-import 'package:PiliPlus/common/widgets/more_text/rich_text_more.dart';
-import 'package:flutter/material.dart' hide Text;
->>>>>>> upstream/main
 
 /// A run of text with a single style.
 ///

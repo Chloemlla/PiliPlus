@@ -1,6 +1,5 @@
 import 'dart:math';
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/pages/setting/widgets/switch_item.dart';
@@ -10,17 +9,6 @@ import 'package:pili_plus/utils/filtering_text.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
-=======
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/pages/setting/widgets/switch_item.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/filtering_text.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';

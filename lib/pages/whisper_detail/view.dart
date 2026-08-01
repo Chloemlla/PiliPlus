@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show File;
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/assets.dart';
 import 'package:pili_plus/common/widgets/dialog/report.dart';
 import 'package:pili_plus/common/widgets/flutter/chat_list_view.dart';
@@ -9,16 +8,6 @@ import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
-=======
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/widgets/dialog/report.dart';
-import 'package:PiliPlus/common/widgets/flutter/chat_list_view.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/text_field.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
->>>>>>> upstream/main
     show platformAlwaysClampingPhysics;
 import 'package:pili_plus/grpc/bilibili/im/type.pb.dart' show Msg;
 import 'package:pili_plus/http/loading_state.dart';

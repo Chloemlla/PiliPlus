@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
@@ -11,20 +10,6 @@ import 'package:pili_plus/pages/dynamics_create/view.dart';
 import 'package:pili_plus/pages/dynamics_tab/view.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
-=======
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
-import 'package:PiliPlus/models/common/dynamic/up_panel_position.dart';
-import 'package:PiliPlus/models/dynamics/up.dart';
-import 'package:PiliPlus/pages/common/common_page.dart';
-import 'package:PiliPlus/pages/dynamics/controller.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/up_panel.dart';
-import 'package:PiliPlus/pages/dynamics_create/view.dart';
-import 'package:PiliPlus/pages/dynamics_tab/view.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart' hide DraggableScrollableSheet;
 import 'package:get/get.dart';
 

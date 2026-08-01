@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/video_reply.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
@@ -6,16 +5,6 @@ import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
-=======
-import 'package:PiliPlus/common/skeleton/video_reply.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
->>>>>>> upstream/main
     show ReplyInfo;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/common/fab_mixin.dart';

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_height_widget.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -11,19 +10,6 @@ import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
-=======
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/custom_height_widget.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/pages/common/common_page.dart';
-import 'package:PiliPlus/pages/home/controller.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/pages/mine/controller.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';

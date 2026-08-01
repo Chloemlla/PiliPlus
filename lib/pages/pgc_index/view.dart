@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
@@ -12,23 +11,6 @@ import 'package:pili_plus/pages/pgc_index/controller.dart';
 import 'package:pili_plus/pages/pgc_index/widgets/pgc_card_v_pgc_index.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/grid.dart';
-=======
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/animated_height.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/self_sized_horizontal_list.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_index_condition/data.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_index_condition/sort.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_index_condition/value.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_index_result/list.dart';
-import 'package:PiliPlus/pages/pgc_index/controller.dart';
-import 'package:PiliPlus/pages/pgc_index/widgets/pgc_card_v_pgc_index.dart';
-import 'package:PiliPlus/pages/search/widgets/search_text.dart';
-import 'package:PiliPlus/utils/grid.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

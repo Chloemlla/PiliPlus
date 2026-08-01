@@ -1,15 +1,7 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
-=======
-import 'package:PiliPlus/common/widgets/animated_height.dart';
-import 'package:PiliPlus/common/widgets/draggable_sheet/dyn.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/text_field.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
->>>>>>> upstream/main
     show platformClampingPhysics;
 import 'package:pili_plus/http/dynamics.dart';
 import 'package:pili_plus/http/loading_state.dart';

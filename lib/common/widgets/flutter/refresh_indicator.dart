@@ -7,19 +7,10 @@
 import 'dart:async' show Completer;
 import 'dart:io' show Platform;
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/scroll_behavior.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
     show RefreshScrollPhysics;
-=======
-import 'package:PiliPlus/common/widgets/scroll_behavior.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
-    show BouncingScrollPhysicsExt;
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:extended_nested_scroll_view/refresh.dart';
->>>>>>> upstream/main
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/material.dart' hide RefreshIndicator;
 

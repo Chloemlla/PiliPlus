@@ -476,13 +476,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-<<<<<<< HEAD
       ref: "161cd202c20bf0ba2394e3a86381d58864dc9e4e"
       resolved-ref: "161cd202c20bf0ba2394e3a86381d58864dc9e4e"
-=======
-      ref: dev
-      resolved-ref: "4b49976df2e0a83c628d0587196ed0cd9e61a03b"
->>>>>>> upstream/main
       url: "https://github.com/bggRGjQaUbCoE/extended_nested_scroll_view.git"
     source: git
     version: "6.2.1"
@@ -521,18 +516,11 @@ packages:
   file_picker:
     dependency: "direct main"
     description:
-<<<<<<< HEAD
       path: "."
       ref: "7fbe3adab03d890d306b197e9244ac6f7f165391"
       resolved-ref: "7fbe3adab03d890d306b197e9244ac6f7f165391"
       url: "https://github.com/miguelpruivo/flutter_file_picker.git"
     source: git
-=======
-      name: file_picker
-      sha256: fdc6a37f715d19f35b131decf1ce39242eeed5ddae18c0818c3eccb731ab76be
-      url: "https://pub.dev"
-    source: hosted
->>>>>>> upstream/main
     version: "12.0.0-beta.7"
   file_selector_linux:
     dependency: transitive

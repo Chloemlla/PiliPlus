@@ -1,19 +1,9 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/models/common/reply/reply_search_type.dart';
 import 'package:pili_plus/pages/video/reply_search_item/child/view.dart';
 import 'package:pili_plus/pages/video/reply_search_item/controller.dart';
 import 'package:pili_plus/utils/utils.dart';
-=======
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/models/common/reply/reply_search_type.dart';
-import 'package:PiliPlus/pages/video/reply_search_item/child/view.dart';
-import 'package:PiliPlus/pages/video/reply_search_item/controller.dart';
-import 'package:PiliPlus/utils/utils.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

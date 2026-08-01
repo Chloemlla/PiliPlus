@@ -1,6 +1,5 @@
 import 'dart:math' show max;
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/button/toolbar_icon_button.dart';
@@ -10,17 +9,6 @@ import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
-=======
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/button/toolbar_icon_button.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/draggable_sheet/dyn.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/text_field.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
->>>>>>> upstream/main
     show platformClampingPhysics;
 import 'package:pili_plus/common/widgets/time_picker.dart';
 import 'package:pili_plus/http/dynamics.dart';

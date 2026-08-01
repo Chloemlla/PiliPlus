@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/appbar/appbar.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
@@ -6,16 +5,6 @@ import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
 import 'package:pili_plus/pages/common/multi_select/base.dart'
-=======
-import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
-import 'package:PiliPlus/pages/common/multi_select/base.dart'
->>>>>>> upstream/main
     show BaseMultiSelectMixin;
 import 'package:pili_plus/pages/download/detail/widgets/item.dart';
 import 'package:pili_plus/services/download/download_service.dart';

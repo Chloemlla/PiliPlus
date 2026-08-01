@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/msg_feed_top.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -8,18 +7,6 @@ import 'package:pili_plus/models_new/follow/list.dart';
 import 'package:pili_plus/pages/follow/widgets/follow_item.dart';
 import 'package:pili_plus/pages/follow_type/controller.dart';
 import 'package:pili_plus/utils/grid.dart';
-=======
-import 'package:PiliPlus/common/skeleton/msg_feed_top.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/follow/list.dart';
-import 'package:PiliPlus/pages/follow/widgets/follow_item.dart';
-import 'package:PiliPlus/pages/follow_type/controller.dart';
-import 'package:PiliPlus/utils/grid.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:get/get.dart';

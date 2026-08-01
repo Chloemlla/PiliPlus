@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
@@ -10,20 +9,6 @@ import 'package:pili_plus/models_new/bubble/dyn_list.dart';
 import 'package:pili_plus/pages/bubble/controller.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
-=======
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/keep_alive_wrapper.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/bubble/dyn_list.dart';
-import 'package:PiliPlus/pages/bubble/controller.dart';
-import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
-import 'package:PiliPlus/utils/grid.dart';
->>>>>>> upstream/main
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart'
     hide ListTile, SliverGridDelegateWithMaxCrossAxisExtent;

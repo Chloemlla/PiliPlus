@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'dart:math';
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/assets.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
@@ -10,18 +9,6 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
 import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
 import 'package:pili_plus/common/widgets/scroll_behavior.dart'
-=======
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/keep_alive_wrapper.dart';
-import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
-import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_behavior.dart'
->>>>>>> upstream/main
     show NoOverscrollIndicator;
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
     show tabBarView, platformAlwaysClampingPhysics, platformClampingPhysics;
@@ -501,7 +488,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         return SimpleScaffold(
           appBar: removeAppBar(isFullScreen)
               ? null
-<<<<<<< HEAD
               : PreferredSize(
                   preferredSize: const .fromHeight(0),
                   child: Obx(
@@ -523,36 +509,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                       );
                     },
                   ),
-=======
-              : Obx(
-                  () {
-                    final scrollRatio = videoDetailController.scrollRatio.value;
-                    final brightness = colorScheme.brightness;
-                    final Brightness statusBarBrightness;
-                    final Brightness statusBarIconBrightness;
-                    final backgroundColor = isPortrait && scrollRatio > 0
-                        ? Color.lerp(
-                            Colors.black,
-                            colorScheme.surface,
-                            scrollRatio,
-                          )!
-                        : Colors.black;
-                    if (isPortrait && scrollRatio >= 0.5) {
-                      statusBarBrightness = brightness;
-                      statusBarIconBrightness = brightness.reverse;
-                    } else {
-                      statusBarBrightness = .dark;
-                      statusBarIconBrightness = .light;
-                    }
-                    return SimpleAppBar(
-                      height: padding.top,
-                      backgroundColor: backgroundColor,
-                      brightness: brightness,
-                      statusBarBrightness: statusBarBrightness,
-                      statusBarIconBrightness: statusBarIconBrightness,
-                    );
-                  },
->>>>>>> upstream/main
                 ),
           body: ExtendedNestedScrollView(
             onlyOneScrollInBody: true,

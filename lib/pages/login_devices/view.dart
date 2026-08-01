@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -7,17 +6,6 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models_new/login_devices/device.dart';
 import 'package:pili_plus/pages/login_devices/controller.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
-=======
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/login_devices/device.dart';
-import 'package:PiliPlus/pages/login_devices/controller.dart';
-import 'package:PiliPlus/utils/extension/widget_ext.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
 

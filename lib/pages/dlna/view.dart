@@ -1,15 +1,8 @@
 import 'dart:async';
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
-=======
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
->>>>>>> upstream/main
 import 'package:dlna_dart/dlna.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

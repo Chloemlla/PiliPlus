@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 part of 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
-=======
-import 'package:flutter/gestures.dart' show Drag;
-import 'package:flutter/material.dart';
->>>>>>> upstream/main
 
 class DynDraggableScrollableSheet extends DraggableScrollableSheet {
   const DynDraggableScrollableSheet({

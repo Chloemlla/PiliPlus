@@ -2,20 +2,12 @@ import 'dart:async';
 import 'dart:math' show min;
 import 'dart:ui';
 
-<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/in_app_mini_player.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:pili_plus/controllers/quality_recommendation_controller.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
-=======
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
->>>>>>> upstream/main
     show PlaylistSource;
 import 'package:pili_plus/grpc/dm.dart';
 import 'package:pili_plus/http/fav.dart';

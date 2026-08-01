@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -9,19 +8,6 @@ import 'package:pili_plus/pages/fav/topic/controller.dart';
 import 'package:pili_plus/pages/fav/video/controller.dart';
 import 'package:pili_plus/pages/fav_folder_sort/view.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
-=======
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/fav_type.dart';
-import 'package:PiliPlus/pages/fav/article/controller.dart';
-import 'package:PiliPlus/pages/fav/cheese/controller.dart';
-import 'package:PiliPlus/pages/fav/topic/controller.dart';
-import 'package:PiliPlus/pages/fav/video/controller.dart';
-import 'package:PiliPlus/pages/fav_folder_sort/view.dart';
-import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
->>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';

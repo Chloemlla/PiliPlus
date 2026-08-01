@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/msg_feed_top.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
@@ -8,18 +7,6 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
 import 'package:pili_plus/grpc/bilibili/app/im/v1.pbenum.dart'
-=======
-import 'package:PiliPlus/common/skeleton/msg_feed_top.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/grpc/bilibili/app/im/v1.pbenum.dart'
->>>>>>> upstream/main
     show IMSettingType;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_type.dart';
