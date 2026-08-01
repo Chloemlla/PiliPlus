@@ -1392,10 +1392,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         if (widget.danmuWidget case final danmaku?)
           Positioned.fill(top: 4, child: danmaku),
 
-        if (!isLive && widget.videoDetailController case final controller?)
-          QualityChipOverlay(
-            controller: controller.qualityRecommendationController,
-          ),
+        if (!isLive)
+          if (widget.videoDetailController case final controller?)
+            QualityChipOverlay(
+              controller: controller.qualityRecommendationController,
+            ),
 
         if (!isLive)
           Positioned.fill(

@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
-import 'package:get/get.dart';
 import 'package:dio/dio.dart';
 import 'package:pili_plus/main.dart' as app;
 import 'package:pili_plus/models/search/search_history_entry.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -110,8 +109,8 @@ abstract final class SynapseSyncService {
     if (!account.isLogin || account.mid <= 0) {
       throw StateError('请先登录 B 站主账号');
     }
-    final cookie = account.cookieJar.toJson().entries
-        .map((entry) => '${entry.key}=${entry.value}')
+    final cookie = account.cookieJar.toList()
+        .map((entry) => '${entry.name}=${entry.value}')
         .join('; ');
     final response = await _client().post<Object?>('uid', data: {
       'uid': account.mid.toString(),
