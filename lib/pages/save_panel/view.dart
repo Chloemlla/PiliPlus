@@ -388,7 +388,6 @@ class _SavePanelState extends State<SavePanel> {
                       if (cover?.isNotEmpty == true &&
                           title?.isNotEmpty == true)
                         Container(
-                          height: coverSize + 16,
                           margin: const .symmetric(horizontal: 12),
                           padding: const .all(8),
                           decoration: BoxDecoration(
@@ -409,14 +408,13 @@ class _SavePanelState extends State<SavePanel> {
                               ),
                               Expanded(
                                 child: Column(
+                                  mainAxisSize: .min,
                                   crossAxisAlignment: .start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        '$title\n',
-                                        maxLines: 2,
-                                        overflow: .ellipsis,
-                                      ),
+                                    Text(
+                                      '$title\n',
+                                      maxLines: 2,
+                                      overflow: .ellipsis,
                                     ),
                                     if (pubdate != null)
                                       Text(

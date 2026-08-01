@@ -249,7 +249,7 @@ class _DynTopicPageState extends State<DynTopicPage>
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Flexible(
+                  Expanded(
                     child: Text(
                       '${NumUtils.numFormat(response.topicItem!.view)}浏览 · ${NumUtils.numFormat(response.topicItem!.discuss)}讨论',
                       maxLines: 1,
@@ -260,7 +260,6 @@ class _DynTopicPageState extends State<DynTopicPage>
                       ),
                     ),
                   ),
-                  const Spacer(),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(

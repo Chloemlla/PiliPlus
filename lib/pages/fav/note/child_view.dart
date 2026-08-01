@@ -98,19 +98,25 @@ class _FavNoteChildPageState extends State<FavNoteChildPage>
                         },
                       ),
                     ),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _favNoteController.handleSelect(
-                        checked: !_favNoteController.allSelected.value,
-                        disableSelect: false,
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.only(
-                          top: 14,
-                          bottom: 14,
-                          right: 12,
+                    Flexible(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _favNoteController.handleSelect(
+                          checked: !_favNoteController.allSelected.value,
+                          disableSelect: false,
                         ),
-                        child: Text('全选'),
+                        child: const Padding(
+                          padding: EdgeInsets.only(
+                            top: 14,
+                            bottom: 14,
+                            right: 12,
+                          ),
+                          child: Text(
+                            '全选',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -128,7 +134,11 @@ class _FavNoteChildPageState extends State<FavNoteChildPage>
                           );
                         }
                       },
-                      child: const Text('删除'),
+                      child: const Text(
+                        '删除',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 16),
                   ],

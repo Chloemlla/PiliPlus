@@ -124,16 +124,20 @@ Widget _forwardAuthor({
         ),
       ),
       const SizedBox(width: 6),
-      Text(
-        isSave
-            ? DateFormatUtils.format(
-                moduleAuthor.pubTs,
-                format: DateFormatUtils.longFormatDs,
-              )
-            : DateFormatUtils.dateFormat(moduleAuthor.pubTs),
-        style: TextStyle(
-          color: theme.colorScheme.outline,
-          fontSize: theme.textTheme.labelSmall!.fontSize,
+      Flexible(
+        child: Text(
+          isSave
+              ? DateFormatUtils.format(
+                  moduleAuthor.pubTs,
+                  format: DateFormatUtils.longFormatDs,
+                )
+              : DateFormatUtils.dateFormat(moduleAuthor.pubTs),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: theme.colorScheme.outline,
+            fontSize: theme.textTheme.labelSmall!.fontSize,
+          ),
         ),
       ),
     ],

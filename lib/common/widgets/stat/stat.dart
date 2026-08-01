@@ -31,11 +31,13 @@ class StatWidget extends StatelessWidget {
           size: iconSize,
           color: color,
         ),
-        Text(
-          NumUtils.numFormat(value),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: color),
+        Flexible(
+          child: Text(
+            NumUtils.numFormat(value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: color),
+          ),
         ),
       ],
     );

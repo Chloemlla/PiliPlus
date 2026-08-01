@@ -361,11 +361,13 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
           color: color,
         ),
         style: btnStyle,
-        label: Text(
-          stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: color),
+        label: Flexible(
+          child: Text(
+            stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color),
+          ),
         ),
       );
     }

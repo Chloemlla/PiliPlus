@@ -127,15 +127,27 @@ class LiveAlertRuleEditorSheet extends StatelessWidget {
                     segments: const [
                       ButtonSegment(
                         value: MatchTarget.titleOnly,
-                        label: Text('仅标题'),
+                        label: Text(
+                          '仅标题',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment(
                         value: MatchTarget.areaOnly,
-                        label: Text('仅分区'),
+                        label: Text(
+                          '仅分区',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       ButtonSegment(
                         value: MatchTarget.both,
-                        label: Text('任一'),
+                        label: Text(
+                          '任一',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     selected: {controller.selectedMatchTarget.value},
@@ -143,6 +155,7 @@ class LiveAlertRuleEditorSheet extends StatelessWidget {
                       controller.setMatchTarget(selection.first);
                     },
                     showSelectedIcon: false,
+                    expandedInsets: EdgeInsets.zero,
                   ),
                 ),
                 const SizedBox(height: 8),
