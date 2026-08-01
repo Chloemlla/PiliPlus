@@ -6,6 +6,7 @@ import 'package:pili_plus/common/widgets/custom_toast.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/scale_app.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/stateful_builder.dart';
 import 'package:pili_plus/models/common/bar_hide_type.dart';
 import 'package:pili_plus/models/common/dynamic/dynamic_badge_mode.dart';

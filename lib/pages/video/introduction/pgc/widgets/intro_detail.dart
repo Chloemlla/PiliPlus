@@ -11,7 +11,7 @@ import 'package:pili_plus/pages/pgc_review/view.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart' hide TabBarView;
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class PgcIntroPanel extends CommonSlidePage {
