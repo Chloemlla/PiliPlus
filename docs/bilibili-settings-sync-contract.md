@@ -45,7 +45,7 @@ cookie is transient input rather than synchronized data:
 ```json
 {
   "uid": "12345",
-  "cookie": "SESSDATA=temporary-value; bili_jct=temporary-value"
+  "cookie": "session-cookie-placeholder"
 }
 ```
 
