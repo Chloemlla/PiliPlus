@@ -456,7 +456,7 @@ class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog
     final uri = Uri.tryParse(widget.loginUrl);
     final loginUri = uri?.replace(
       queryParameters: {
-        ...uri.queryParameters,
+        ...?uri.queryParameters,
         'redirect_uri': 'piliplus://synapse-auth',
       },
     );

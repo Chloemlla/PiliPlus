@@ -8,6 +8,7 @@ import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models_new/match/match_info/contest.dart';
 import 'package:pili_plus/models_new/match/match_info/team.dart';
 import 'package:pili_plus/pages/common/dyn/common_dyn_page.dart';
+import 'package:pili_plus/pages/common/fab_mixin.dart'
     show NoBottomPaddingFabLocation;
 import 'package:pili_plus/pages/match_info/controller.dart';
 import 'package:pili_plus/pages/video/reply_reply/view.dart';

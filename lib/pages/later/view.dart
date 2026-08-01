@@ -6,6 +6,7 @@ import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/models/common/later_view_type.dart';
 import 'package:pili_plus/models_new/later/list.dart';
+import 'package:pili_plus/pages/common/fab_mixin.dart'
     show NoRightMarginFabLocation;
 import 'package:pili_plus/pages/later/base_controller.dart';
 import 'package:pili_plus/pages/later/controller.dart';
