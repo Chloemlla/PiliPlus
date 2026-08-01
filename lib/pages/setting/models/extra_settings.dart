@@ -47,6 +47,7 @@ import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/update.dart';
 import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide RefreshIndicator;
@@ -116,6 +117,14 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.showViewPoints,
     defaultVal: true,
   ),
+  if (Accounts.main.isLogin)
+    NormalModel(
+      title: 'Synapse 云同步',
+      subtitle: '应用内登录 Synapse 后同步搜索历史和设置；绑定时校验当前 B 站登录',
+      leading: const Icon(Icons.cloud_sync_outlined),
+      getSubtitle: () => SynapseSyncService.isEnabled ? '已启用（绑定 UID ${SynapseSyncService.boundMid}）' : '未启用',
+      onTap: _showSynapseSyncDialog,
+    ),
   const SwitchModel(
     title: '视频页显示相关视频',
     leading: Icon(MdiIcons.motionPlayOutline),
@@ -735,6 +744,65 @@ List<SettingsModel> get extraSettings => [
   ),
 ];
 
+Future<void> _showSynapseSyncDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final urlController = TextEditingController(text: SynapseSyncService.baseUrl);
+  try {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Synapse 云同步'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('仅已登录的 B 站账号可以启用。点击登录后将在应用内完成 Synapse 授权；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。'),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(labelText: '服务地址'),
+                keyboardType: TextInputType.url,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          if (SynapseSyncService.isConfigured)
+            TextButton(
+              onPressed: () async {
+                await SynapseSyncService.clearCredentials();
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+              },
+              child: const Text('清除凭据'),
+            ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final result = await SynapseSyncService.authorizeAndBind(
+                  dialogContext,
+                  baseUrl: urlController.text,
+                );
+                SmartDialog.showToast('Synapse 已绑定 UID ${result['uid']}');
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+              } catch (error) {
+                SmartDialog.showToast(error.toString());
+              }
+            },
+            child: const Text('保存并启用'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) setState();
+  } finally {
+    urlController.dispose();
+  }
+}
 Future<void> audioNormalization(
   BuildContext context,
   VoidCallback setState, {

@@ -14,6 +14,9 @@ import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/utils/storage/search_history_store.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -23,7 +26,6 @@ class SearchPage extends StatefulWidget {
   @override
   State<SearchPage> createState() => _SearchPageState();
 }
-
 class _SearchPageState extends State<SearchPage> {
   final _tag = Utils.generateRandomString(6);
   late final SSearchController _searchController;
@@ -426,7 +428,16 @@ class _SearchPageState extends State<SearchPage> {
           );
         }
         _searchController.historyList.value = list;
-        GStorage.historyWord.put('cacheList', list);
+        Persistence.background(
+          Future.wait([
+            GStorage.historyWord.put('cacheList', list),
+            SearchHistoryStore.write(
+              list.map(SearchHistoryStore.create),
+            ),
+          ]),
+          label: 'search history import',
+        );
+        SynapseSyncService.scheduleSync();
       },
     ),
   );

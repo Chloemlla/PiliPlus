@@ -13,6 +13,8 @@ import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/storage/search_history_store.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
@@ -37,7 +39,6 @@ mixin DebounceStreamMixin<T> {
     ctr = null;
   }
 }
-
 abstract class DebounceStreamState<T extends StatefulWidget, S> extends State<T>
     with DebounceStreamMixin<S> {
   @override
@@ -58,7 +59,8 @@ class BaseSearchController extends GetxController {
 
   final historyList = List<String>.from(
     _trimHistory(
-      GStorage.historyWord.get('cacheList') ?? const <String>[],
+      (GStorage.historyWord.get('cacheList') as List?) ??
+          SearchHistoryStore.visible().map((entry) => entry.keyword).toList(),
     ),
   ).obs;
 
@@ -194,9 +196,13 @@ class SSearchController extends GetxController
         );
       }
       Persistence.background(
-        GStorage.historyWord.put('cacheList', historyList.toList()),
+        Future.wait([
+          GStorage.historyWord.put('cacheList', historyList.toList()),
+          SearchHistoryStore.upsert(controller.text),
+        ]),
         label: 'search history add',
       );
+      SynapseSyncService.scheduleSync();
     }
 
     searchFocusNode.unfocus();
@@ -246,9 +252,13 @@ class SSearchController extends GetxController
   void onLongSelect(String word) {
     historyList.remove(word);
     Persistence.background(
-      GStorage.historyWord.put('cacheList', historyList),
+      Future.wait([
+        GStorage.historyWord.put('cacheList', historyList),
+        SearchHistoryStore.tombstone(word),
+      ]),
       label: 'search history remove',
     );
+    SynapseSyncService.scheduleSync();
   }
 
   void onClearHistory() {
@@ -258,9 +268,13 @@ class SSearchController extends GetxController
       onConfirm: () {
         historyList.clear();
         Persistence.background(
-          GStorage.historyWord.delete('cacheList'),
+          Future.wait([
+            GStorage.historyWord.delete('cacheList'),
+            SearchHistoryStore.tombstoneAll(),
+          ]),
           label: 'search history clear',
         );
+        SynapseSyncService.scheduleSync();
       },
     );
   }

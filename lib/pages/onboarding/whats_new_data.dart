@@ -93,6 +93,17 @@ abstract final class WhatsNewData {
       tip: '入口：设置 → 其它设置 → 直播提醒设置 / 弹幕高亮。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.cloud_sync_outlined,
+      title: 'Synapse 设置与搜索记录同步',
+      subtitle: '仅对已登录的 B 站账号开放，并由服务端校验后加密保存登录凭据。',
+      bullets: [
+        '在设置中通过应用内 WebView 登录 Synapse 并绑定当前 B 站账号后，才可启用同步；未登录 B 站时不会显示同步入口。',
+        '设置冲突可选择保留本地、使用远端或安全合并；搜索记录会自动去重，删除会通过 tombstone 同步。',
+        'B 站 Cookie 仅用于服务端身份校验并进入独立加密档案，不会进入同步设置、日志或客户端 JWT 存储。',
+      ],
+      tip: '入口：设置 → 其它设置 → Synapse 云同步。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.shield_outlined,
       title: '存储、账号与界面可靠性',
       subtitle: '近期审计修复继续作为这些新功能的安全底座。',

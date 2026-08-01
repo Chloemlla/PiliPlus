@@ -29,6 +29,7 @@ import 'package:pili_plus/services/live_alert_lifecycle_observer.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/services/whats_new_guide_service.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
@@ -94,7 +95,6 @@ Future<void> _initDownPath() async {
     downloadPath = defDownloadPath;
   }
 }
-
 Future<void> _initTmpPath() async {
   tmpDirPath = (await getTemporaryDirectory()).path;
 }
@@ -406,6 +406,7 @@ class MyApp extends StatelessWidget {
     child = FirstLaunchOssNoticeGate(child: child);
     child = FirstLaunchImprovementsGuideGate(child: child);
     child = WhatsNewGuideGate(child: child);
+    child = SynapseSyncGate(child: child);
     if (Platform.isAndroid) {
       child = AndroidFirstLaunchPermissionGate(child: child);
     }

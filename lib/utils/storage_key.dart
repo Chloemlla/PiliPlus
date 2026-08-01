@@ -18,6 +18,15 @@ abstract final class SettingBoxKey {
       firstLaunchOssNoticeSeen = 'firstLaunchOssNoticeSeen',
       whatsNewAckCommitHash = 'whatsNewAckCommitHash',
       whatsNewAckBuildTime = 'whatsNewAckBuildTime',
+      synapseBaseUrl = 'synapseBaseUrl',
+      synapseSyncEnabled = 'synapseSyncEnabled',
+      synapseSyncBoundMid = 'synapseSyncBoundMid',
+      synapseDeviceId = 'synapseDeviceId',
+      synapseSyncRevision = 'synapseSyncRevision',
+      synapseSettingsVersion = 'synapseSettingsVersion',
+      synapseLastSyncedAt = 'synapseLastSyncedAt',
+      synapseSettingsUpdatedAt = 'synapseSettingsUpdatedAt',
+      synapseLocalSettingsChangedAt = 'synapseLocalSettingsChangedAt',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',
@@ -256,7 +265,6 @@ abstract final class SettingBoxKey {
       liveCdnUrl = 'liveCdnUrl',
       saveReply = 'saveReply';
 }
-
 abstract final class LocalCacheKey {
   static const String historyPause = 'historyPause',
       blackMids = 'blackMids',

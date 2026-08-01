@@ -57,6 +57,13 @@ abstract final class SettingSecretStore {
     _save();
   }
 
+  /// Used by integrations that keep their credentials outside Hive settings.
+  static String? readSynapse(String key) => read('synapse.$key');
+
+  static void writeSynapse(String key, String value) => write('synapse.$key', value);
+
+  static void deleteSynapse(String key) => delete('synapse.$key');
+
   static crypt.Key _readOrCreateKey() {
     final keyFile = _keyFile!;
     final existing = AtomicFile.readPrimaryOrBackup(

@@ -13,6 +13,7 @@ import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/web_cookie_sync.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' show Digest;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
@@ -37,6 +38,7 @@ abstract final class LoginUtils {
       } else {
         GlobalData().coins = coin;
       }
+      await SynapseSyncService.maybeShowStartupPrompt();
     }
   }
 
@@ -91,6 +93,7 @@ abstract final class LoginUtils {
         if (response != Pref.userInfoCache) {
           await GStorage.userInfo.put('userInfoCache', response);
         }
+        await SynapseSyncService.maybeShowStartupPrompt();
       }
     } else {
       // 获取用户信息失败
@@ -113,6 +116,7 @@ abstract final class LoginUtils {
       ..isLogin.value = false;
 
     return Future.wait([
+      SynapseSyncService.disableForLogout(),
       if (!Platform.isLinux)
         web.CookieManager.instance(
           webViewEnvironment: webViewEnvironment,
