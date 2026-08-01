@@ -37,7 +37,6 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
     final size = context.mediaQuerySize;
     final maxWidth = size.width - padding.horizontal;
     final width = size.isPortrait ? maxWidth : min(640.0, maxWidth * 0.6);
-    final height = width * 528 / 1125;
     return Scaffold(
       extendBody: true,
       extendBodyBehindAppBar: true,

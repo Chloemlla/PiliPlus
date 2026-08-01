@@ -536,3 +536,236 @@ Automated scan of 630 UI files for responsive layout issues. Found 63 issues tot
 - **Why**: 5 items x maxWidth 80 = 400dp > 320dp, so Flexible squeezes each to ~64dp, but AspectRatio(1) then forces a tight 64x64 box; the icon+label content (~66dp tall and ~65dp wide) exceeds the box, so the middle column wraps and overflows on narrow screens. The maxWidth 80 cap also makes the buttons arbitrarily cramped instead of letting labels ellipsize.
 - **Fix**: Remove ConstrainedBox(maxWidth: 80) and AspectRatio(1); lay the 5 actions out with Wrap (with run/vertical spacing) or a horizontally scrollable ListView, and let each item size to content with Text maxLines:1 + TextOverflow.ellipsis (e.g. FittedBox).
 
+
+### lib/pages/member_upower_rank/view.dart:216
+- **Element**: `Row (ListTile.title) in _buildBody / SliverList itemBuilder`
+- **Issue**: Anti-pattern #1: ListTile title is a Row [NetworkImgLayer(width:38,height:38), SizedBox(spacing:12), Text(item.nickname!)] where the nickname Text has no Flexible/Expanded and no maxLines/overflow. The Text lays out at its full intrinsic width and cannot shrink, so a long CJK nickname pushes past the bounded title width and overflows horizontally.
+- **Why**: On a 320dp screen the ListTile content width is already consumed by the scaled leading rank number, the trailing 'N 天' (~40px) and tile padding, leaving ~170-200dp for the title Row. The fixed 38px avatar + 12 spacing = 50dp fixed, so any nickname longer than ~8 CJK chars (~120px at fontSize 14) exceeds the available width -> RenderFlex overflow. The nickname comes straight from server data with no length cap.
+- **Fix**: Wrap the nickname Text in Expanded/Flexible with maxLines: 1 and overflow: TextOverflow.ellipsis (and crossAxisAlignment center on the Row).
+
+
+### lib/pages/music/view.dart:85
+- **Element**: `Row (AppBar title, _buildAppBar)`
+- **Issue**: AppBar title is a Row whose second child is a plain Text(response.musicTitle!) with no maxLines/overflow and not wrapped in Expanded/Flexible.
+- **Why**: The title Text is a non-flex Row child laid out at unbounded width, so it renders at full intrinsic width with no truncation possible. Adding the 36dp cover + 8dp spacing, a music title longer than ~220dp exceeds the toolbar title area (~264dp on a 320dp screen), causing a RenderFlex overflow on narrow phones whenever the title is moderately long.
+- **Fix**: Wrap the title Text (or the whole trailing content) in Expanded/Flexible and add maxLines: 1 with overflow: TextOverflow.ellipsis so long titles truncate instead of overflowing the AppBar.
+
+
+### lib/pages/rank/zone/view.dart:66
+- **Element**: `VideoCardH / StatWidget Row (grid cell)`
+- **Issue**: SliverGrid.builder renders shared VideoCardH inside GridMixin's fixed gridDelegate (mainAxisExtent: 110, maxCrossAxisExtent: smallCardWidth*2 = 480). On phones this grid is always 1 column, so each VideoCardH's AspectRatio(16/10) cover is forced to ~160dp wide, and its bottom stats Row (two StatWidgets, no flex) overflows. Anti-pattern #4/#6 (AspectRatio + fixed-height container + Row with no flex/scroll).
+- **Why**: On a 320dp phone the rank page gives content only ~266dp after the fixed 51dp VerticalTabBar sidebar. VideoCardH's padding (24dp) + AspectRatio cover width 160dp (height capped at 110-10=100dp by the fixed mainAxisExtent) + SizedBox(10) leave ~75dp for the text column. The stats Row (play icon+count ≈59dp, danmaku ≈43dp, spacing 8) needs ~110dp, so it overflows and the numbers are clipped. On ≥360dp phones it barely fits, which is why it only breaks on 320-345dp screens.
+- **Fix**: Fix in VideoCardH (used by this page and rank's grid): wrap each StatWidget in Flexible or change the stat Row to Wrap, or add overflow/ellipsis to the stat text; alternatively make the grid delegate adaptive (reduce maxCrossAxisExtent / cap cover width) so the text column stays wide enough on small phones. In this page you can also cap the cover via a ConstrainedBox(maxWidth: ~120) around the AspectRatio.
+
+
+### lib/pages/save_panel/view.dart:391
+- **Element**: `Container(height: 81) wrapping Row with NetworkImgLayer(width/height from coverSize)`
+- **Issue**: Fixed-height Container (height: 81) whose child NetworkImgLayer height is derived from coverSize = MediaQuery.textScalerOf(context).scale(65). Content area is only 65px tall (81 minus 2x8 padding), so at any text scale above 1.0 the image (and the adjacent Expanded title text) overflows the box.
+- **Why**: On small phones users frequently run larger system font scales. With textScale 1.1 the image is ~71.5px inside a 65px content slot -> RenderFlex vertical overflow (yellow/black stripes in debug, clipped image bottom in release). The 88x88 QR block above already pushes content; this box is the one fixed-size element that does not adapt to scaled content (anti-pattern: fixed-height container not adapting to text/content).
+- **Fix**: Size the container from the same scaled value instead of a literal: `height: coverSize + 16` (16 = the 2x8 padding) so image + padding stay consistent, or drop the fixed height and let the Row size naturally. coverSize is already textScaler-scaled, so reuse it.
+
+
+## Moderate Issues
+
+### lib/pages/article_list/widgets/item.dart:43
+- **Element**: `AspectRatio in ArticleListItem`
+- **Issue**: AspectRatio(aspectRatio: 16/10) placed directly as a Row child (anti-pattern #4: AspectRatio on an item that should flex; it has unbounded horizontal constraints and sizes off the row height instead of the available column width).
+- **Why**: A bare AspectRatio in a Row receives infinite maxWidth (flex.dart _constraintsForNonFlexChild returns BoxConstraints(maxHeight:) for horizontal rows), so RenderAspectRatio._applyAspectRatio falls back to height = constraints.maxHeight (grid mainAxisExtent 110 minus 10dp vertical padding ≈ 100) and width = 100 × 1.6 = 160dp fixed. The thumbnail never adapts to the cell width: whenever the grid has ≥2 columns (tablets/landscape, or user lowers smallCardWidth to its 150dp minimum → a 320dp phone gets 2 columns of ~160dp and a 360dp phone cells of ~180dp, leaving only ~136-156dp for the row), the fixed 160dp image overflows the Row and squeezes the title column. The recent 'layoutbuilder patch' commit (89522e205) only patches the image inside the AspectRatio, not the AspectRatio's own sizing.
+- **Fix**: Give the thumbnail an explicit bounded width before the AspectRatio (e.g. SizedBox(width: ~110, child: AspectRatio(...))) or wrap it in Flexible and size it from available width with a LayoutBuilder, so it scales with column width instead of row height.
+
+
+### lib/pages/article/view.dart:434
+- **Element**: `Row of textIconButton (TextButton.icon) in _buildBottom`
+- **Issue**: Bottom action bar is a Row of four Expanded TextButton.icon whose fixed content (15dp horizontal padding on each side + 16dp icon + 8dp gap + formatted count label) has a minimum width larger than each button's share on small screens (anti-pattern #8: Fixed-content children in a Row that cannot shrink below their intrinsic min-width, no scroll/Wrap).
+- **Why**: The bar spans the full screen width (the fab slot is laid out with constraints.loosen(), and the Row has Expanded children), so on a 320dp screen each button is forced to ~80dp with a ~50dp content area after the 30dp horizontal padding. TextButton.icon's internal Row (mainAxisSize.min) then needs icon 16 + gap 8 + label: a 2-char label '转发/分享/收藏/点赞' is ~28dp and a formatted count like '12.3万' is ~39dp, so 52-63dp > 50dp → the button's inner Row overflows (visible stripe/clipped count). Only fits comfortably at ≥350dp widths.
+- **Fix**: Reduce the TextButton horizontal padding, replace the fixed icon+gap+label layout with Flexible/FittedBox + overflow ellipsis on the label, or make the action row horizontally scrollable (SingleChildScrollView) instead of four rigid Expanded buttons.
+
+
+### PiliPlus/lib/pages/common/dyn/common_dyn_page.dart:103
+- **Element**: `buildReplyHeader Row`
+- **Issue**: Row(mainAxisAlignment: spaceBetween) with a dynamic reply-count Text and a TextButton.icon, neither wrapped in Flexible/Expanded, no ellipsis on the Text, inside a pinned header with only 18px of horizontal padding
+- **Why**: The Row has non-flexible children whose content is dynamic (reply count Text('$x条回复') and a sort label). On 320dp screens combined with the elevated system font scale common on small Android phones (1.3-2.0x), the count text plus the TextButton.icon exceeds the ~302px available width; because Row does not wrap or scroll and the Text has no overflow handling, it renders the yellow/black overflow stripes in debug and clipped text in release. Even at default scale a large unformatted count could push the sort button off-screen.
+- **Fix**: Wrap the reply-count Text in Flexible and give it overflow: TextOverflow.ellipsis (and maxLines: 1); optionally constrain the TextButton.icon label with an overflow too, or replace the Row with a Wrap so the button wraps to the next line on narrow screens.
+
+
+### F:\Repositories\GitHub\PiliPlus\lib\pages\dynamics\widgets\additional_panel.dart:620
+- **Element**: `ADDITIONAL_TYPE_MATCH Row (teamItem / title)`
+- **Issue**: MATCH additional row: an unconstrained title (Text/Column at lines 592-612, no Flexible/ellipsis) followed by two Expanded team columns (each a 30px NetworkImgLayer inside EdgeInsets only(left/right:16)), a non-flexible center score Column, and an optional FilledButton.
+- **Why**: On a 320dp screen the usable row width is ~272px. The non-flexible title (often 130-180px), center score column, and button consume most of it, leaving the two Expanded team columns only ~0-40px each. The 30px team logos plus 16px side padding overflow their shrunken cells (visual overlap) and a longer title pushes the row past the available width into RenderFlex overflow — the exact 'cramped squares' anti-pattern.
+- **Fix**: Make the title Flexible/Expanded with ellipsis, or move the title onto its own full-width line above the Row; also reduce the team Padding to EdgeInsets.zero (or remove the fixed 30px image) and wrap in a scrollable/Wrap if content must stay inline.
+
+
+### lib/pages/dynamics_topic/view.dart:1
+- **Element**: `Import block / file header`
+- **Issue**: Unresolved git merge-conflict markers (<<<<<<< HEAD / ======= / >>>>>>> upstream/main) wrap the entire import block, so this file fails to compile and the page cannot build or render at all.
+- **Why**: The Dart compiler rejects the literal `<<<<<<<`, `=======`, and `>>>>>>>` tokens. Any layout is impossible because the whole file (and any import chain that pulls it in) won't compile, so this page breaks the app on every screen size, not just small phones.
+- **Fix**: Resolve the conflict: keep the HEAD side (`package:pili_plus/...` imports), delete the duplicate `package:PiliPlus/...` block and the three conflict-marker lines, then re-verify the remaining symbols (e.g. SimpleScaffold) still resolve.
+
+
+### lib/pages/dynamics_topic/view.dart:122
+- **Element**: `ToggleButtons (sort tabs) in SliverPinnedHeader`
+- **Issue**: Sort-bar ToggleButtons has no Wrap/scroll: it renders a data-driven list of tabs (allSortBy) in a plain Row with `constraints: BoxConstraints(minWidth: 54)`.
+- **Why**: Flutter's ToggleButtons builds children inside an un-scrollable `Row(mainAxisSize: min)` (confirmed in toggle_buttons.dart). With 6 tabs at 54dp min each the Row needs 324dp, but on a 320dp screen only ~308dp is available (320 minus the 12dp left padding; there is no right padding), so RenderFlex overflows. Topic pages commonly return 5-6 sort options, and wider labels (e.g. "最多观看") push the threshold even lower.
+- **Fix**: Wrap the ToggleButtons in a SingleChildScrollView(scrollDirection: Axis.horizontal) or replace it with a horizontally scrollable TabBar / Wrap so extra tabs scroll or wrap instead of overflowing.
+
+
+### lib/pages/dynamics_topic_rcmd/view.dart:1
+- **Element**: `Import block / file header`
+- **Issue**: Unresolved git merge-conflict markers (<<<<<<< HEAD / ======= / >>>>>>> upstream/main) in the import block; the file fails to compile.
+- **Why**: The literal conflict tokens are invalid Dart, so DynTopicRcmdPage cannot compile, which breaks the whole app build; the topic-recommendation list can never render on any device.
+- **Fix**: Resolve the conflict: keep the `pili_plus/...` import set, delete the `PiliPlus/...` duplicate block and the marker lines.
+
+
+### lib/pages/episode_panel/view.dart:3
+- **Element**: `Import block / file header`
+- **Issue**: Unresolved git merge-conflict markers (<<<<<<< HEAD / ======= / >>>>>>> upstream/main) wrap the import block; the file fails to compile.
+- **Why**: Invalid Dart tokens break the build of EpisodePanel, which is used by the video player's episode/分P bottom sheet — nothing renders on any screen until resolved.
+- **Fix**: Resolve the conflict: keep the `pili_plus/...` import block, drop the `PiliPlus/...` block and markers, then confirm symbols like `tabBarScrollPhysics` still exist.
+
+
+### lib/pages/episode_panel/view.dart:673
+- **Element**: `_buildToolbar Row (title, fav, jump-top/bottom/current, reverse, sort, close)`
+- **Issue**: Toolbar is a non-scrollable Row with up to 7 fixed-width controls (title Text + `iconButton`s, each a `SizedBox(width: 36)`) and only a `Spacer` — no Flexible/Expanded or scroll.
+- **Why**: Fixed children sum to ~312dp on the worst case (2-char title "合集" ~32dp + 7x36dp buttons + 28dp horizontal padding) against a 320dp screen, leaving only ~8dp slack. Any wider title, a system font scale above ~1.15, or an extra control pushes it past 320dp and RenderFlex overflows; there is zero flexibility in the layout.
+- **Fix**: Make the toolbar scrollable (wrap in SingleChildScrollView horizontal) or shrink-to-fit (use Expanded/Flexible on the title, or LayoutBuilder/MediaQuery to drop/reflow buttons on narrow widths).
+
+
+### lib/pages/episode_panel/view.dart:514
+- **Element**: `NetworkImgLayer (episode cover) in _buildEpisodeItem Row`
+- **Issue**: Hardcoded cover width: `NetworkImgLayer(width: 160, height: 100)` is a fixed non-flexing child of the episode Row, alongside an Expanded text column.
+- **Why**: On a 320dp screen the fixed 160dp cover + 10dp spacing consumes half the panel width, leaving the Expanded title column only ~126dp (≈8 characters per line before ellipsis) and the cover does not shrink on narrower devices, producing a cramped, unbalanced layout rather than a proportional one.
+- **Fix**: Give the cover a flexing width, e.g. Expanded(child: AspectRatio(aspectRatio: 16/10)) next to the Expanded text column, or scale the 160dp constant down with MediaQuery/LayoutBuilder on small screens.
+
+
+### lib/pages/live_area/view.dart:1
+- **Element**: `file header / import section`
+- **Issue**: Build-blocking, not a layout pattern: the file contains unresolved git merge-conflict markers (<<<<<<< HEAD ... ======= ... >>>>>>> upstream/main) in the import block, leaving duplicated/conflicting imports (package:pili_plus vs package:PiliPlus).
+- **Why**: The file cannot compile, so the page (and the whole app during `flutter analyze`/build) is broken regardless of screen size; no responsive behavior can be verified or rendered.
+- **Fix**: Resolve the merge conflict by keeping one side (HEAD's package:pili_plus imports) and deleting the conflict markers, then re-run `flutter analyze` to confirm the file compiles.
+
+
+### lib/pages/live_dm_block/view.dart:1
+- **Element**: `file header / import section`
+- **Issue**: Build-blocking, not a layout pattern: the file contains unresolved git merge-conflict markers (<<<<<<< HEAD ... ======= ... >>>>>>> upstream/main) in the import block, leaving duplicated/conflicting imports (package:pili_plus vs package:PiliPlus).
+- **Why**: The file cannot compile, so the 弹幕屏蔽 page is broken regardless of screen size; no responsive behavior can be verified or rendered.
+- **Fix**: Resolve the merge conflict by keeping one side (HEAD's package:pili_plus imports) and deleting the conflict markers, then re-run `flutter analyze` to confirm the file compiles.
+
+
+### lib/pages/member_coin_arc/view.dart:1
+- **Element**: `MemberCoinArcPage`
+- **Issue**: Unresolved git merge conflict markers (`<<<<<<< HEAD`, `=======`, `>>>>>>> upstream/main`) spanning the entire import block (lines 1-26); the file will not parse/compile.
+- **Why**: The Dart compiler rejects conflict markers in source, so this page cannot build at all — the widget tree never renders on any device/screen size (worst case of 'layout wrong'). The duplicate import blocks also reference `SimpleScaffold` and `package:PiliPlus/...` (old casing) on one side and `pili_plus` on the other, so the file is left in a broken half-merged state.
+- **Fix**: Resolve the merge conflict: keep the current `pili_plus` import block (remove the `<<<<<<< HEAD` / `=======` / `>>>>>>> upstream/main` markers and the `package:PiliPlus/...` duplicate imports), then verify the file compiles with `flutter analyze`.
+
+
+### lib/pages/member_favorite/widget/item.dart:65
+- **Element**: `AspectRatio / MemberFavItem Row`
+- **Issue**: AspectRatio (aspectRatio: Style.aspectRatio) is a non-flexible child of a Row; its width is derived from the fixed cell height, not the available width. Together with the trailing SizedBox(width:10) it forms a ~170px rigid segment that the Expanded text column has to fit around.
+- **Why**: In this page the item sits in a SliverGrid with mainAxisExtent 110 (single full-width column on 320-375dp phones since maxCrossAxisExtent=480). The Row's inner height is ~100px (110 minus vertical padding), so the AspectRatio pins the thumbnail to 1.6*100 = 160px regardless of screen width, leaving only ~110px on a 320dp screen for the 2-line title + subtitle. Whenever the row is narrower than ~170px (e.g. the fav grid drops to 2 columns when the user lowers the smallCardWidth preference, or this widget is reused in a narrower slot) the AspectRatio + 10px gap + Expanded min-width exceeds the cell and triggers a horizontal RenderFlex overflow.
+- **Fix**: Make the thumbnail flex: wrap it in Expanded/Flexible with a flex ratio, e.g. Expanded(flex: 3, child: AspectRatio(aspectRatio: Style.aspectRatio, child: LayoutBuilder(...))) and Expanded(flex: 4, child: textColumn), so it shrinks with the row width instead of being pinned by the cell height; or size it via LayoutBuilder from a fraction of the row width.
+
+
+### lib/pages/member_home/widgets/fav_item.dart:45
+- **Element**: `NetworkImgLayer / MemberFavItem Row`
+- **Issue**: Hardcoded thumbnail size NetworkImgLayer(width: 160, height: 100) as a non-flexible Row child with a fixed SizedBox(width: 10) gap.
+- **Why**: The 160px image + 10px gap is a rigid 170px segment inside the Row. On a 320dp phone (available ~296px after Style.safeSpace padding) the 2-line title column is squeezed to ~126px, and the fixed width does not scale with device size or text scale; if this item is ever placed in a parent narrower than ~170px (2-column layout, split view, or a smaller card-width setting) the Row overflows horizontally with the yellow/black error stripes. It also does not adapt to taller or narrower screen variants.
+- **Fix**: Remove the hardcoded width/height and let the thumbnail flex with the row, e.g. Expanded(child: AspectRatio(aspectRatio: 1.6, child: NetworkImgLayer(...))) alongside an Expanded text column, or use LayoutBuilder to size the image as a fraction of available width instead of fixed 160.
+
+
+### lib/pages/member_favorite/view.dart:172
+- **Element**: `SliverGrid.builder / SizedBox(height: 110) / Container(height: 40)`
+- **Issue**: Fixed-height layout that does not adapt to text size/content: grid cells hardcoded to mainAxisExtent 110 (Grid.videoCardHDelegate), each item additionally wrapped in SizedBox(height: 110), and a load-more Container(height: 40).
+- **Why**: On small phones the two-line title plus the 12px metadata line must fit in the fixed 100px inner height of each 110px-tall grid cell. At default text scale it barely fits, but with the system font scaling typical on budget Android phones (1.3-1.5x) the title + subtitle exceed the fixed cell and the Column overflows/clips vertically inside the grid tile, and the fixed-height thumbnail (AspectRatio sized from that same height) then also compresses the already-narrow text column.
+- **Fix**: Derive the cell height from the text scale, e.g. mainAxisExtent: MediaQuery.textScalerOf(context).scale(110) in Grid.videoCardHDelegate, and remove the redundant SizedBox(height: 110) wrapper so the tile can size to its content; make the load-more button height adaptive (min-height + padding) instead of a fixed Container(height: 40).
+
+
+### lib/pages/mine/view.dart:142
+- **Element**: `Row in _buildHeaderActions (IconButtons + msgBadge + BackButton)`
+- **Issue**: Anti-pattern #2: _buildHeaderActions is a Row(mainAxisAlignment: end, spacing: 5) of up to 6-7 fixed-size IconButtons (iconSize 22 + EdgeInsets.all(8) padding) plus an optional Expanded BackButton and trailing SizedBox(width:16), with no Wrap or scroll. All children have fixed min widths, so when the optional actions are enabled (search + msgBadge shown because hasHome is false, plus star/incognito/switch/theme/settings, and/or showBackBtn when MinePage is pushed via MainController.toMinePage) the row exceeds 320dp.
+- **Why**: The msgBadge IconButton uses the default 48dp min target (no shrinkWrap style) and the other icon buttons are ~38dp each; the fixed set totals ~312-322dp on a 320dp screen before the BackButton, so with home disabled + reply-cache toggle enabled, or when pushed with a back button, the non-flexible children sum exceeds the available width and RenderFlex overflows.
+- **Fix**: Wrap the action buttons in a horizontal SingleChildScrollView or use OverflowBar, or derive the icon size/spacing from LayoutBuilder/MediaQuery (e.g. shrink icons on narrow widths), or move overflow actions into a PopupMenuButton.
+
+
+### lib/pages/music/widget/music_video_card_h.dart:117
+- **Element**: `Row (stats, content())`
+- **Issue**: Row with two fixed StatWidgets (play + danmaku) inside the Expanded content column — no Flexible, Wrap, or scroll. The 16:10 AspectRatio thumbnail (line 65) derives its 160dp width from the grid cell's fixed 110dp height, leaving too little room for the content column on narrow screens.
+- **Why**: The grid cell has a fixed mainAxisExtent of 110 (Grid.videoCardHDelegate), so the AspectRatio thumbnail is forced to 100*1.6 = 160dp wide on every screen. On a 320dp phone (1 column, cell=320dp), the content column is only 320 - 24 (safeSpace 12x2) - 160 (thumb) - 10 (gap) = ~126dp wide, but the two StatWidgets need ~134dp (13dp icon + 2dp gap + ~48dp 4-char formatted count each, plus 8dp spacing) and cannot shrink, so the inner Row throws a RenderFlex overflow (yellow/black stripes) at 320dp widths.
+- **Fix**: Wrap the stats Row in a Wrap(spacing: 8) so the two stats flow to a second line when narrow, or wrap each StatWidget in Flexible/Expanded inside the Row, or size the thumbnail responsively (e.g. with LayoutBuilder fraction of cell width) instead of deriving its width from the fixed cell height.
+
+
+### lib/pages/music/view.dart:567
+- **Element**: `Row (rank stats, _buildCard / _buildRank)`
+- **Issue**: Row with 4 fixed-width children ('热歌榜排名' label + 3 _buildRank stat columns) using MainAxisAlignment.spaceBetween — no Wrap, Flexible, or horizontal scroll.
+- **Why**: Inside the Card (margin 8x2 + padding 16x2) a 320dp screen leaves only ~272dp of width. Each _buildRank column sizes to its widest text (rank number at 14dp bodyMedium can be up to 84dp for strings like '999.9万', labels like '使用稿件量' are 60dp) plus an 18dp arrow on the last item. With typical data the 4 items total ~246dp, but with larger formatted counts they reach ~312dp and overflow the Row with no fallback, since spaceBetween neither wraps nor clips.
+- **Fix**: Replace the spaceBetween Row with a Wrap(spacing: 16, runSpacing: 8) so the rank columns wrap onto a second line, or wrap each _buildRank in Expanded/Flexible and ellipsize the labels.
+
+
+### lib/pages/music/video/view.dart:80
+- **Element**: `Row (SliverAppBar title, _buildAppBar)`
+- **Issue**: SliverAppBar title is a Row (40dp cover + Column) where the Column is NOT wrapped in Expanded/Flexible. The title Text already has maxLines:1 + ellipsis but it cannot truncate because Row lays out non-flex children at unbounded width.
+- **Why**: Non-flex children of a Row are laid out with an unbounded main axis, so the Column sizes to the full untruncated width of info.musicTitle. On a 320-375dp screen the toolbar title slot (after back button, no actions) is only ~264-310dp; a long bilibili music title (15+ CJK chars at titleMedium ≈ 240dp+) pushes the Row past the toolbar width and triggers a RenderFlex overflow instead of ellipsizing.
+- **Fix**: Wrap the Column in Expanded so it receives the remaining bounded width, letting the existing maxLines:1 + TextOverflow.ellipsis on the title actually truncate long titles.
+
+
+### lib/pages/pgc/view.dart:1
+- **Element**: `N/A (no Flutter code in repo)`
+- **Issue**: FILE NOT FOUND - audit blocked
+- **Why**: None of the 16 listed files exist in this checkout. The repository F:/Repositories/GitHub/Happy-TTS contains zero .dart files, no pubspec.yaml, and no lib/pages/pgc, lib/pages/onboarding, lib/pages/pgc_index, or lib/pages/pgc_review directories (confirmed in the working tree and in all .claude/worktrees). This is a Node.js/TypeScript/React project (src/, frontend/src/), not a Flutter app, so there are no widgets to audit and no responsive layout bugs can be verified.
+- **Fix**: Re-run this audit against the correct Flutter project checkout that contains lib/pages/pgc/, lib/pages/onboarding/, etc. Once the files are available, scan for the 9 listed anti-patterns (hardcoded widths, non-scrolling Rows, small ConstrainedBox maxWidth, inflexible AspectRatio, missing Wrap/SingleChildScrollView, fixed-height containers, unchecked MediaQuery.of, Overflowing Row with Flexible but no scroll, custom RenderObjects).
+
+
+### lib/pages/popular_series/view.dart:194
+- **Element**: `Row (in _buildSeriesList)`
+- **Issue**: Row(spacing: 16, children: [label-with-arrow GestureDetector, Text(reminder)]) where the reminder Text is a raw non-flexible child with no Flexible/Expanded wrap and no maxLines/ellipsis. Anti-pattern #2/#5 (Row with growing non-flex text, no wrap/scroll).
+- **Why**: The Bilibili weekly-list `reminder` string (e.g. '▸ 本期数据截止至 2026-07-26 12:00') is ~20+ CJK/ASCII glyphs. The Row sits in a SliverFloatingHeaderWidget padded to a max width of screen width minus ~14dp. On a 320dp phone the label ('第240期' ~70dp) + 16 spacing + arrow icon + the reminder's single-line intrinsic width (~230dp) exceeds the ~306dp available, so RenderFlex lays out overflow and the reminder text is clipped/bleeds off-screen (yellow-black overflow stripes in debug).
+- **Fix**: Wrap the reminder Text in Expanded (or Flexible) with maxLines: 1, overflow: TextOverflow.ellipsis, or convert the whole Row to a Wrap(spacing: 16, runSpacing: 4); simplest is Expanded + ellipsis so the reminder truncates instead of overflowing.
+
+
+### lib/pages/search_panel/pgc/view.dart:50
+- **Element**: `gridDelegate (mainAxisExtent: 160)`
+- **Issue**: SliverGridDelegateWithMaxCrossAxisExtent hardcodes mainAxisExtent: 160, but the grid cell's item (SearchPgcItem) has an intrinsic height of 164 (fixed 148px NetworkImgLayer + 16px vertical cardSpace padding). Every cell under-allocates by 4px.
+- **Why**: SliverGrid gives the child a tight 160px height; the item needs 164, so the bottom ~4px of each card overflows into the next row (mainAxisSpacing is only 2px, so it visibly overlaps the following card). With large text scales the title Text.rich wraps to more lines and the overflow grows well beyond 4px, so it is worst on small phones with accessibility font sizes.
+- **Fix**: Compute the extent from content, e.g. `mainAxisExtent: 148 + MediaQuery.textScalerOf(context).scale(16)` (mirrors how live/view.dart scales its extent), or omit mainAxisExtent and drive the cell height from childAspectRatio/content.
+
+
+### lib/pages/search_panel/all/view.dart:67
+- **Element**: `SizedBox(height: 160) around SearchPgcItem`
+- **Issue**: SizedBox(height: 160) wraps SearchPgcItem, whose intrinsic height is 164 (148px image + 16px vertical padding). The hardcoded 160 box under-allocates by 4px (same mismatch as the pgc grid delegate).
+- **Why**: The single PGC result branch forces a 160px box; the card's fixed 148px cover plus padding renders 164px, so the bottom of the card overflows/clips into the next waterfall item. Text scaling makes it worse (title can wrap). The sibling branch below (multi-PGC) already uses MediaQuery.textScalerOf for its height, so this branch is inconsistent.
+- **Fix**: Use the same scaling approach as the multi-card branch: `height: 148 + MediaQuery.textScalerOf(context).scale(16)` (or 164) so the fixed 148px image + padding is fully contained.
+
+
+### lib/pages/search_panel/article/widgets/item.dart:89
+- **Element**: `Row(Text('${item.view}浏览'), Text(' • '), Text('${item.reply}评论'))`
+- **Issue**: Row of three non-flexible Texts (view count, ' • ' separator, reply count) with no Flexible/FittedBox/ellipsis, inside an Expanded column that is only ~110-126px wide on a 320-375dp phone.
+- **Why**: The article grid is a single column on phones (maxCrossAxisExtent 480 -> 1 column at 320dp). The fixed 16:10 cover AspectRatio consumes ~160px of the ~296px content row, leaving ~126px for the text column. Counts like '1000000浏览' (~65px) + ' • ' + '10000评论' (~53px) already sum past 126px, and Bilibili articles with >=1M views are common -> RenderFlex overflow, right edge clipped. On tablets the same cell gets a wider text column, so this only breaks on small phones.
+- **Fix**: Wrap each Text in Flexible (with TextOverflow.ellipsis), or merge into a single Text with overflow handling, or format counts via NumUtils.numFormat and wrap the Row in FittedBox so long numbers scale down instead of overflowing.
+
+
+### lib/pages/search_panel/user/widgets/item.dart:40
+- **Element**: `Column (child of Row in SearchUserItem.build)`
+- **Issue**: The info Column inside the card Row is NOT wrapped in Expanded/Flexible, so it is laid out with unbounded width and sizes to the intrinsic width of its widest child.
+- **Why**: A Row lays out non-flex children with unbounded horizontal constraints, so the Column's width becomes the widest line (item.uname!, or the officialVerify.desc Text at line 66 which can be a long string like '知名游戏区UP主'). On a 320dp phone the grid cell is ~300dp wide; fixed siblings (SizedBox 15 + PendantAvatar 42 + SizedBox 10 = 67dp) plus an unwrapped long name/desc exceed the cell width, causing RenderFlex horizontal overflow (yellow/black stripes). Because the host SliverGrid also has a fixed mainAxisExtent of 66, a 3-line item clips vertically too.
+- **Fix**: Wrap the Column in Expanded (or Flexible) so it takes the remaining width, and add maxLines: 1 + TextOverflow.ellipsis to the uname Text (and/or the officialVerify desc Text).
+
+
+### lib/pages/search_panel/pgc/widgets/item.dart:82
+- **Element**: `Row (meta info rows inside the Expanded column of SearchPgcItem)`
+- **Issue**: The two metadata rows (lines 82-94 and 95-105) are Rows of plain Text children separated by '·' literals, with no Flexible/ellipsis.
+- **Why**: In a Row, non-flex Text children are measured with unbounded width and therefore never wrap. On a 320dp screen the Expanded content area is only ~175dp wide (320 - 2*12 padding - 111 cover - 10 gap). Real data such as styles '日常/恋爱/搞笑' (~117dp) + '·' + indexShow '全13话' (~52dp) exceeds 175dp, producing RenderFlex overflow. The first meta row (areas + pubtime) can overflow too when the area string is long.
+- **Fix**: Wrap the leading Text of each meta Row in Flexible with TextOverflow.ellipsis (or replace the Row with a Wrap), so long area/style/indexShow strings truncate instead of overflowing.
+
+
+### lib/pages/search_panel/user/view.dart:53
+- **Element**: `Row (buildHeader in _SearchUserPanelState)`
+- **Issue**: buildHeader builds a Row with two maxLines:1 Texts ('排序: …' and '用户类型: …'), two Spacers, and a fixed 32x32 IconButton, with no Flexible wrapper and no ellipsis on the Texts.
+- **Why**: Available width on a 320dp screen is ~283dp (320 - 25 - 12 padding). With the longest labels ('排序: Lv等级由高到低' ≈143dp + '用户类型: 认证用户' ≈91dp + 32dp button ≈ 266dp) it only fits at default text scale. The two Spacers collapse to 0 once intrinsic widths exceed available space, and because the Texts are non-flexible with maxLines:1 and no overflow, any accessibility text scaling or longer label triggers horizontal RenderFlex overflow.
+- **Fix**: Wrap each Obx Text in Flexible with TextOverflow.ellipsis (keeping Spacer only for leftover space), or collapse to a single flexible status text plus the trailing filter button.
+
+
+### lib/pages/search_panel/user/view.dart:95
+- **Element**: `gridDelegate (SliverGridDelegateWithMaxCrossAxisExtent in _SearchUserPanelState)`
+- **Issue**: SliverGridDelegateWithMaxCrossAxisExtent uses a hardcoded mainAxisExtent: 66 for user cells whose content height is variable.
+- **Why**: SearchUserItem can render up to three stacked text lines (uname + '粉丝/视频' + officialVerify.desc). At default font that is ~54dp and fits in 66dp, but when the third line is present or the user enables text scaling (>=1.3x), the content exceeds the fixed 66dp cell. The Column uses mainAxisAlignment.center, so overflow is clipped symmetrically at both the top and bottom of the cell.
+- **Fix**: Derive the extent from the text scaler, e.g. mainAxisExtent: 66 * MediaQuery.textScalerOf(context).scale(1), or enforce single-line ellipsis on all three Texts so the fixed height is safe.
+
