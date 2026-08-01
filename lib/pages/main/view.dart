@@ -23,7 +23,6 @@ import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
-import 'package:pili_plus/utils/storage_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
