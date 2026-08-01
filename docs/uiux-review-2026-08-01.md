@@ -104,6 +104,7 @@
 | 1.26 | `lib/pages/video/widgets/header_control.dart` | 2014-2253 | 按钮 40×34 但图标仅 15-20px，视觉目标和点击区域差距大 | 确保涟漪效果清晰可见 |
 | 1.27 | `lib/pages/video/view.dart` | 1088-1165 | 60px 播放图标阴影超出 IconButton 范围不可点击 | 用更大 SizedBox 包裹匹配阴影范围 |
 
+
 ---
 
 ## 2. 首页/我的/导航模块
@@ -191,6 +192,7 @@
 | 3.14 | `lib/pages/setting/pages/color_select.dart` | 130-133 | 动态颜色复选框 `visualDensity: -4` 过度压缩 | 使用更温和的密度值 |
 | 3.15 | `lib/common/widgets/dialog/report.dart` | 69-72 | 举报表单 label 22 个中文字符过长 | 改用更短的 label 或 hintText |
 
+
 ---
 
 ## 4. 直播/评论/动态模块
@@ -261,6 +263,7 @@
 |---|------|------|----------|----------|
 | 4.26 | `lib/pages/live_room/widgets/chat_panel.dart` | 36-398 | 聊天消息用 Text.rich + TextSpan，屏幕阅读器无法区分用户名/勋章/内容 | 每条消息用 Semantics 包裹 |
 | 4.27 | `lib/pages/live_room/widgets/header_control.dart` | 117-312 | ComBtn 有 tooltip 但无 Semantics 标签 | 添加与 tooltip 一致的 Semantics |
+
 
 ---
 
@@ -345,6 +348,7 @@
 | # | 文件 | 行号 | 问题描述 | 建议修复 |
 |---|------|------|----------|----------|
 | 6.11 | `lib/common/widgets/radio_widget.dart` | 71-74 | 逻辑颠倒：移动端用 `shrinkWrap`，桌面用 `padded` | 交换：移动端用 padded，桌面用 shrinkWrap |
+
 
 ---
 
@@ -452,3 +456,83 @@
 
 *报告生成日期：2026-08-01*
 *扫描工具：6 路并行 Agent（video / home / search / live / member / widgets）*
+
+
+---
+
+# UI/UX Responsive Review — 2026-08-01
+
+## Overview
+Automated scan of 630 UI files for responsive layout issues. Found 63 issues total.
+
+## Critical Issues (Overflow Risks)
+
+### lib/pages/article_list/view.dart:112
+- **Element**: `Row inside _buildHeader (SliverAppBar.medium flexibleSpace background)`
+- **Issue**: Row with fixed-width thumbnail + non-flex Column containing long Text.rich meta lines; no Expanded/Flexible, so the column sizes to its full intrinsic width and overflows on narrow screens (anti-patterns #1/#2: hardcoded-width sibling + Row children that don't flex).
+- **Why**: In a Row, non-flex children get unbounded maxWidth (confirmed in Flutter flex.dart _constraintsForNonFlexChild), so the Column and its Text.rich lines ('12.3万篇专栏  |  456万字  |  789次阅读' ≈ 240-260dp, and the date line '2026-08-01更新  |  文集号: 123456') lay out on single lines at intrinsic width. After the fixed 91dp image + 10dp gap and 12dp margins, only ~195dp is left on a 320dp screen and ~250dp on 375dp, so the stats Text.rich line overflows the Row (yellow/black-stripe RenderFlex overflow, clipped text).
+- **Fix**: Wrap the info Column in Expanded/Flexible so it gets the remaining bounded width, and add maxLines + TextOverflow.ellipsis (or allow wrapping) on the Text.rich meta lines.
+
+
+### F:\Repositories\GitHub\PiliPlus\lib\pages\dynamics\widgets\forward_panel.dart:111
+- **Element**: `_forwardAuthor (Row > Text)`
+- **Issue**: Row with two non-flexible Text children (author @name and timestamp) and no scroll/Flexible; the @name Text has no maxLines or TextOverflow.ellipsis.
+- **Why**: On a 320dp screen the forwarded-card content is only ~266px wide (after outer 12px padding and the 15px container padding in forwardPanel). A UP name of ~14+ CJK chars at default font size plus the timestamp text (e.g. '08-01 12:30') exceeds the row width, and since Text in a Row lays out at full intrinsic single-line width, it triggers a RenderFlex overflow (yellow/black stripes). Larger system font scaling makes it worse.
+- **Fix**: Wrap the author name Text in Flexible/Expanded with maxLines: 1 and overflow: TextOverflow.ellipsis (keep the timestamp as a trailing fixed child), or use Wrap.
+
+
+### F:\Repositories\GitHub\PiliPlus\lib\pages\dynamics\widgets\module_panel.dart:244
+- **Element**: `MEDIALIST Row / SizedBox(height:110) text column`
+- **Issue**: DYNAMIC_TYPE_MEDIALIST Row: hardcoded 180x110 cover (NetworkImgLayer width:180) plus Expanded(child: SizedBox(height:110, child: Column)) whose title Text (lines 278-284) has no maxLines/overflow and wraps inside the narrow column.
+- **Why**: On a 320dp screen the fixed 180px thumbnail + 14px gap leave only ~100px for the title column. At that width the titleMedium text wraps to 3+ lines; combined with the SizedBox(height:4) and subTitle, the content exceeds the fixed 110px height, causing a vertical RenderFlex overflow inside the Column. On wider screens the title fits 1-2 lines so the bug only shows on small phones.
+- **Fix**: Make the cover width responsive (Expanded or LayoutBuilder with an aspect ratio) so the text column keeps a usable width, remove the fixed SizedBox(height:110) / replace with IntrinsicHeight or let the column size to content, and add maxLines + TextOverflow.ellipsis to the title.
+
+
+### lib/pages/dynamics_topic/view.dart:281
+- **Element**: `Row (view/discuss stats + like/fav buttons) in _buildAppBar.flexibleSpace`
+- **Issue**: Bottom stats Row overflows: an unbounded `Text('...浏览 · ...讨论')` (no Flexible/maxLines/ellipsis) plus `Spacer` plus two fixed `OutlinedButton.icon` (like/fav counts) in one non-scrollable Row.
+- **Why**: Non-flexible Text children in a Row lay out at their full intrinsic single-line width (no wrapping). On a 320dp screen the Row only has ~296dp (320 - 12 left - 12 right padding), but a typical payload like "12.4万浏览 · 1.3万讨论" (~170dp at fontSize 13) plus two count buttons (~85dp each + 10dp gap, ~184dp) needs ~354dp, so RenderFlex overflows with yellow/black stripes.
+- **Fix**: Wrap the stats Text in Flexible with maxLines:1 and TextOverflow.ellipsis, and/or let the button group wrap onto its own line (e.g. a Wrap or a second Row), or constrain the buttons via LayoutBuilder/MediaQuery.
+
+
+### lib/pages/fav/pgc/child_view.dart:125
+- **Element**: `Row (bottom multi-select action bar, containing two '标记为X' GestureDetector buttons)`
+- **Issue**: Anti-pattern #2/#8: Row with 9-10 fixed-width children and no scroll. The multi-select action bar Row always contains two '标记为X' status buttons, each wrapped in Padding(left: 25) + inner horizontal padding 5 + 5 CJK-char text (~105dp each), plus leading SizedBox(16), iconButton(size:32), SizedBox(12), Checkbox (~48), '全选' label (~40), trailing SizedBox(20). Only one Spacer() can absorb slack. Total fixed content ~370dp exceeds a 320dp-wide screen, so the Row overflows (yellow-black stripes) and the rightmost buttons get clipped. The same Container also uses a fixed height of bottomH = 50 + system inset, which overflows vertically when system text scale increases the label/button heights beyond 50dp.
+- **Why**: On a 320-375dp phone the two status buttons (Padding left:25 each) plus checkbox/icon/'全选' total ~370dp fixed, so with only one Spacer the Row is ~50dp wider than the screen at 320dp. The bar is positioned as a non-scrollable fixed bar, so there is no way to recover; the '标记为X' actions clip. At larger accessibility text scales the fixed 50dp height also clips the taller labels/buttons vertically.
+- **Fix**: Make the bar adaptive: wrap the Row in a horizontal SingleChildScrollView (or use Wrap) so extra buttons scroll instead of overflowing; replace the large Padding(left:25) per button with Wrap/Expanded spacing or smaller fixed gaps; drop the fixed height (use content-sized Container with SafeArea padding / EdgeInsets only) so it grows with text scale. Optionally use LayoutBuilder/MediaQuery to hide the '标记为X' text labels and show icon-only actions on narrow screens.
+
+
+### lib/pages/fav/note/child_view.dart:69
+- **Element**: `Container(height: bottomH) bottom action bar / Row`
+- **Issue**: Anti-pattern #6: Fixed-height Container (height = bottomH = 50 + MediaQuery bottom inset) that does not adapt to text size. The child Row contains an iconButton (32), a Checkbox (~48 tall), a '全选' GestureDetector, and a FilledButton.tonal('删除') whose heights scale with the ambient textScaler. Any scale above ~1.15 pushes the button/checkbox content taller than the hardcoded 50dp, causing vertical overflow inside the clipped Container. The Row is also a fixed-content Row with a single Spacer and no scroll wrapper.
+- **Why**: The bar height is pinned to 50 + system inset while its children (Checkbox, text labels, FilledButton) grow with MediaQuery text scale; on small phones (320dp) with accessibility/larger fonts the labels and the '删除' button exceed 50dp and overflow vertically (clip/stripes). The horizontal fixed content (~240dp) also has no scroll fallback if it ever grows past the available width.
+- **Fix**: Remove the hardcoded height: let the Container size to its content, using EdgeInsets/SafeArea for the system inset instead of a fixed 50dp, or wrap the Row in a horizontal SingleChildScrollView and apply IntrinsicHeight/textScaler-aware layout so larger text expands the bar instead of overflowing.
+
+
+### lib/pages/live/widgets/live_item_app.dart:200
+- **Element**: `videoStat()`
+- **Issue**: Overflowing Row with two non-flexible Text children and no ellipsis (anti-pattern 8): MainAxisAlignment.spaceBetween Row of Text(areaName) + Text(watchedShow.textLarge), neither wrapped in Expanded/Flexible.
+- **Why**: On 320-375dp the card grid (maxCrossAxisExtent 240, cardSpace 8, margins 12) yields ~144dp cards, giving the overlay only ~124dp of usable width (card minus 20dp horizontal padding). Real Bilibili area names such as '哔哩哔哩英雄联盟赛事' are ~121px at fontSize 11, which alone nearly fills the overlay; adding textLarge like '100.2万人看过' (~78px) forces a RenderFlex overflow / clipped text, with no ellipsis to degrade gracefully.
+- **Fix**: Wrap each child Text in Expanded/Flexible with overflow: TextOverflow.ellipsis (e.g. Expanded(child: Text(...))) inside the spaceBetween Row, or use a FittedBox/Flexible so long values shrink instead of overflowing.
+
+
+### lib/pages/live_alert/widgets/live_alert_rule_editor_sheet.dart:126
+- **Element**: `SegmentedButton<MatchTarget>`
+- **Issue**: SegmentedButton with 3 wide labels: the control clamps each segment to availableWidth/segments (verified in Flutter SDK _calculateHorizontalChildSize: childWidth = min(max intrinsic width, maxWidth/childCount)), so a wide selected segment overflows its cell.
+- **Why**: On a 320dp screen the sheet content is 320 - 32 (16dp ListView padding each side) = 288dp, so each of the 3 segments is forced to ~96dp. When the widest segment '标题或分区' is selected, showSelectedIcon (default true) renders a leading check icon inline, so the segment needs ~28 (M3 scaled padding 12+16) + 18 (icon) + 8 (gap) + 70 (label) ≈ 124dp > 96dp (and > ~114dp even on 375dp) -> RenderFlex overflow. Any text scale > ~1.1 overflows all three segments.
+- **Fix**: Shorten the labels (e.g. '标题或分区' -> '任一'), set showSelectedIcon: false with a reduced visualDensity, or replace SegmentedButton with ChoiceChips inside a Wrap so wide items wrap to the next line instead of being forced into equal-width fixed cells.
+
+
+### lib/pages/member_coin_arc/widgets/item.dart:113
+- **Element**: `MemberCoinLikeItem`
+- **Issue**: Overflowing Row with Flexible/Spacer but no scroll (anti-pattern #8): the stats row inside the card is `Row[StatWidget(play), SizedBox(8), StatWidget(danmaku), Spacer(), Text(date), SizedBox(6)]` with no Wrap/scroll and no ellipsis on the date.
+- **Why**: On a 320-375dp phone the coin_arc grid (`SliverGridDelegateWithExtentAndRatio`, maxCrossAxisExtent 240) yields 2 columns; each card is only ~144dp wide and the stats row's usable width is ~131dp (144 - Card default margin 8 - padding-left 5). The two StatWidgets (Icon 13 + 2 gap + 12px text, up to ~55dp each for 万/亿-formatted counts like '9999万' or '1.2亿' via NumUtils.numFormat) plus an 8dp gap plus a date that can be '昨天 23:59' or 'yyyy-MM-dd' (~45-60dp at 11px) total ~150-175dp fixed min-width. Because `Spacer()` can only absorb remaining space after inflexible children are placed, the fixed children overflow the ~131dp row on any popular video, causing a RenderFlex overflow exception. Even moderate values (e.g. '1.2亿' play + '07-31' date) exceed it.
+- **Fix**: Make the row overflow-proof: replace the `Spacer()` + bare date `Text` with the date wrapped in `Expanded(child: Text(..., maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end))`, and wrap the whole stats row in `Wrap(spacing: 8)` (or make the two StatWidgets Flexible). Removing the trailing `SizedBox(width: 6)` also helps.
+
+
+### lib/pages/mine/view.dart:105
+- **Element**: `Row in _buildActions (Flexible + ConstrainedBox(maxWidth: 80) + AspectRatio(aspectRatio: 1))`
+- **Issue**: Anti-patterns #3+#4: Row(mainAxisAlignment: spaceEvenly) of 5 action buttons, each wrapped in Flexible -> ConstrainedBox(maxWidth: 80) -> AspectRatio(aspectRatio: 1), forcing each button into a fixed small square. On a 320dp screen the Row splits 5 ways, giving each item only ~64dp; the 5th label '收藏的评论' (5 CJK chars ~65px at fontSize 13) no longer fits on one line, wraps, and the icon(24)+spacing(6)+2-line-text (~36) Column overflows the 64x64 AspectRatio box -> RenderFlex vertical overflow stripes and cramped text.
+- **Why**: 5 items x maxWidth 80 = 400dp > 320dp, so Flexible squeezes each to ~64dp, but AspectRatio(1) then forces a tight 64x64 box; the icon+label content (~66dp tall and ~65dp wide) exceeds the box, so the middle column wraps and overflows on narrow screens. The maxWidth 80 cap also makes the buttons arbitrarily cramped instead of letting labels ellipsize.
+- **Fix**: Remove ConstrainedBox(maxWidth: 80) and AspectRatio(1); lay the 5 actions out with Wrap (with run/vertical spacing) or a horizontally scrollable ListView, and let each item size to content with Text maxLines:1 + TextOverflow.ellipsis (e.g. FittedBox).
+
