@@ -35,6 +35,7 @@ import 'package:pili_plus/plugin/pl_player/models/hwdec_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/bilibili_device_identity.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/login_utils.dart';
@@ -1034,6 +1035,7 @@ abstract final class Pref {
       buvid = LoginUtils.generateBuvid();
       _localCache.put(LocalCacheKey.buvid, buvid);
     }
+    BilibiliDeviceIdentity.buvid = buvid;
     return buvid;
   }
 

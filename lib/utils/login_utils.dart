@@ -7,6 +7,7 @@ import 'package:pili_plus/main.dart';
 import 'package:pili_plus/services/account_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/bilibili_device_identity.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -129,10 +130,12 @@ abstract final class LoginUtils {
     final md5Str = Digest(
       List.generate(16, (_) => Utils.random.nextInt(256)),
     ).toString();
-    return 'XY${md5Str[2]}${md5Str[12]}${md5Str[22]}$md5Str';
+    final buvid = 'XY${md5Str[2]}${md5Str[12]}${md5Str[22]}$md5Str';
+    BilibiliDeviceIdentity.buvid = buvid;
+    return buvid;
   }
 
-  static final buvid = Pref.buvid;
+  static String get buvid => Pref.buvid;
 
   // static String getUUID() {
   //   return const Uuid().v4().replaceAll('-', '');

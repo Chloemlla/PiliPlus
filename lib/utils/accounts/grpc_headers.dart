@@ -6,7 +6,7 @@ import 'package:pili_plus/grpc/bilibili/metadata/device.pb.dart';
 import 'package:pili_plus/grpc/bilibili/metadata/fawkes.pb.dart';
 import 'package:pili_plus/grpc/bilibili/metadata/locale.pb.dart';
 import 'package:pili_plus/grpc/bilibili/metadata/network.pb.dart' as network;
-import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/bilibili_device_identity.dart';
 import 'package:pili_plus/utils/utils.dart';
 
 abstract final class GrpcHeaders {
@@ -16,7 +16,7 @@ abstract final class GrpcHeaders {
   static const _mobiApp = 'android_hd';
   static const _device = 'android';
 
-  static String get _buvid => LoginUtils.buvid;
+  static String get _buvid => BilibiliDeviceIdentity.buvid;
   static String get _traceId => Constants.traceId;
   static String get _sessionId => Utils.generateRandomString(8);
 
