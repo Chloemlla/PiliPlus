@@ -217,7 +217,7 @@ abstract final class MediaExportUtils {
     } else {
       final String? pickedPath;
       try {
-        pickedPath = await FilePicker.saveFile(
+        pickedPath = await FilePicker.platform.saveFile(
           fileName: fileName,
           type: isAudio ? FileType.audio : FileType.video,
           bytes: Uint8List(0),

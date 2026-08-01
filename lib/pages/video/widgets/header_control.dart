@@ -959,7 +959,7 @@ class HeaderControlState extends State<HeaderControl>
                 onTap: () async {
                   Get.back();
                   try {
-                    final result = await FilePicker.pickFiles(
+                    final result = await FilePicker.platform.pickFiles(
                       type: .custom,
                       allowedExtensions: const ['json', 'vtt', 'srt', 'ass'],
                     );
