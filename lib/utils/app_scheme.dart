@@ -1,6 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
+import 'dart:io' show Platform, Process;
 
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
@@ -40,12 +41,46 @@ abstract final class PiliScheme {
   static Stream<String> get pendingAuthToken => _pendingAuthTokenController.stream;
 
   static void init() {
-    // Register our protocol only on Windows platform
-    // registerProtocolHandler('bilibili');
+    // Register piliplus:// protocol on Windows for deep link auth callback
+    _registerWindowsProtocol();
+
     appLinks = AppLinks();
+
+    // Handle initial link (e.g. from protocol handler launch)
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        routePush(uri);
+      }
+    });
 
     listener?.cancel();
     listener = appLinks.uriLinkStream.listen(routePush);
+  }
+
+  /// Register piliplus:// protocol in Windows registry so the browser can
+  /// launch PiliPlus via deep link. Writes to HKCU (no admin required).
+  static void _registerWindowsProtocol() {
+    if (!Platform.isWindows) return;
+    try {
+      final exe = Platform.resolvedExecutable;
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus',
+        '/ve', '/d', 'URL:PiliPlus Protocol',
+        '/f',
+      ]);
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus',
+        '/v', 'URL Protocol', '/d', '',
+        '/f',
+      ]);
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus\\shell\\open\\command',
+        '/ve', '/d', '"$exe" "%1"',
+        '/f',
+      ]);
+    } on Object {
+      // Best-effort; portable builds may skip protocol registration.
+    }
   }
 
   static void dispose() {
