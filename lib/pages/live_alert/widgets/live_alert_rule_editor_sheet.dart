@@ -135,13 +135,15 @@ class LiveAlertRuleEditorSheet extends StatelessWidget {
                       ),
                       ButtonSegment(
                         value: MatchTarget.both,
-                        label: Text('标题或分区'),
+                        label: Text('任一'),
                       ),
                     ],
                     selected: {controller.selectedMatchTarget.value},
                     onSelectionChanged: (selection) {
                       controller.setMatchTarget(selection.first);
                     },
+                    showSelectedIcon: false,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
                 const SizedBox(height: 8),

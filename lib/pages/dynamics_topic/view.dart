@@ -249,11 +249,15 @@ class _DynTopicPageState extends State<DynTopicPage>
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Text(
-                    '${NumUtils.numFormat(response.topicItem!.view)}浏览 · ${NumUtils.numFormat(response.topicItem!.discuss)}讨论',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colorScheme.outline,
+                  Flexible(
+                    child: Text(
+                      '${NumUtils.numFormat(response.topicItem!.view)}浏览 · ${NumUtils.numFormat(response.topicItem!.discuss)}讨论',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.outline,
+                      ),
                     ),
                   ),
                   const Spacer(),

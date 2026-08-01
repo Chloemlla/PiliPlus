@@ -242,62 +242,73 @@ Widget module(
         ),
       );
     case 'DYNAMIC_TYPE_MEDIALIST':
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (floor == 1) const SizedBox(width: 12),
-          if (major?.medialist?.cover?.isNotEmpty == true) ...[
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Hero(
-                  tag: major!.medialist!.cover!,
-                  child: NetworkImgLayer(
-                    width: 180,
-                    height: 110,
-                    src: major.medialist!.cover,
-                  ),
-                ),
-                PBadge(
-                  right: 6,
-                  top: 6,
-                  text: major.medialist!.badge?.text,
-                ),
-              ],
-            ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: SizedBox(
-              height: 110,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    major!.medialist!.title!,
-                    style: TextStyle(
-                      fontSize: theme.textTheme.titleMedium!.fontSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (major.medialist?.subTitle != null) ...[
-                    const Spacer(),
-                    Text(
-                      major.medialist!.subTitle!,
-                      style: TextStyle(
-                        fontSize: theme.textTheme.labelLarge!.fontSize,
-                        color: theme.colorScheme.outline,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Scale the cover with the available width (capped at the original
+          // 180x110) so the text column keeps a usable width on narrow screens.
+          final coverWidth = (constraints.maxWidth * 0.42)
+              .clamp(0.0, 180.0)
+              .toDouble();
+          final coverHeight = coverWidth * 110 / 180;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (floor == 1) const SizedBox(width: 12),
+              if (major?.medialist?.cover?.isNotEmpty == true) ...[
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Hero(
+                      tag: major!.medialist!.cover!,
+                      child: NetworkImgLayer(
+                        width: coverWidth,
+                        height: coverHeight,
+                        src: major.medialist!.cover,
                       ),
                     ),
+                    PBadge(
+                      right: 6,
+                      top: 6,
+                      text: major.medialist!.badge?.text,
+                    ),
                   ],
-                ],
+                ),
+                const SizedBox(width: 14),
+              ],
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      major!.medialist!.title!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: theme.textTheme.titleMedium!.fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (major.medialist?.subTitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        major.medialist!.subTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: theme.textTheme.labelLarge!.fontSize,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ),
-          if (floor == 1) const SizedBox(width: 12),
-        ],
+              if (floor == 1) const SizedBox(width: 12),
+            ],
+          );
+        },
       );
 
     case 'DYNAMIC_TYPE_SUBSCRIPTION_NEW'

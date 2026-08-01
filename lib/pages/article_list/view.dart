@@ -123,9 +123,10 @@ class _ArticleListPageState extends State<ArticleListPage> with GridMixin {
                 ),
                 const SizedBox(width: 10),
               ],
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Text(
                     item.name!,
                     maxLines: 1,
@@ -158,6 +159,8 @@ class _ArticleListPageState extends State<ArticleListPage> with GridMixin {
                   ],
                   const SizedBox(height: 10),
                   Text.rich(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     TextSpan(
                       children: [
                         TextSpan(
@@ -172,6 +175,8 @@ class _ArticleListPageState extends State<ArticleListPage> with GridMixin {
                     ),
                   ),
                   Text.rich(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     TextSpan(
                       children: [
                         TextSpan(
@@ -184,7 +189,8 @@ class _ArticleListPageState extends State<ArticleListPage> with GridMixin {
                       style: style,
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

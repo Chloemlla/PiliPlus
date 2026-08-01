@@ -121,43 +121,57 @@ class _FavPgcChildPageState extends State<FavPgcChildPage>
                         child: Text('全选'),
                       ),
                     ),
-                    const Spacer(),
-                    ...const [
-                          (followStatus: 1, title: '想看'),
-                          (followStatus: 2, title: '在看'),
-                          (followStatus: 3, title: '看过'),
-                        ]
-                        .where(
-                          (item) => item.followStatus != widget.followStatus,
-                        )
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(left: 25),
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                if (_favPgcController.checkedCount != 0) {
-                                  _favPgcController.onUpdateList(
-                                    item.followStatus,
-                                  );
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                  horizontal: 5,
-                                ),
-                                child: Text(
-                                  '标记为${item.title}',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              ...const [
+                                    (followStatus: 1, title: '想看'),
+                                    (followStatus: 2, title: '在看'),
+                                    (followStatus: 3, title: '看过'),
+                                  ]
+                                  .where(
+                                    (item) =>
+                                        item.followStatus != widget.followStatus,
+                                  )
+                                  .map(
+                                    (item) => Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {
+                                          if (_favPgcController.checkedCount != 0) {
+                                            _favPgcController.onUpdateList(
+                                              item.followStatus,
+                                            );
+                                          }
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                            horizontal: 5,
+                                          ),
+                                          child: Text(
+                                            '标记为${item.title}',
+                                            style: TextStyle(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
+                              const SizedBox(width: 20),
+                            ],
                           ),
                         ),
-                    const SizedBox(width: 20),
+                      ),
+                    ),
                   ],
                 ),
               ),

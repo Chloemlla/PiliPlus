@@ -215,6 +215,7 @@ class _UpowerRankPageState extends State<UpowerRankPage>
                       ),
                       title: Row(
                         spacing: 12,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           NetworkImgLayer(
                             width: 38,
@@ -222,9 +223,13 @@ class _UpowerRankPageState extends State<UpowerRankPage>
                             src: item.avatar,
                             type: ImageType.avatar,
                           ),
-                          Text(
-                            item.nickname!,
-                            style: const TextStyle(fontSize: 14),
+                          Expanded(
+                            child: Text(
+                              item.nickname!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14),
+                            ),
                           ),
                         ],
                       ),

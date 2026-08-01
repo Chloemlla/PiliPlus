@@ -388,7 +388,7 @@ class _SavePanelState extends State<SavePanel> {
                       if (cover?.isNotEmpty == true &&
                           title?.isNotEmpty == true)
                         Container(
-                          height: 81,
+                          height: coverSize + 16,
                           margin: const .symmetric(horizontal: 12),
                           padding: const .all(8),
                           decoration: BoxDecoration(

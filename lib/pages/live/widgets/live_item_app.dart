@@ -200,14 +200,22 @@ class LiveCardVApp extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            item.areaName.toString(),
-            style: const TextStyle(fontSize: 11, color: Colors.white),
+          Expanded(
+            child: Text(
+              item.areaName.toString(),
+              style: const TextStyle(fontSize: 11, color: Colors.white),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (item.watchedShow?.textLarge case final textLarge?)
-            Text(
-              textLarge,
-              style: const TextStyle(fontSize: 11, color: Colors.white),
+            Flexible(
+              child: Text(
+                textLarge,
+                style: const TextStyle(fontSize: 11, color: Colors.white),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
         ],
       ),

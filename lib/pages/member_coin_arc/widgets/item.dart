@@ -121,16 +121,20 @@ class MemberCoinLikeItem extends StatelessWidget {
                         type: StatType.danmaku,
                         value: item.danmaku,
                       ),
-                      const Spacer(),
-                      Text(
-                        DateFormatUtils.dateFormat(
-                          item.ctime,
-                          short: VideoCardV.shortFormat,
-                          long: VideoCardV.longFormat,
-                        ),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.outline,
+                      Expanded(
+                        child: Text(
+                          DateFormatUtils.dateFormat(
+                            item.ctime,
+                            short: VideoCardV.shortFormat,
+                            long: VideoCardV.longFormat,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),

@@ -93,7 +93,13 @@ class _MusicDetailPageState extends CommonDynPageState<MusicDetailPage> {
                       height: 36,
                       type: ImageType.avatar,
                     ),
-                    Text(response.musicTitle!),
+                    Expanded(
+                      child: Text(
+                        response.musicTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),

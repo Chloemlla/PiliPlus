@@ -110,13 +110,17 @@ Widget _forwardAuthor({
   final isNormalAuth = moduleAuthor.type == 'AUTHOR_TYPE_NORMAL';
   return Row(
     children: [
-      GestureDetector(
-        onTap: isNormalAuth
-            ? () => Get.toNamed('/member?mid=${moduleAuthor.mid}')
-            : null,
-        child: Text(
-          '${isNormalAuth ? '@' : ''}${moduleAuthor.name}',
-          style: TextStyle(color: theme.colorScheme.primary),
+      Flexible(
+        child: GestureDetector(
+          onTap: isNormalAuth
+              ? () => Get.toNamed('/member?mid=${moduleAuthor.mid}')
+              : null,
+          child: Text(
+            '${isNormalAuth ? '@' : ''}${moduleAuthor.name}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: theme.colorScheme.primary),
+          ),
         ),
       ),
       const SizedBox(width: 6),

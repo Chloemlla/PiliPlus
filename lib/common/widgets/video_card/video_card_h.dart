@@ -238,13 +238,17 @@ class VideoCardH extends StatelessWidget {
           Row(
             spacing: 8,
             children: [
-              StatWidget(
-                type: .play,
-                value: videoItem.stat.view,
+              Flexible(
+                child: StatWidget(
+                  type: .play,
+                  value: videoItem.stat.view,
+                ),
               ),
-              StatWidget(
-                type: .danmaku,
-                value: videoItem.stat.danmu,
+              Flexible(
+                child: StatWidget(
+                  type: .danmaku,
+                  value: videoItem.stat.danmu,
+                ),
               ),
             ],
           ),

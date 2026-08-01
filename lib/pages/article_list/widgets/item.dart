@@ -40,16 +40,19 @@ class ArticleListItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (item.imageUrls?.isNotEmpty == true)
-                AspectRatio(
-                  aspectRatio: Style.aspectRatio,
-                  child: LayoutBuilder(
-                    builder: (context, boxConstraints) {
-                      return NetworkImgLayer(
-                        src: item.imageUrls!.first,
-                        width: boxConstraints.maxWidth,
-                        height: boxConstraints.maxHeight,
-                      );
-                    },
+                SizedBox(
+                  width: 110,
+                  child: AspectRatio(
+                    aspectRatio: Style.aspectRatio,
+                    child: LayoutBuilder(
+                      builder: (context, boxConstraints) {
+                        return NetworkImgLayer(
+                          src: item.imageUrls!.first,
+                          width: boxConstraints.maxWidth,
+                          height: boxConstraints.maxHeight,
+                        );
+                      },
+                    ),
                   ),
                 ),
               Expanded(

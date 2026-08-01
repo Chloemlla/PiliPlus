@@ -16,6 +16,7 @@ library;
 
 import 'dart:ui' as ui show TextHeightBehavior;
 
+import 'package:pili_plus/common/widgets/more_text/rich_text_more.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';

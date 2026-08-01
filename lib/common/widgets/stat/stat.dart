@@ -33,6 +33,8 @@ class StatWidget extends StatelessWidget {
         ),
         Text(
           NumUtils.numFormat(value),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, color: color),
         ),
       ],

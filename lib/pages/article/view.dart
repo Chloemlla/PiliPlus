@@ -340,7 +340,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
     late final outline = theme.colorScheme.outline;
     late final btnStyle = TextButton.styleFrom(
       tapTargetSize: .padded,
-      padding: const .symmetric(horizontal: 15),
+      padding: const .symmetric(horizontal: 4),
       foregroundColor: outline,
     );
 
@@ -363,6 +363,8 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
         style: btnStyle,
         label: Text(
           stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(color: color),
         ),
       );
