@@ -27,7 +27,7 @@ void main() {
       expect(restored.duration, item.duration);
       expect(restored.addedAt, addedAt);
       expect(restored.description, item.description);
-      expect(restored.referenceUrl, contains(item.bvid!));
+      expect(restored.referenceUrl, contains('BV1MM4y1s7NZ'));
     });
 
     test('round-trips a following-series entry', () {
@@ -103,6 +103,26 @@ void main() {
       );
     });
 
+    test('requires the exact schema version and app identity', () {
+      final base = <String, dynamic>{
+        'version': 1,
+        'app': 'PiliPlus',
+        'exportedAt': '2026-07-31T00:00:00.000Z',
+        'playlistName': 'Test',
+        'count': 0,
+        'videos': <Object?>[],
+      };
+
+      expect(
+        () => PlaylistExportData.fromJson({...base, 'version': 2}),
+        throwsFormatException,
+      );
+      expect(
+        () => PlaylistExportData.fromJson({...base, 'app': 'OtherApp'}),
+        throwsFormatException,
+      );
+    });
+
     test('writes video and season references to M3U8', () {
       final data = PlaylistExportData(
         exportedAt: DateTime.utc(2026, 7, 31),
@@ -167,7 +187,7 @@ void main() {
         failedBvids: [],
       );
 
-      expect(result.summary, '已导入 10 个视频');
+      expect(result.summary, '成功导入 10 个视频');
       expect(result.skippedCount, 0);
     });
 
@@ -186,7 +206,7 @@ void main() {
 
         expect(
           result.summary,
-          '已导入 5 个视频，跳过 3 个重复，忽略 1 个追番/追剧条目，1 个导入失败',
+          '已导入 5 个视频，已跳过 3 个重复，忽略 1 个追番/追剧条目，1 个导入失败',
         );
         expect(result.skippedCount, 5);
       },

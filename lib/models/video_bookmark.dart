@@ -4,6 +4,12 @@ part 'video_bookmark_adapter.dart';
 
 @HiveType(typeId: 100)
 class VideoBookmark extends HiveObject {
+  static const int maxIdLength = 128;
+  static const int maxBvidLength = 32;
+  static const int maxVideoTitleLength = 512;
+  static const int maxNameLength = 256;
+  static const int maxNoteLength = 4096;
+
   @HiveField(0)
   final String id;
 
@@ -20,10 +26,10 @@ class VideoBookmark extends HiveObject {
   final int timestampSeconds;
 
   @HiveField(5)
-  String name;
+  final String name;
 
   @HiveField(6)
-  String? note;
+  final String? note;
 
   @HiveField(7)
   final DateTime createdAt;
@@ -39,14 +45,33 @@ class VideoBookmark extends HiveObject {
     required this.createdAt,
   });
 
-  String get formattedTimestamp {
-    final hours = timestampSeconds ~/ 3600;
-    final minutes = (timestampSeconds % 3600) ~/ 60;
-    final seconds = timestampSeconds % 60;
+  String get formattedTimestamp => formatTimestamp(timestampSeconds);
+
+  static String formatTimestamp(int timestampSeconds) {
+    final safeSeconds = timestampSeconds < 0 ? 0 : timestampSeconds;
+    final hours = safeSeconds ~/ 3600;
+    final minutes = (safeSeconds % 3600) ~/ 60;
+    final seconds = safeSeconds % 60;
     if (hours > 0) {
       return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     }
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  VideoBookmark copyWithDetails({
+    required String name,
+    String? note,
+  }) {
+    return VideoBookmark(
+      id: id,
+      bvid: bvid,
+      videoTitle: videoTitle,
+      authorMid: authorMid,
+      timestampSeconds: timestampSeconds,
+      name: name,
+      note: note,
+      createdAt: createdAt,
+    );
   }
 
   VideoBookmark copyWith({
@@ -85,15 +110,80 @@ class VideoBookmark extends HiveObject {
   }
 
   factory VideoBookmark.fromJson(Map<String, dynamic> json) {
+    final timestampSeconds = _requiredInt(json, 'timestampSeconds');
+    if (timestampSeconds < 0) {
+      throw const FormatException('timestampSeconds 不能为负数');
+    }
+    final authorMid = _optionalInt(json, 'authorMid');
+    if (authorMid != null && authorMid <= 0) {
+      throw const FormatException('authorMid 必须为正整数');
+    }
+    final createdAtValue = _requiredString(json, 'createdAt');
+    final createdAt = DateTime.tryParse(createdAtValue);
+    if (createdAt == null) {
+      throw const FormatException('createdAt 不是有效的日期时间');
+    }
+
     return VideoBookmark(
-      id: json['id'] as String,
-      bvid: json['bvid'] as String,
-      videoTitle: json['videoTitle'] as String,
-      authorMid: json['authorMid'] as int?,
-      timestampSeconds: json['timestampSeconds'] as int,
-      name: json['name'] as String,
-      note: json['note'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: _requiredString(json, 'id', maxLength: maxIdLength),
+      bvid: _requiredString(json, 'bvid', maxLength: maxBvidLength),
+      videoTitle: _requiredString(
+        json,
+        'videoTitle',
+        maxLength: maxVideoTitleLength,
+      ),
+      authorMid: authorMid,
+      timestampSeconds: timestampSeconds,
+      name: _requiredString(json, 'name', maxLength: maxNameLength),
+      note: _optionalString(json, 'note', maxLength: maxNoteLength),
+      createdAt: createdAt,
     );
+  }
+
+  static String _requiredString(
+    Map<String, dynamic> json,
+    String key, {
+    int? maxLength,
+  }) {
+    final value = json[key];
+    if (value is! String || value.trim().isEmpty) {
+      throw FormatException('$key 缺失或格式无效');
+    }
+    final normalized = value.trim();
+    if (maxLength != null && normalized.length > maxLength) {
+      throw FormatException('$key 过长');
+    }
+    return normalized;
+  }
+
+  static String? _optionalString(
+    Map<String, dynamic> json,
+    String key, {
+    int? maxLength,
+  }) {
+    final value = json[key];
+    if (value == null) return null;
+    if (value is! String) {
+      throw FormatException('$key 格式无效');
+    }
+    final normalized = value.trim();
+    if (normalized.isEmpty) return null;
+    if (maxLength != null && normalized.length > maxLength) {
+      throw FormatException('$key 过长');
+    }
+    return normalized;
+  }
+
+  static int _requiredInt(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is int) return value;
+    throw FormatException('$key 缺失或格式无效');
+  }
+
+  static int? _optionalInt(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value == null) return null;
+    if (value is int) return value;
+    throw FormatException('$key 格式无效');
   }
 }

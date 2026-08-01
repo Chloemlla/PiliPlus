@@ -26,6 +26,9 @@ jobs:
           channel: stable
           flutter-version-file: pubspec.yaml
 
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Set and Extract version
         shell: pwsh
         run: lib/scripts/build.ps1
@@ -36,7 +39,7 @@ jobs:
 
       - name: Build iOS
         run: |
-          flutter build ios --release --no-codesign --dart-define-from-file=pili_release.json
+          flutter build ios --release --no-codesign --no-pub --dart-define-from-file=pili_release.json
           ln -sf ./build/ios/iphoneos Payload
           # make AltSign happy...
           find Payload/Runner.app/Frameworks -type d -name "*.framework" -exec codesign --force --sign - --preserve-metadata=identifier,entitlements {} \;

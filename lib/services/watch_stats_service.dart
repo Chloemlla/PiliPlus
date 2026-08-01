@@ -1,276 +1,244 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:collection/collection.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pili_plus/models/watch_stats_session.dart';
-import 'package:pili_plus/utils/path_utils.dart';
-import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/services/watch_session_tracker.dart';
+import 'package:pili_plus/services/watch_stats_aggregation.dart';
+
+export 'package:pili_plus/services/watch_session_tracker.dart';
+export 'package:pili_plus/services/watch_stats_aggregation.dart';
+
+typedef WatchStatsClock = DateTime Function();
 
 class WatchStatsService {
-  WatchStatsService._();
+  WatchStatsService._({WatchStatsClock? clock})
+    : _clock = clock ?? DateTime.now;
 
   static final WatchStatsService instance = WatchStatsService._();
 
   static const String boxName = 'watchStatsSessions';
+  static const int adapterTypeId = 102;
   static const int maxRetentionDays = 90;
 
+  final WatchStatsClock _clock;
   Box<WatchStatsSession>? _box;
+  Future<void>? _initializing;
+
+  bool get isInitialized => _box?.isOpen ?? false;
+
   Box<WatchStatsSession> get box {
-    if (_box == null) {
-      throw StateError('WatchStatsService not initialized. Call init() first.');
+    final current = _box;
+    if (current == null || !current.isOpen) {
+      throw StateError('WatchStatsService is not initialized.');
     }
-    return _box!;
+    return current;
   }
 
-  bool _isInitialized = false;
-  bool get isInitialized => _isInitialized;
-
-  /// Initialize the service and open Hive box
-  Future<void> init() async {
-    if (_isInitialized) return;
-
-    if (!Hive.isAdapterRegistered(100)) {
-      Hive.registerAdapter(WatchStatsSessionAdapter());
-    }
-
-    _box = await Hive.openBox<WatchStatsSession>(boxName);
-    _isInitialized = true;
-
-    // Prune old entries on init
-    await pruneOldSessions();
+  Future<void> init() {
+    if (isInitialized) return Future<void>.value();
+    return _initializing ??= _initialize();
   }
 
-  /// Record a watch session
+  Future<void> _initialize() async {
+    try {
+      if (!Hive.isAdapterRegistered(adapterTypeId)) {
+        Hive.registerAdapter(WatchStatsSessionAdapter());
+      }
+      _box = await Hive.openBox<WatchStatsSession>(boxName);
+      await pruneOldSessions();
+    } catch (_) {
+      _initializing = null;
+      rethrow;
+    }
+  }
+
+  Future<void> recordPendingSession(PendingWatchSession pending) {
+    return recordSession(
+      bvid: pending.metadata.bvid,
+      title: pending.metadata.title,
+      authorName: pending.metadata.authorName,
+      authorMid: pending.metadata.authorMid,
+      watchedSeconds: pending.watchedSeconds,
+      endedAt: pending.endedAt,
+    );
+  }
+
   Future<void> recordSession({
     required String bvid,
     required String title,
     required String authorName,
     required int authorMid,
     required int watchedSeconds,
+    DateTime? endedAt,
   }) async {
-    if (!_isInitialized) return;
+    if (bvid.isEmpty || watchedSeconds <= 0) return;
+    await init();
 
-    final now = DateTime.now();
-    final session = WatchStatsSession(
-      bvid: bvid,
-      title: title,
-      authorName: authorName,
-      authorMid: authorMid,
-      watchedSeconds: watchedSeconds,
-      timestamp: now.millisecondsSinceEpoch ~/ 1000,
-      date: DateFormat('yyyy-MM-dd').format(now),
+    final end = endedAt ?? _clock();
+    await box.add(
+      WatchStatsSession(
+        bvid: bvid,
+        title: title.trim(),
+        authorName: authorName.trim(),
+        authorMid: authorMid,
+        watchedSeconds: watchedSeconds,
+        timestamp: end.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond,
+        date: DateFormat('yyyy-MM-dd').format(end),
+      ),
     );
-
-    await box.add(session);
   }
 
-  /// Get all sessions within a date range
-  List<WatchStatsSession> getSessionsInRange(DateTime start, DateTime end) {
-    if (!_isInitialized) return [];
+  List<WatchStatsSession> get allSessions {
+    if (!isInitialized) return const [];
+    final sessions = box.values.toList();
+    sessions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return sessions;
+  }
 
-    final startTs = start.millisecondsSinceEpoch ~/ 1000;
-    final endTs = end.millisecondsSinceEpoch ~/ 1000;
-
+  List<WatchStatsSession> getSessionsInRange(
+    DateTime start,
+    DateTime endExclusive,
+  ) {
+    if (!isInitialized) return const [];
+    final startTimestamp =
+        start.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond;
+    final endTimestamp =
+        endExclusive.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond;
     return box.values
-        .where((s) => s.timestamp >= startTs && s.timestamp <= endTs)
-        .toList();
+        .where(
+          (session) =>
+              session.timestamp >= startTimestamp &&
+              session.timestamp < endTimestamp,
+        )
+        .toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 
-  /// Get sessions for the last N days
-  List<WatchStatsSession> getSessionsForDays(int days) {
-    final now = DateTime.now();
-    final start = now.subtract(Duration(days: days));
-    return getSessionsInRange(start, now);
-  }
-
-  /// Get total watch time in seconds for a list of sessions
-  int getTotalWatchTime(List<WatchStatsSession> sessions) {
-    return sessions.fold(0, (sum, s) => sum + s.watchedSeconds);
-  }
-
-  /// Get unique video count
-  int getUniqueVideoCount(List<WatchStatsSession> sessions) {
-    return sessions.map((s) => s.bvid).toSet().length;
-  }
-
-  /// Get daily watch time breakdown
-  Map<String, int> getDailyWatchTime(List<WatchStatsSession> sessions) {
-    return sessions.groupFoldBy(
-      (s) => s.date,
-      (sum, s) => sum + s.watchedSeconds,
+  WatchStatsData getStats(
+    WatchStatsPeriod period, {
+    DateTime? now,
+  }) {
+    final currentTime = now ?? _clock();
+    final sessions = allSessions;
+    final earliestSession = sessions.isEmpty
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            sessions.first.timestamp * Duration.millisecondsPerSecond,
+          );
+    final range = WatchStatsDateRange.forPeriod(
+      period,
+      now: currentTime,
+      earliestSession: earliestSession,
+    );
+    final previousWatchTime = period == WatchStatsPeriod.all
+        ? 0
+        : _totalWatchTime(sessions.where(range.previous().contains));
+    return WatchStatsAggregator.aggregate(
+      period: period,
+      range: range,
+      sessions: sessions,
+      previousPeriodWatchTimeSeconds: previousWatchTime,
     );
   }
 
-  /// Get top N creators by watch time
-  List<MapEntry<String, int>> getTopCreators(
-    List<WatchStatsSession> sessions, {
-    int limit = 5,
-  }) {
-    final creatorTime = sessions.groupFoldBy(
-      (s) => s.authorName,
-      (sum, s) => sum + s.watchedSeconds,
+  Future<void> pruneOldSessions({DateTime? now}) async {
+    if (!isInitialized) return;
+    final current = now ?? _clock();
+    final today = DateTime(current.year, current.month, current.day);
+    final cutoff = today.subtract(
+      const Duration(days: maxRetentionDays - 1),
     );
-
-    final sorted = creatorTime.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return sorted.take(limit).toList();
-  }
-
-  /// Get top N longest videos
-  List<MapEntry<String, int>> getLongestVideos(
-    List<WatchStatsSession> sessions, {
-    int limit = 5,
-  }) {
-    // Group by bvid and sum watch time
-    final videoTime = <String, int>{};
-    final videoTitles = <String, String>{};
-
-    for (final session in sessions) {
-      videoTime[session.bvid] = (videoTime[session.bvid] ?? 0) + session.watchedSeconds;
-      videoTitles[session.bvid] = session.title;
-    }
-
-    final sorted = videoTime.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    return sorted.take(limit).toList();
-  }
-
-  /// Prune sessions older than maxRetentionDays
-  Future<void> pruneOldSessions() async {
-    if (!_isInitialized) return;
-
-    final cutoff = DateTime.now()
-        .subtract(const Duration(days: maxRetentionDays))
-        .millisecondsSinceEpoch ~/ 1000;
-
+    final cutoffTimestamp =
+        cutoff.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond;
     final keysToDelete = box.keys.where((key) {
       final session = box.get(key);
-      return session != null && session.timestamp < cutoff;
+      return session != null && session.timestamp < cutoffTimestamp;
     }).toList();
-
     if (keysToDelete.isNotEmpty) {
       await box.deleteAll(keysToDelete);
     }
   }
 
-  /// Clear all watch statistics
   Future<void> clearAll() async {
-    if (!_isInitialized) return;
+    await init();
     await box.clear();
   }
 
-  /// Export statistics as JSON
   Future<String> exportAsJson() async {
-    if (!_isInitialized) return '{}';
-
-    final sessions = box.values.map((s) => s.toJson()).toList();
-    final stats = {
-      'exportDate': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'totalSessions': sessions.length,
-      'sessions': sessions,
-    };
-
-    return const JsonEncoder.withIndent('  ').convert(stats);
+    await init();
+    return encodeJson(allSessions, exportedAt: _clock());
   }
 
-  /// Export statistics as CSV
   Future<String> exportAsCsv() async {
-    if (!_isInitialized) return '';
+    await init();
+    return encodeCsv(allSessions);
+  }
 
-    final buffer = StringBuffer();
-    buffer.writeln('bvid,title,authorName,authorMid,watchedSeconds,timestamp,date');
+  static String encodeJson(
+    Iterable<WatchStatsSession> sessions, {
+    required DateTime exportedAt,
+  }) {
+    final values = sessions.map((session) => session.toJson()).toList();
+    return const JsonEncoder.withIndent('  ').convert({
+      'schemaVersion': 1,
+      'exportedAt': exportedAt.toIso8601String(),
+      'localOnly': true,
+      'totalSessions': values.length,
+      'sessions': values,
+    });
+  }
 
-    for (final session in box.values) {
-      buffer.writeln(
-        '${_escapeCsv(session.bvid)},'
-        '${_escapeCsv(session.title)},'
-        '${_escapeCsv(session.authorName)},'
-        '${session.authorMid},'
-        '${session.watchedSeconds},'
-        '${session.timestamp},'
-        '${session.date}',
-      );
+  static String encodeCsv(Iterable<WatchStatsSession> sessions) {
+    final buffer = StringBuffer(
+      'bvid,title,authorName,authorMid,watchedSeconds,timestamp,date\r\n',
+    );
+    for (final session in sessions) {
+      buffer
+        ..write(_escapeCsv(session.bvid))
+        ..write(',')
+        ..write(_escapeCsv(session.title))
+        ..write(',')
+        ..write(_escapeCsv(session.authorName))
+        ..write(',')
+        ..write(session.authorMid)
+        ..write(',')
+        ..write(session.watchedSeconds)
+        ..write(',')
+        ..write(session.timestamp)
+        ..write(',')
+        ..write(_escapeCsv(session.date))
+        ..write('\r\n');
     }
-
     return buffer.toString();
   }
 
-  String _escapeCsv(String value) {
-    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '""')}"';
-    }
-    return value;
-  }
-
-  /// Get export file path
-  Future<String> getExportPath(String filename) async {
-    final dir = await getApplicationDocumentsDirectory();
-    return path.join(dir.path, filename);
-  }
-
-  /// Save export to file
   Future<File> saveExport(String filename, String content) async {
-    final filePath = await getExportPath(filename);
-    final file = File(filePath);
-    await file.writeAsString(content);
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File(path.join(directory.path, filename));
+    await file.writeAsString(content, flush: true);
     return file;
   }
 
-  /// Close the service
   Future<void> close() async {
     await _box?.close();
-    _isInitialized = false;
+    _box = null;
+    _initializing = null;
   }
-}
 
-/// Aggregated watch statistics data
-class WatchStatsData {
-  final int totalWatchTimeSeconds;
-  final int videosWatched;
-  final int uniqueVideoCount;
-  final int uniqueCreatorCount;
-  final Map<String, int> dailyWatchTime;
-  final List<MapEntry<String, int>> topCreators;
-  final List<MapEntry<String, int>> longestVideos;
-  final int periodDays;
+  static int _totalWatchTime(Iterable<WatchStatsSession> sessions) =>
+      sessions.fold(0, (total, session) => total + session.watchedSeconds);
 
-  WatchStatsData({
-    required this.totalWatchTimeSeconds,
-    required this.videosWatched,
-    required this.uniqueVideoCount,
-    required this.uniqueCreatorCount,
-    required this.dailyWatchTime,
-    required this.topCreators,
-    required this.longestVideos,
-    required this.periodDays,
-  });
-
-  String get formattedWatchTime {
-    final hours = totalWatchTimeSeconds ~/ 3600;
-    final minutes = (totalWatchTimeSeconds % 3600) ~/ 60;
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
+  static String _escapeCsv(String value) {
+    if (value.contains(',') ||
+        value.contains('"') ||
+        value.contains('\n') ||
+        value.contains('\r')) {
+      return '"${value.replaceAll('"', '""')}"';
     }
-    return '${minutes}m';
-  }
-
-  double get dailyAverageSeconds {
-    if (periodDays <= 0) return 0;
-    return totalWatchTimeSeconds / periodDays;
-  }
-
-  String get formattedDailyAverage {
-    final hours = dailyAverageSeconds ~/ 3600;
-    final minutes = ((dailyAverageSeconds % 3600) ~/ 60).round();
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    }
-    return '${minutes}m';
+    return value;
   }
 }

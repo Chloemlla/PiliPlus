@@ -42,4 +42,17 @@ void main() {
 
     expect(result[SettingBoxKey.windowSize], [1180.0, 720.0]);
   });
+
+  test('rejects a fractional value for an integer setting', () {
+    expect(
+      () => SettingsBackupValidator.validateSection(
+        {
+          'setting': {SettingBoxKey.retryCount: 1.5},
+        },
+        'setting',
+        const {SettingBoxKey.retryCount: 3},
+      ),
+      throwsFormatException,
+    );
+  });
 }

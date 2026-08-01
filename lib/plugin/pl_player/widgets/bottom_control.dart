@@ -1,10 +1,14 @@
 import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_sheet.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/view/view.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -43,6 +47,51 @@ class BottomControl extends StatelessWidget {
     controller
       ..onSeekEnd()
       ..seekTo(Duration(milliseconds: milliseconds), isSeek: false);
+  }
+
+  ({String title, int? authorMid}) _bookmarkMetadata() {
+    String? title = videoDetailController.args['title'] as String?;
+    int? authorMid;
+    try {
+      if (videoDetailController.isUgc) {
+        final detail = Get.find<UgcIntroController>(
+          tag: videoDetailController.heroTag,
+        ).videoDetail.value;
+        title = detail.title ?? title;
+        authorMid = detail.owner?.mid;
+      } else {
+        final intro = Get.find<PgcIntroController>(
+          tag: videoDetailController.heroTag,
+        );
+        title = intro.videoDetail.value.title ?? intro.pgcItem.title ?? title;
+        authorMid = intro.pgcItem.upInfo?.mid;
+      }
+    } catch (_) {}
+
+    final normalizedTitle = title?.trim();
+    return (
+      title: normalizedTitle == null || normalizedTitle.isEmpty
+          ? videoDetailController.bvid
+          : normalizedTitle,
+      authorMid: authorMid,
+    );
+  }
+
+  void _showBookmarkSheet(BuildContext context) {
+    final metadata = _bookmarkMetadata();
+    PageUtils.showVideoBottomSheet(
+      context,
+      child: VideoBookmarkSheet(
+        bvid: videoDetailController.bvid,
+        videoTitle: metadata.title,
+        authorMid: metadata.authorMid,
+        currentTimestamp: controller.position.value,
+        onBookmarkTap: (bookmark) => controller.seekTo(
+          Duration(seconds: bookmark.timestampSeconds),
+          isSeek: false,
+        ),
+      ),
+    );
   }
 
   @override
@@ -118,7 +167,26 @@ class BottomControl extends StatelessWidget {
               ),
             ),
           ),
-          buildBottomControl(),
+          Row(
+            children: [
+              Expanded(child: buildBottomControl()),
+              if (!controller.isFileSource && !controller.isDesktopPip)
+                SizedBox(
+                  width: isFullScreen ? 42 : 35,
+                  height: 30,
+                  child: IconButton(
+                    tooltip: '视频标记',
+                    padding: EdgeInsets.zero,
+                    onPressed: () => _showBookmarkSheet(context),
+                    icon: const Icon(
+                      Icons.bookmark_add_outlined,
+                      size: 21,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

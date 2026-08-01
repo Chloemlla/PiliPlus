@@ -2,7 +2,7 @@ import 'package:hive_ce/hive.dart';
 
 part 'watch_stats_session.g.dart';
 
-@HiveType(typeId: 100)
+@HiveType(typeId: 102)
 class WatchStatsSession extends HiveObject {
   @HiveField(0)
   final String bvid;
@@ -47,13 +47,13 @@ class WatchStatsSession extends HiveObject {
 
   factory WatchStatsSession.fromJson(Map<String, dynamic> json) {
     return WatchStatsSession(
-      bvid: json['bvid'] as String,
-      title: json['title'] as String,
-      authorName: json['authorName'] as String,
-      authorMid: json['authorMid'] as int,
-      watchedSeconds: json['watchedSeconds'] as int,
-      timestamp: json['timestamp'] as int,
-      date: json['date'] as String,
+      bvid: json['bvid'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      authorName: json['authorName'] as String? ?? '',
+      authorMid: (json['authorMid'] as num?)?.toInt() ?? 0,
+      watchedSeconds: (json['watchedSeconds'] as num?)?.toInt() ?? 0,
+      timestamp: (json['timestamp'] as num?)?.toInt() ?? 0,
+      date: json['date'] as String? ?? '',
     );
   }
 }

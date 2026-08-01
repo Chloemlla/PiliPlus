@@ -149,8 +149,58 @@ void main() {
         createdAt: 1234567890,
       );
 
-      expect(rule.matches(streamTitle: '今晚有演唱会', areaName: '娱乐'), isTrue);
-      expect(rule.matches(streamTitle: 'CONCERT tonight', areaName: 'entertainment'), isTrue);
+      expect(rule.matches(streamTitle: '今晚有演唱会', areaName: '娱乐'), isFalse);
+      expect(
+        rule.matches(
+          streamTitle: 'Concert Tonight',
+          areaName: 'entertainment',
+        ),
+        isTrue,
+      );
+    });
+
+    test('empty keyword never matches', () {
+      final rule = LiveKeywordRule(
+        id: 'test_id',
+        mid: 12345678,
+        upName: 'Test UP',
+        keyword: '   ',
+        matchTargetIndex: MatchTarget.both.index,
+        enabled: true,
+        createdAt: 1234567890,
+      );
+
+      expect(rule.matches(streamTitle: '任意标题', areaName: '任意分区'), isFalse);
+    });
+
+    test('invalid match target falls back to title only', () {
+      final rule = LiveKeywordRule(
+        id: 'test_id',
+        mid: 12345678,
+        upName: 'Test UP',
+        keyword: 'game',
+        matchTargetIndex: 999,
+        enabled: true,
+        createdAt: 1234567890,
+      );
+
+      expect(rule.matchTarget, MatchTarget.titleOnly);
+    });
+
+    test('account ownership survives JSON round trip', () {
+      final rule = LiveKeywordRule(
+        id: 'test_id',
+        mid: 12345678,
+        upName: 'Test UP',
+        keyword: 'game',
+        matchTargetIndex: MatchTarget.titleOnly.index,
+        enabled: true,
+        createdAt: 1234567890,
+        accountMid: 42,
+      );
+
+      final restored = LiveKeywordRule.fromJson(rule.toJson());
+      expect(restored.accountMid, 42);
     });
   });
 }

@@ -376,5 +376,50 @@ void main() {
       expect(task1 == task3, false);
       expect(task1.hashCode, task2.hashCode);
     });
+
+    test('should keep batch tasks distinct by Seal task id', () {
+      final now = DateTime.now();
+      final task1 = DownloadTask(
+        requestId: 'request-1',
+        taskId: 'task-1',
+        bvid: 'BV1',
+        title: 'P1',
+        quality: '1080p',
+        format: 'video',
+        status: DownloadStatus.downloading,
+        createdAt: now,
+      );
+      final task2 = task1.copyWith(taskId: 'task-2', title: 'P2');
+
+      expect(task1.identity, 'task-1');
+      expect(task2.identity, 'task-2');
+      expect(task1 == task2, false);
+    });
+
+    test('should round-trip persisted task metadata', () {
+      final original = DownloadTask(
+        requestId: 'request-1',
+        taskId: 'task-1',
+        bvid: 'BV1',
+        title: 'Title',
+        quality: '1080p',
+        format: 'video',
+        status: DownloadStatus.completed,
+        progress: 1,
+        downloadedBytes: 1024,
+        totalBytes: 1024,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+        completedAt: DateTime.fromMillisecondsSinceEpoch(2000),
+        contentUri: 'content://seal/task-1',
+        source: 'https://www.bilibili.com/video/BV1',
+      );
+
+      final restored = DownloadTask.fromJson(original.toJson());
+      expect(restored.identity, 'task-1');
+      expect(restored.status, DownloadStatus.completed);
+      expect(restored.quality, '1080p');
+      expect(restored.downloadedBytes, 1024);
+      expect(restored.contentUri, original.contentUri);
+    });
   });
 }

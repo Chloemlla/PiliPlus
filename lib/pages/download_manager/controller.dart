@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:pili_plus/models/download/download_stats.dart';
 import 'package:pili_plus/models/download/download_task.dart';
 import 'package:pili_plus/services/download_manager_service.dart';
 
@@ -39,7 +40,8 @@ class DownloadManagerController extends GetxController {
 
   void exitSelectionMode() => _service.exitSelectionMode();
 
-  void toggleSelection(String requestId) => _service.toggleSelection(requestId);
+  void toggleSelection(String taskIdentity) =>
+      _service.toggleSelection(taskIdentity);
 
   void selectAll() => _service.selectAll();
 

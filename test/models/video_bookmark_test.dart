@@ -3,6 +3,10 @@ import 'package:pili_plus/models/video_bookmark.dart';
 
 void main() {
   group('VideoBookmark', () {
+    test('uses the reserved Hive adapter type ID', () {
+      expect(VideoBookmarkAdapter().typeId, 100);
+    });
+
     test('should create bookmark with all fields', () {
       final now = DateTime.now();
       final bookmark = VideoBookmark(
@@ -52,6 +56,10 @@ void main() {
       expect(bookmark.formattedTimestamp, '01:02:03');
     });
 
+    test('should clamp negative timestamps when formatting', () {
+      expect(VideoBookmark.formatTimestamp(-1), '00:00');
+    });
+
     test('should convert to JSON and back', () {
       final now = DateTime.now();
       final bookmark = VideoBookmark(
@@ -96,6 +104,20 @@ void main() {
       expect(restored.note, null);
     });
 
+    test('rejects malformed imported fields with FormatException', () {
+      expect(
+        () => VideoBookmark.fromJson(const {
+          'id': '',
+          'bvid': 'BV1MM4y1s7NZ',
+          'videoTitle': 'Video',
+          'timestampSeconds': -1,
+          'name': 'Bookmark',
+          'createdAt': 'not-a-date',
+        }),
+        throwsFormatException,
+      );
+    });
+
     test('should copyWith create new instance with updated fields', () {
       final original = VideoBookmark(
         id: 'bm_1',
@@ -114,6 +136,29 @@ void main() {
       expect(copied.note, 'New note');
       expect(original.name, 'Original Name');
       expect(original.note, null);
+    });
+
+    test('should replace editable details and allow clearing the note', () {
+      final original = VideoBookmark(
+        id: 'bm_1',
+        bvid: 'BV123456',
+        videoTitle: 'Test Video',
+        timestampSeconds: 100,
+        name: 'Original Name',
+        note: 'Original note',
+        createdAt: DateTime.now(),
+      );
+
+      final updated = original.copyWithDetails(
+        name: 'Updated Name',
+        note: null,
+      );
+
+      expect(updated.name, 'Updated Name');
+      expect(updated.note, isNull);
+      expect(updated.id, original.id);
+      expect(updated.createdAt, original.createdAt);
+      expect(original.note, 'Original note');
     });
   });
 }

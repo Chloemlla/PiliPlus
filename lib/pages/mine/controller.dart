@@ -63,6 +63,16 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
       },
     ),
     (
+      icon: Icons.insights_outlined,
+      title: '我的观看统计',
+      onTap: () => Get.toNamed('/watchStats'),
+    ),
+    (
+      icon: Icons.bookmark_border,
+      title: '我的视频标记',
+      onTap: () => Get.toNamed('/videoBookmarks'),
+    ),
+    (
       icon: CustomIcons.subscriptions_outlined,
       title: '我的订阅',
       onTap: () {
@@ -77,6 +87,24 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
       onTap: () {
         if (isLogin) {
           Get.toNamed('/later');
+        }
+      },
+    ),
+    (
+      icon: Icons.playlist_add,
+      title: '导入播放列表',
+      onTap: () {
+        if (isLogin) {
+          Get.toNamed('/playlistImport');
+        }
+      },
+    ),
+    (
+      icon: Icons.playlist_play,
+      title: '导出播放列表',
+      onTap: () {
+        if (isLogin) {
+          Get.toNamed('/playlistExport');
         }
       },
     ),

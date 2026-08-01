@@ -36,6 +36,13 @@ object SealDownloadStatusBridge {
     private const val EXTRA_MIME_TYPE = "mime_type"
     private const val EXTRA_STRIP_RESULT = "strip_result"
     private const val EXTRA_STRIP_MESSAGE = "strip_message"
+    private const val EXTRA_PROGRESS = "progress"
+    private const val EXTRA_DOWNLOADED_BYTES = "downloaded_bytes"
+    private const val EXTRA_TOTAL_BYTES = "total_bytes"
+    private const val EXTRA_TITLE = "title"
+    private const val EXTRA_QUALITY = "quality"
+    private const val EXTRA_SOURCE_URL = "source_url"
+    private const val EXTRA_EXTRACT_AUDIO = "extract_audio"
     private const val PROTOCOL_VERSION = 1
     private const val MAX_QUEUED = 32
 
@@ -160,6 +167,33 @@ object SealDownloadStatusBridge {
             "mime_type" to data.getStringExtra(EXTRA_MIME_TYPE),
             "strip_result" to data.getStringExtra(EXTRA_STRIP_RESULT),
             "strip_message" to data.getStringExtra(EXTRA_STRIP_MESSAGE),
+            "progress" to
+                if (data.hasExtra(EXTRA_PROGRESS)) {
+                    data.getDoubleExtra(EXTRA_PROGRESS, 0.0)
+                } else {
+                    null
+                },
+            "downloaded_bytes" to
+                if (data.hasExtra(EXTRA_DOWNLOADED_BYTES)) {
+                    data.getLongExtra(EXTRA_DOWNLOADED_BYTES, 0L)
+                } else {
+                    null
+                },
+            "total_bytes" to
+                if (data.hasExtra(EXTRA_TOTAL_BYTES)) {
+                    data.getLongExtra(EXTRA_TOTAL_BYTES, 0L)
+                } else {
+                    null
+                },
+            "title" to data.getStringExtra(EXTRA_TITLE),
+            "quality" to data.getStringExtra(EXTRA_QUALITY),
+            "source_url" to data.getStringExtra(EXTRA_SOURCE_URL),
+            "extract_audio" to
+                if (data.hasExtra(EXTRA_EXTRACT_AUDIO)) {
+                    data.getBooleanExtra(EXTRA_EXTRACT_AUDIO, false)
+                } else {
+                    null
+                },
         )
     }
 }

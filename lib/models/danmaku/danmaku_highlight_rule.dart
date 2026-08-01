@@ -69,14 +69,14 @@ class DanmakuHighlightRule {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'keyword': keyword,
-        'isRegex': isRegex,
-        'color': color.index,
-        'priority': priority,
-        'enabled': enabled,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'keyword': keyword,
+    'isRegex': isRegex,
+    'color': color.index,
+    'priority': priority,
+    'enabled': enabled,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory DanmakuHighlightRule.fromJson(Map<String, dynamic> json) {
     return DanmakuHighlightRule(
@@ -113,7 +113,7 @@ class DanmakuQuickRule {
 
 const danmakuQuickRules = <DanmakuQuickRule>[
   DanmakuQuickRule(keyword: '主播', color: HighlightColor.yellow),
-  DanmakuQuickRule(keyword: '谢谢', color: HighlightColor.green),
-  DanmakuQuickRule(keyword: '厉害', color: HighlightColor.orange),
-  DanmakuQuickRule(keyword: '注意', color: HighlightColor.red),
+  DanmakuQuickRule(keyword: '谢谢', color: HighlightColor.yellow),
+  DanmakuQuickRule(keyword: '厉害', color: HighlightColor.yellow),
+  DanmakuQuickRule(keyword: '注意', color: HighlightColor.yellow),
 ];

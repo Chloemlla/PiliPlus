@@ -214,6 +214,7 @@ abstract final class SettingBoxKey {
       mergeDanmaku = 'mergeDanmaku',
       danmakuWeight = 'danmakuWeight',
       danmakuBlockType = 'danmakuBlockType',
+      danmakuHighlightRules = 'danmakuHighlightRules',
       danmakuShowArea = 'danmakuShowArea',
       danmakuOpacity = 'danmakuOpacity',
       danmakuFontScale = 'danmakuFontScale',
@@ -274,6 +275,7 @@ abstract final class LocalCacheKey {
       pipVideoPosition = 'pipVideoPosition',
       pipVideoTitle = 'pipVideoTitle',
       pipVideoCover = 'pipVideoCover',
+      sealDownloadTaskHistory = 'sealDownloadTaskHistory',
       autoEnterPipOnMinimize = 'autoEnterPipOnMinimize';
 }
 

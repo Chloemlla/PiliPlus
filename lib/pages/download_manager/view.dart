@@ -103,7 +103,7 @@ class _TaskListView extends StatelessWidget {
                       task: task,
                       controller: controller,
                       isSelected: controller.selectedIds.contains(
-                        task.requestId,
+                        task.identity,
                       ),
                     ),
                   );

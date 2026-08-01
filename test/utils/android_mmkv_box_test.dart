@@ -117,9 +117,8 @@ void main() {
           isAndroid: true,
           store: store,
           openHive: () {
-            // <-- 删掉了 async
             hiveOpenCount++;
-            return Hive.openBox<dynamic>(name); // 直接返回 Future，Dart 会自动处理
+            return Hive.openBox<dynamic>(name);
           },
         ),
         throwsA(isA<StateError>()),
@@ -140,7 +139,7 @@ void main() {
       await box.putAll(const {'first': 1, 'second': 2});
       events.clear();
       final before = store.exportBox('atomic_batch');
-      store.failNextPutAll = true;
+      store.failPutAllAfter = 1;
 
       await expectLater(
         box.putAll(const {'first': 10, 'third': 3}),
@@ -164,7 +163,7 @@ void main() {
       await box.putAll(const {'first': 1, 'second': 2});
       events.clear();
       final before = store.exportBox('atomic_delete');
-      store.failNextRemoveAll = true;
+      store.failRemoveAllAfter = 1;
 
       await expectLater(
         box.deleteAll(const ['first', 'second']),
@@ -359,6 +358,20 @@ void main() {
     await lazy.close();
   });
 
+  test('lazy access surfaces corrupt migrated values', () async {
+    final store = _MemoryAndroidMmkvStore();
+    store.putRaw('lazy_corrupt', jsonEncode('broken'), 'not-json');
+    final box = AndroidMmkvBackedBox<dynamic>(
+      'lazy_corrupt',
+      store: store,
+      loadMode: AndroidMmkvLoadMode.lazy,
+    );
+
+    expect(box.tryLoadFromMmkv(), isTrue);
+    expect(() => box.get('broken'), throwsA(isA<StateError>()));
+    await box.close();
+  });
+
   test('close does not require sync and clears memory', () async {
     final store = _MemoryAndroidMmkvStore();
     final box = AndroidMmkvBackedBox<dynamic>('close_soft', store: store);
@@ -394,8 +407,8 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   final bool clearSucceeds;
   bool failNextReplace = false;
-  bool failNextPutAll = false;
-  bool failNextRemoveAll = false;
+  int? failPutAllAfter;
+  int? failRemoveAllAfter;
   int exportCount = 0;
   int exportKeysCount = 0;
   int replaceCount = 0;
@@ -442,10 +455,15 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   @override
   bool putAllRaw(String name, Map<String, String> entries) {
-    if (failNextPutAll) {
-      failNextPutAll = false;
-      (_boxes[name] ??= {}).addAll(entries);
-      return false;
+    final failAfter = failPutAllAfter;
+    if (failAfter != null) {
+      failPutAllAfter = null;
+      final box = _boxes[name] ??= {};
+      var written = 0;
+      for (final entry in entries.entries) {
+        if (written++ == failAfter) return false;
+        box[entry.key] = entry.value;
+      }
     }
     putAllCount++;
     (_boxes[name] ??= {}).addAll(entries);
@@ -460,15 +478,17 @@ final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
 
   @override
   bool removeAllRaw(String name, Iterable<String> keys) {
-    if (failNextRemoveAll) {
-      failNextRemoveAll = false;
+    final failAfter = failRemoveAllAfter;
+    if (failAfter != null) {
+      failRemoveAllAfter = null;
       final box = _boxes[name];
       if (box != null) {
+        var removed = 0;
         for (final key in keys) {
+          if (removed++ == failAfter) return false;
           box.remove(key);
         }
       }
-      return false;
     }
     removeAllCount++;
     final box = _boxes[name];

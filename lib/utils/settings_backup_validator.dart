@@ -1,4 +1,3 @@
-import 'package:pili_plus/models/common/member/tab_type.dart';
 import 'package:pili_plus/models/common/theme/theme_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -6,6 +5,9 @@ import 'package:flex_seed_scheme/flex_seed_scheme.dart';
 
 abstract final class SettingsBackupValidator {
   static const int currentSchemaVersion = 1;
+  // Keep storage validation independent from MemberTabType: that enum reads
+  // Pref, which would recreate the GStorage -> Pref initialization cycle.
+  static const int _memberTabValueCount = 8;
 
   static void validateSchemaVersion(Map<String, dynamic> backup) {
     final version = backup['schemaVersion'] ?? 0;
@@ -49,7 +51,7 @@ abstract final class SettingsBackupValidator {
   }
 
   static void _validateStartupSettings(Map<dynamic, dynamic> values) {
-    _enumIndex(values, SettingBoxKey.memberTab, MemberTabType.values.length);
+    _enumIndex(values, SettingBoxKey.memberTab, _memberTabValueCount);
     _enumIndex(values, SettingBoxKey.themeMode, ThemeType.values.length);
     _enumIndex(
       values,
@@ -118,6 +120,8 @@ abstract final class SettingsBackupValidator {
 
   static bool _sameStoredType(Object current, Object? candidate) {
     if (candidate == null) return false;
+    if (current is int) return candidate is int;
+    if (current is double) return candidate is double;
     if (current is num) return candidate is num;
     if (current is List) return candidate is List;
     if (current is Map) return candidate is Map;

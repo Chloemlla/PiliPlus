@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/models/video_bookmark.dart';
 import 'package:pili_plus/controllers/video_bookmark_controller.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/models/video_bookmark.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_editor_dialog.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_list_controls.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_tile.dart';
 import 'package:pili_plus/services/video_bookmark_service.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 
 class VideoBookmarkListPage extends StatefulWidget {
-  const VideoBookmarkListPage({super.key});
+  const VideoBookmarkListPage({super.key, this.currentBvid});
+
+  final String? currentBvid;
 
   @override
   State<VideoBookmarkListPage> createState() => _VideoBookmarkListPageState();
@@ -19,205 +27,132 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
   @override
   void initState() {
     super.initState();
-    controller = Get.put(VideoBookmarkController());
-    controller.loadAllBookmarks();
+    controller = VideoBookmarkController()..loadAllBookmarks();
   }
 
   @override
   void dispose() {
     searchController.dispose();
-    Get.delete<VideoBookmarkController>();
     super.dispose();
   }
 
-  String _formatTimestamp(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
-  void _showSortOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.access_time),
-              title: const Text('最近添加'),
-              trailing: controller.sortType.value == SortType.mostRecent
-                  ? const Icon(Icons.check)
-                  : null,
-              onTap: () {
-                controller.setSortType(SortType.mostRecent);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.video_library),
-              title: const Text('按视频名称'),
-              trailing: controller.sortType.value == SortType.videoName
-                  ? const Icon(Icons.check)
-                  : null,
-              onTap: () {
-                controller.setSortType(SortType.videoName);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.timer),
-              title: const Text('按时间戳'),
-              trailing: controller.sortType.value == SortType.timestamp
-                  ? const Icon(Icons.check)
-                  : null,
-              onTap: () {
-                controller.setSortType(SortType.timestamp);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _exportBookmarks() async {
-    final json = controller.exportAllBookmarks();
-    Utils.copyText(json);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制到剪贴板')),
+  void _exportBookmarks() {
+    Utils.copyText(
+      controller.exportAllBookmarks(),
+      toastText: '已复制到剪贴板',
     );
   }
 
   Future<void> _clearAllBookmarks() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('清空所有标记'),
         content: const Text('确定要清空所有视频标记吗？此操作不可恢复。'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('取消'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('清空'),
           ),
         ],
       ),
     );
+    if (!mounted || confirm != true) {
+      return;
+    }
 
-    if (confirm == true) {
-      await controller.clearAllBookmarks();
+    await controller.clearAllBookmarks();
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已清空所有标记')),
+    );
+  }
+
+  Future<void> _openBookmark(VideoBookmark bookmark) async {
+    try {
+      final target = await SearchHttp.ab2cWithDimension(bvid: bookmark.bvid);
+      if (!mounted) {
+        return;
+      }
+      final cid = target?.cid;
+      if (cid == null) {
+        SmartDialog.showToast('无法获取视频播放信息');
+        return;
+      }
+
+      await PageUtils.toVideoPage(
+        bvid: bookmark.bvid,
+        cid: cid,
+        title: bookmark.videoTitle,
+        progress: bookmark.timestampSeconds * 1000,
+        dimension: target!.dimension,
+      );
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已清空所有标记')),
-        );
+        SmartDialog.showToast('打开视频失败：$error');
       }
     }
   }
 
-  void _showBookmarkOptions(VideoBookmark bookmark) {
-    showModalBottomSheet(
+  Future<void> _showEditDialog(VideoBookmark bookmark) async {
+    final result = await showVideoBookmarkEditorDialog(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.play_arrow),
-              title: const Text('跳转到标记'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to video at timestamp
-                Get.toNamed('/video', arguments: {
-                  'bvid': bookmark.bvid,
-                  'cid': null, // Will be fetched from video detail
-                  'heroTag': Utils.makeHeroTag(bookmark.bvid),
-                  'seekTo': bookmark.timestampSeconds,
-                });
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('编辑'),
-              onTap: () {
-                Navigator.pop(context);
-                _showEditDialog(bookmark);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('删除', style: TextStyle(color: Colors.red)),
-              onTap: () async {
-                Navigator.pop(context);
-                await controller.deleteBookmark(bookmark);
-              },
-            ),
-          ],
-        ),
-      ),
+      title: '编辑标记',
+      timestampSeconds: bookmark.timestampSeconds,
+      defaultName:
+          '标记 @ ${VideoBookmark.formatTimestamp(bookmark.timestampSeconds)}',
+      initialName: bookmark.name,
+      initialNote: bookmark.note,
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    await controller.updateBookmark(
+      bookmark.copyWithDetails(name: result.name, note: result.note),
     );
   }
 
-  void _showEditDialog(VideoBookmark bookmark) {
-    final nameController = TextEditingController(text: bookmark.name);
-    final noteController = TextEditingController(text: bookmark.note ?? '');
-
-    showDialog(
+  Future<void> _confirmDelete(VideoBookmark bookmark) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('编辑标记'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: '标记名称',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteController,
-              decoration: const InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('删除标记'),
+        content: Text('确定要删除“${bookmark.name}”吗？'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () async {
-              bookmark.name = nameController.text.trim();
-              bookmark.note = noteController.text.trim().isEmpty
-                  ? null
-                  : noteController.text.trim();
-              await controller.updateBookmark(bookmark);
-              if (mounted) Navigator.pop(context);
-            },
-            child: const Text('保存'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('删除'),
           ),
         ],
       ),
     );
+    if (!mounted || confirm != true) {
+      return;
+    }
+    await controller.deleteBookmark(bookmark);
+  }
+
+  String get _activeFilterLabel {
+    return switch (controller.filterType.value) {
+      BookmarkFilterType.all => '',
+      BookmarkFilterType.currentVideo => '当前视频',
+      BookmarkFilterType.creator =>
+        '创作者 UID ${controller.authorMidFilter.value}',
+    };
   }
 
   @override
@@ -228,41 +163,59 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
       appBar: AppBar(
         title: const Text('我的视频标记'),
         actions: [
+          Obx(
+            () => IconButton(
+              tooltip: '筛选',
+              onPressed: () => showVideoBookmarkFilterSheet(
+                context: context,
+                controller: controller,
+                currentBvid: widget.currentBvid,
+              ),
+              icon: Icon(
+                controller.filterType.value == BookmarkFilterType.all
+                    ? Icons.filter_list
+                    : Icons.filter_alt,
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.sort),
             tooltip: '排序',
-            onPressed: _showSortOptions,
+            onPressed: () => showVideoBookmarkSortSheet(
+              context: context,
+              controller: controller,
+            ),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'export':
+          PopupMenuButton<_PageAction>(
+            onSelected: (action) {
+              switch (action) {
+                case _PageAction.export:
                   _exportBookmarks();
-                  break;
-                case 'clear':
+                case _PageAction.clear:
                   _clearAllBookmarks();
-                  break;
               }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.upload_outlined),
-                    SizedBox(width: 8),
-                    Text('导出全部'),
-                  ],
+                value: _PageAction.export,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.upload_outlined),
+                  title: Text('导出全部'),
                 ),
               ),
-              const PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('清空全部', style: TextStyle(color: Colors.red)),
-                  ],
+              PopupMenuItem(
+                value: _PageAction.clear,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    '清空全部',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
                 ),
               ),
             ],
@@ -271,41 +224,55 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
       ),
       body: Column(
         children: [
-          // Search bar
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: '搜索标记名称或备注...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: searchController,
+              builder: (context, value, child) => TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: '搜索标记名称或备注…',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  suffixIcon: value.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            controller.search('');
+                          },
+                        ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                suffixIcon: searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          searchController.clear();
-                          controller.search('');
-                        },
-                      )
-                    : null,
+                onChanged: controller.search,
               ),
-              onChanged: (value) {
-                controller.search(value);
-                setState(() {});
-              },
             ),
           ),
-
-          // Bookmark list
+          Obx(() {
+            if (controller.filterType.value == BookmarkFilterType.all) {
+              return const SizedBox.shrink();
+            }
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: InputChip(
+                  label: Text(_activeFilterLabel),
+                  onDeleted: controller.clearFilter,
+                ),
+              ),
+            );
+          }),
           Expanded(
             child: Obx(() {
               final bookmarks = controller.allBookmarks;
-
               if (bookmarks.isEmpty) {
+                final hasCriteria =
+                    controller.searchQuery.value.trim().isNotEmpty ||
+                    controller.filterType.value != BookmarkFilterType.all;
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -317,18 +284,14 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        controller.searchQuery.value.isNotEmpty
-                            ? '没有找到相关标记'
-                            : '暂无视频标记',
+                        hasCriteria ? '没有找到相关标记' : '暂无视频标记',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.outline,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        controller.searchQuery.value.isNotEmpty
-                            ? '尝试其他关键词'
-                            : '在视频播放时点击标记图标添加',
+                        hasCriteria ? '尝试调整搜索或筛选条件' : '在视频播放时点击标记图标添加',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.outline,
                         ),
@@ -338,65 +301,14 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
                 );
               }
 
-              // Group by video if sorted by video name
               if (controller.sortType.value == SortType.videoName) {
-                final grouped = <String, List<VideoBookmark>>{};
-                for (final bookmark in bookmarks) {
-                  grouped.putIfAbsent(bookmark.videoTitle, () => []).add(bookmark);
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: grouped.length,
-                  itemBuilder: (context, index) {
-                    final videoTitle = grouped.keys.elementAt(index);
-                    final videoBookmarks = grouped[videoTitle]!;
-                    final firstBvid = videoBookmarks.first.bvid;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  videoTitle,
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Get.toNamed('/video', arguments: {
-                                    'bvid': firstBvid,
-                                    'heroTag': Utils.makeHeroTag(firstBvid),
-                                  });
-                                },
-                                child: const Text('查看视频'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ...videoBookmarks.map((bookmark) => _buildBookmarkTile(bookmark)),
-                        const Divider(),
-                      ],
-                    );
-                  },
-                );
+                return _buildGroupedList(bookmarks, theme);
               }
-
-              // Regular list view
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: bookmarks.length,
-                itemBuilder: (context, index) {
-                  return _buildBookmarkTile(bookmarks[index]);
-                },
+                itemBuilder: (context, index) =>
+                    _buildBookmarkTile(bookmarks[index]),
               );
             }),
           ),
@@ -405,50 +317,54 @@ class _VideoBookmarkListPageState extends State<VideoBookmarkListPage> {
     );
   }
 
-  Widget _buildBookmarkTile(VideoBookmark bookmark) {
-    final theme = Theme.of(context);
+  Widget _buildGroupedList(
+    List<VideoBookmark> bookmarks,
+    ThemeData theme,
+  ) {
+    final grouped = <String, List<VideoBookmark>>{};
+    for (final bookmark in bookmarks) {
+      grouped.putIfAbsent(bookmark.bvid, () => []).add(bookmark);
+    }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        onTap: () => _showBookmarkOptions(bookmark),
-        leading: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            bookmark.formattedTimestamp,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        title: Text(bookmark.name),
-        subtitle: Column(
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: grouped.length,
+      itemBuilder: (context, index) {
+        final videoBookmarks = grouped.values.elementAt(index);
+        final videoTitle = videoBookmarks.first.videoTitle;
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (bookmark.note != null && bookmark.note!.isNotEmpty)
-              Text(
-                bookmark.note!,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                videoTitle,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
-              ),
-            Text(
-              bookmark.videoTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
               ),
             ),
+            ...videoBookmarks.map(_buildBookmarkTile),
+            const Divider(),
           ],
-        ),
-        trailing: const Icon(Icons.chevron_right),
-      ),
+        );
+      },
     );
   }
+
+  Widget _buildBookmarkTile(VideoBookmark bookmark) {
+    return VideoBookmarkTile(
+      bookmark: bookmark,
+      onTap: () => _openBookmark(bookmark),
+      onEdit: () => _showEditDialog(bookmark),
+      onDelete: () => _confirmDelete(bookmark),
+    );
+  }
+}
+
+enum _PageAction {
+  export,
+  clear,
 }

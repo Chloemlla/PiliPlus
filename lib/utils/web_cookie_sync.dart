@@ -15,7 +15,10 @@ abstract final class WebCookieSync {
           await write(origin, cookie);
         } catch (error, stackTrace) {
           Error.throwWithStackTrace(
-            StateError('Failed to sync WebView cookie ${cookie.name}: $error'),
+            StateError(
+              'Failed to sync WebView cookie ${cookie.name}: '
+              '${error.runtimeType}',
+            ),
             stackTrace,
           );
         }

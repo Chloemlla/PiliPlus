@@ -9,10 +9,12 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/sponsor_block.dart';
 import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
 import 'package:pili_plus/models/common/sponsor_block/strip_removal_report.dart';
+import 'package:pili_plus/models/download/seal_download_status.dart';
 import 'package:pili_plus/models_new/sponsor_block/segment_item.dart';
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
+import 'package:pili_plus/services/seal_download_channel_dispatcher.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
@@ -31,7 +33,7 @@ import 'package:get/get.dart';
 /// The entire lifecycle is presented by a compact self-owned status panel
 /// (waiting → accepted → completed/failed/canceled), instead of bare toasts.
 abstract final class SealDownloadUtils {
-  static const _channel = MethodChannel('pili_plus/seal_download');
+  static final _channel = SealDownloadChannelDispatcher.instance;
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
   static const _panelTag = 'seal_download_panel';
 
@@ -47,14 +49,12 @@ abstract final class SealDownloadUtils {
     if (!isSupported) return;
     if (!_listening) {
       _listening = true;
-      _channel.setMethodCallHandler(_onMethodCall);
+      _channel.addStatusListener(_handleStatusEvent);
       if (kDebugMode) {
         debugPrint('SealDownloadUtils: listening for DOWNLOAD_STATUS');
       }
     }
-    unawaited(
-      _channel.invokeMethod<void>('readyForStatus').catchError((Object _) {}),
-    );
+    _channel.ensureListening();
   }
 
   static Future<void> downloadVideo(VideoDetailController ctr) {
@@ -1303,15 +1303,6 @@ abstract final class SealDownloadUtils {
     return '${badges.join(' · ')} · $namePart';
   }
 
-  static Future<dynamic> _onMethodCall(MethodCall call) async {
-    if (call.method != 'onDownloadStatus') return null;
-    final args = call.arguments;
-    if (args is! Map) return null;
-    final status = SealDownloadStatus.fromMap(args);
-    await _handleStatusEvent(status);
-    return null;
-  }
-
   static Future<void> _handleStatusEvent(SealDownloadStatus status) async {
     final key = _eventKey(status);
     if (!_handledEvents.add(key)) return;
@@ -1726,109 +1717,6 @@ final class _StripPrepareSkip extends _StripPrepareResult {
 final class _StripPrepareFail extends _StripPrepareResult {
   const _StripPrepareFail(this.message);
   final String message;
-}
-
-final class SealDownloadStatus {
-  const SealDownloadStatus({
-    required this.status,
-    this.errorCode,
-    this.errorMessage,
-    this.taskId,
-    this.callerRequestId,
-    this.contentUri,
-    this.displayName,
-    this.mimeType,
-    this.stripResult,
-    this.stripMessage,
-    this.source,
-  });
-
-  factory SealDownloadStatus.fromMap(Map<dynamic, dynamic> map) {
-    return SealDownloadStatus(
-      status: map['status']?.toString() ?? '',
-      errorCode: map['error_code']?.toString(),
-      errorMessage: map['error_message']?.toString(),
-      taskId: map['task_id']?.toString(),
-      callerRequestId: map['caller_request_id']?.toString(),
-      contentUri: map['content_uri']?.toString(),
-      displayName: map['display_name']?.toString(),
-      mimeType: map['mime_type']?.toString(),
-      stripResult: map['strip_result']?.toString(),
-      stripMessage: map['strip_message']?.toString(),
-      source: map['source']?.toString(),
-    );
-  }
-
-  final String status;
-  final String? errorCode;
-  final String? errorMessage;
-  final String? taskId;
-  final String? callerRequestId;
-  final String? contentUri;
-  final String? displayName;
-  final String? mimeType;
-  final String? stripResult;
-  final String? stripMessage;
-  final String? source;
-
-  bool get isTerminal =>
-      status == 'completed' || status == 'failed' || status == 'canceled';
-
-  bool get confirmsAppliedStrip =>
-      stripResult?.trim().toLowerCase() == 'applied';
-
-  bool isUnconfirmedCompletedStrip({required bool stripRequested}) =>
-      status == 'completed' && stripRequested && !confirmsAppliedStrip;
-
-  String? get stripFailureMessage {
-    final message = stripMessage?.trim();
-    return message == null || message.isEmpty ? null : message;
-  }
-
-  bool get isAudioHint {
-    final mime = mimeType?.toLowerCase() ?? '';
-    final name = displayName?.toLowerCase() ?? '';
-    return mime.startsWith('audio/') ||
-        name.endsWith('.m4a') ||
-        name.endsWith('.mp3') ||
-        name.endsWith('.opus') ||
-        name.endsWith('.flac');
-  }
-
-  bool get isVideoHint {
-    final mime = mimeType?.toLowerCase() ?? '';
-    final name = displayName?.toLowerCase() ?? '';
-    return mime.startsWith('video/') ||
-        name.endsWith('.mp4') ||
-        name.endsWith('.mkv') ||
-        name.endsWith('.webm');
-  }
-
-  String? get userFacingErrorMessage {
-    final message = errorMessage?.trim();
-    if (message != null && message.isNotEmpty) return message;
-    final stripFailure = stripResult == 'failed' ? stripFailureMessage : null;
-    if (stripFailure != null && stripFailure.isNotEmpty) return stripFailure;
-    return switch (errorCode) {
-      'disabled' => 'Seal 已关闭外部下载委托',
-      'auto_start_denied' => 'Seal 未允许自动开始下载',
-      'invalid_url' => '无效的下载链接',
-      'invalid_sections' => '去除片段区间无效，请刷新标记后重试',
-      'unsupported_version' => 'Seal 协议版本不兼容',
-      'caller_denied' => 'Seal 白名单拒绝了当前应用',
-      'queue_rejected' => 'Seal 请求过于频繁，请稍后再试',
-      'internal_error' => 'Seal 内部错误',
-      'download_failed' => 'Seal 下载失败',
-      'canceled' => '已取消 Seal 下载',
-      'cookie_denied' ||
-      'cookies_disabled' => 'Seal 未允许外部 Cookie（请在 Seal → 外部下载中开启）',
-      'cookie_invalid' || 'cookies_invalid' => 'Cookie 无效，请重新登录后重试',
-      'cookie_too_large' || 'cookies_too_large' => 'Cookie 数据过大',
-      'cookies_uri_denied' => '无法将 Cookie 交给 Seal',
-      'cookies_unsupported' => 'Seal 不支持当前 Cookie 格式',
-      _ => null,
-    };
-  }
 }
 
 sealed class _CookieChoice {

@@ -1,106 +1,190 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:pili_plus/services/quality_recommendation_service.dart';
 import 'package:pili_plus/models/quality_mode.dart';
+import 'package:pili_plus/services/quality_network_speed_probe.dart';
+import 'package:pili_plus/services/quality_recommendation_service.dart';
+import 'package:battery_plus/battery_plus.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('QualityRecommendationService', () {
-    late QualityRecommendationService service;
+    final services = <QualityRecommendationService>[];
 
-    setUp(() {
-      service = QualityRecommendationService.instance;
+    QualityRecommendationService createService({
+      NetworkType networkType = NetworkType.wifi,
+      int batteryLevel = 80,
+      BatteryState batteryState = BatteryState.discharging,
+      NetworkSpeedProbe? probe,
+      DateTime Function()? clock,
+    }) {
+      final service = QualityRecommendationService(
+        networkTypeReader: () => Future.value(networkType),
+        networkTypeChanges: const Stream.empty(),
+        batteryLevelReader: () => Future.value(batteryLevel),
+        batteryStateReader: () => Future.value(batteryState),
+        speedProbe: probe ?? _FakeSpeedProbe(12),
+        clock: clock,
+      );
+      services.add(service);
+      return service;
+    }
+
+    tearDown(() async {
+      for (final service in services) {
+        await service.close();
+      }
+      services.clear();
     });
 
-    test('should be singleton', () {
-      final instance1 = QualityRecommendationService.instance;
-      final instance2 = QualityRecommendationService.instance;
-      expect(identical(instance1, instance2), true);
+    test('keeps a shared default instance', () {
+      expect(
+        identical(
+          QualityRecommendationService.instance,
+          QualityRecommendationService.instance,
+        ),
+        isTrue,
+      );
     });
 
-    group('recommendQuality', () {
-      test('should return auto for empty qualities', () async {
-        final result = await service.recommendQuality(
-          mode: QualityMode.auto,
-          availableQualities: [],
-        );
+    test('returns automatic fallback when no qn is available', () async {
+      final result = await createService().recommendQuality(
+        mode: QualityMode.auto,
+        availableQualities: const [],
+      );
 
-        expect(result.qualityCode, VideoQualityCode.kAuto);
-        expect(result.qualityLabel, '自动');
-      });
+      expect(result.qualityCode, VideoQualityCode.kAuto);
+      expect(result.qualityLabel, '自动');
+    });
 
-      test('should recommend highest quality for qualityFirst mode', () async {
-        final qualities = [
+    test('quality-first selects the highest actual DASH qn', () async {
+      final result = await createService().recommendQuality(
+        mode: QualityMode.qualityFirst,
+        availableQualities: const [
           VideoQualityCode.k480p,
           VideoQualityCode.k720p,
           VideoQualityCode.k1080p,
           VideoQualityCode.k4k,
-        ];
+        ],
+      );
 
-        final result = await service.recommendQuality(
-          mode: QualityMode.qualityFirst,
-          availableQualities: qualities,
-        );
+      expect(result.qualityCode, VideoQualityCode.k4k);
+      expect(result.isAuto, isFalse);
+    });
 
-        expect(result.qualityCode, VideoQualityCode.k4k);
-        expect(result.isAuto, false);
-      });
-
-      test('should prefer 60fps for smoothFirst mode when available', () async {
-        final qualities = [
-          VideoQualityCode.k480p,
+    test('smooth-first prefers 720P60 before higher resolution', () async {
+      final result = await createService().recommendQuality(
+        mode: QualityMode.smoothFirst,
+        availableQualities: const [
           VideoQualityCode.k720p,
           VideoQualityCode.k720p60,
           VideoQualityCode.k1080p,
-        ];
+          VideoQualityCode.k1080p60,
+        ],
+      );
 
-        final result = await service.recommendQuality(
-          mode: QualityMode.smoothFirst,
-          availableQualities: qualities,
-        );
-
-        expect(result.qualityCode, VideoQualityCode.k720p60);
-        expect(result.reason, '流畅优先模式');
-        expect(result.isAuto, true);
-      });
-
-      test('should fallback to 720P for smoothFirst if no 60fps', () async {
-        final qualities = [
-          VideoQualityCode.k480p,
-          VideoQualityCode.k720p,
-          VideoQualityCode.k1080p,
-        ];
-
-        final result = await service.recommendQuality(
-          mode: QualityMode.smoothFirst,
-          availableQualities: qualities,
-        );
-
-        expect(result.qualityCode, VideoQualityCode.k720p);
-        expect(result.isAuto, true);
-      });
-
-      test('should recommend lower quality for batterySaver mode', () async {
-        final qualities = [
-          VideoQualityCode.k480p,
-          VideoQualityCode.k720p,
-          VideoQualityCode.k1080p,
-        ];
-
-        final result = await service.recommendQuality(
-          mode: QualityMode.batterySaver,
-          availableQualities: qualities,
-        );
-
-        // Since we can't control battery state in test, result may vary
-        expect(qualities.contains(result.qualityCode), true);
-        expect(result.isAuto, true);
-      });
+      expect(result.qualityCode, VideoQualityCode.k720p60);
+      expect(result.mode, QualityMode.smoothFirst);
+      expect(result.isAuto, isFalse);
     });
 
-    group('speed cache', () {
-      test('should clear speed cache', () {
-        service.clearSpeedCache();
-        // No exception means success
-      });
+    test('battery saver selects a low stable supported qn', () async {
+      final result = await createService().recommendQuality(
+        mode: QualityMode.batterySaver,
+        availableQualities: const [
+          VideoQualityCode.k360p,
+          VideoQualityCode.k480p,
+          VideoQualityCode.k720p,
+          VideoQualityCode.k1080p,
+        ],
+      );
+
+      expect(result.qualityCode, VideoQualityCode.k360p);
+      expect(result.mode, QualityMode.batterySaver);
+    });
+
+    test('auto uses measured throughput and never invents a qn', () async {
+      final result =
+          await createService(
+            probe: _FakeSpeedProbe(12),
+          ).recommendQuality(
+            mode: QualityMode.auto,
+            probeUri: Uri.parse('https://example.com/video.m4s'),
+            availableQualities: const [
+              VideoQualityCode.k480p,
+              VideoQualityCode.k720p,
+              VideoQualityCode.k1080p,
+              VideoQualityCode.k4k,
+            ],
+          );
+
+      expect(result.qualityCode, VideoQualityCode.k1080p);
+      expect(result.reason, contains('12.0 Mbps'));
+    });
+
+    test('low battery caps an otherwise high recommendation', () async {
+      final result =
+          await createService(
+            batteryLevel: 15,
+            probe: _FakeSpeedProbe(50),
+          ).recommendQuality(
+            mode: QualityMode.auto,
+            probeUri: Uri.parse('https://example.com/video.m4s'),
+            availableQualities: const [
+              VideoQualityCode.k480p,
+              VideoQualityCode.k720p,
+              VideoQualityCode.k1080p,
+              VideoQualityCode.k4k,
+            ],
+          );
+
+      expect(result.qualityCode, VideoQualityCode.k720p);
+      expect(result.reason, contains('低电量'));
+    });
+
+    test('falls back to the next lower available qn', () async {
+      final result =
+          await createService(
+            probe: _FakeSpeedProbe(12),
+          ).recommendQuality(
+            mode: QualityMode.auto,
+            probeUri: Uri.parse('https://example.com/video.m4s'),
+            availableQualities: const [
+              VideoQualityCode.k720p,
+              VideoQualityCode.k4k,
+            ],
+          );
+
+      expect(result.qualityCode, VideoQualityCode.k720p);
+    });
+
+    test('reuses a successful speed probe for five minutes', () async {
+      var now = DateTime.utc(2026, 7, 31, 12);
+      final probe = _FakeSpeedProbe(8);
+      final service = createService(probe: probe, clock: () => now);
+      final uri = Uri.parse('https://example.com/video.m4s');
+
+      expect(await service.measureNetworkSpeed(uri), 8);
+      now = now.add(const Duration(minutes: 4));
+      expect(await service.measureNetworkSpeed(uri), 8);
+      expect(probe.callCount, 1);
+
+      now = now.add(const Duration(minutes: 2));
+      expect(await service.measureNetworkSpeed(uri), 8);
+      expect(probe.callCount, 2);
     });
   });
+}
+
+class _FakeSpeedProbe implements NetworkSpeedProbe {
+  _FakeSpeedProbe(this.mbps);
+
+  final double? mbps;
+  int callCount = 0;
+
+  @override
+  Future<double?> measure(
+    Uri uri, {
+    required Duration maxDuration,
+  }) {
+    callCount++;
+    return Future.value(mbps);
+  }
 }

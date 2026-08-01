@@ -5,16 +5,23 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/user.dart';
 import 'package:pili_plus/models/playlist_export_data.dart';
 import 'package:pili_plus/services/playlist_export_service.dart';
+import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/id_utils.dart';
+
+typedef WatchLaterPlaylistWriter =
+    Future<LoadingState<void>> Function(String bvid);
 
 abstract final class PlaylistImportService {
   static const String importedFolderName = '已导入';
+  static const int maxImportFileBytes = 8 * 1024 * 1024;
+  static const int maxImportEntries = 10000;
   static const int _favoriteBatchSize = 20;
 
   static Future<LoadingState<PlaylistImportResult>> importPlaylist({
     required String jsonString,
     required ImportDestination destination,
     Set<String>? existingBvids,
+    WatchLaterPlaylistWriter? watchLaterWriter,
   }) async {
     final validation = validateJson(jsonString);
     final playlistData = validation.playlistData;
@@ -27,6 +34,7 @@ abstract final class PlaylistImportService {
         playlistData: playlistData,
         destination: destination,
         existingBvids: existingBvids,
+        watchLaterWriter: watchLaterWriter ?? _writeWatchLaterSilently,
       );
     } catch (error) {
       return Error('导入失败: $error');
@@ -37,18 +45,20 @@ abstract final class PlaylistImportService {
     required PlaylistExportData playlistData,
     required ImportDestination destination,
     Set<String>? existingBvids,
+    required WatchLaterPlaylistWriter watchLaterWriter,
   }) async {
-    final videoEntries = <PlaylistVideoItem>[];
+    final videoBvids = <String>[];
     int unsupportedCount = 0;
     for (final entry in playlistData.videos) {
-      if (entry.isVideo) {
-        videoEntries.add(entry);
+      final bvid = entry.bvid;
+      if (entry.itemType == PlaylistItemType.video && bvid != null) {
+        videoBvids.add(bvid);
       } else {
         unsupportedCount++;
       }
     }
 
-    if (videoEntries.isEmpty) {
+    if (videoBvids.isEmpty) {
       return Success(
         PlaylistImportResult(
           totalCount: playlistData.count,
@@ -74,18 +84,17 @@ abstract final class PlaylistImportService {
     }
 
     final knownBvids = <String>{...target.existingBvids};
-    final videosToImport = <PlaylistVideoItem>[];
+    final bvidsToImport = <String>[];
     final duplicateBvids = <String>[];
-    for (final video in videoEntries) {
-      final bvid = video.bvid!;
+    for (final bvid in videoBvids) {
       if (knownBvids.add(bvid)) {
-        videosToImport.add(video);
+        bvidsToImport.add(bvid);
       } else {
         duplicateBvids.add(bvid);
       }
     }
 
-    if (videosToImport.isEmpty) {
+    if (bvidsToImport.isEmpty) {
       return Success(
         PlaylistImportResult(
           totalCount: playlistData.count,
@@ -99,14 +108,25 @@ abstract final class PlaylistImportService {
       );
     }
 
-    final writeResult = switch (destination) {
-      ImportDestination.watchLater => _importToWatchLater(videosToImport),
-      ImportDestination.importedFavorite => _importToFavorite(
-        videos: videosToImport,
-        mediaId: target.favoriteMediaId!,
-      ),
-    };
-    final written = await writeResult;
+    final _WriteResult written;
+    switch (destination) {
+      case ImportDestination.watchLater:
+        written = await _importToWatchLater(
+          bvidsToImport,
+          writer: watchLaterWriter,
+        );
+        break;
+      case ImportDestination.importedFavorite:
+        final mediaId = target.favoriteMediaId;
+        if (mediaId == null) {
+          return const Error('导入收藏夹无效');
+        }
+        written = await _importToFavorite(
+          bvids: bvidsToImport,
+          mediaId: mediaId,
+        );
+        break;
+    }
 
     return Success(
       PlaylistImportResult(
@@ -183,7 +203,8 @@ abstract final class PlaylistImportService {
     final foldersResult = await PlaylistExportService.getFavoriteFolders();
     if (foldersResult case Success(:final response)) {
       for (final folder in response) {
-        if (folder.title == importedFolderName) {
+        if (folder.title == importedFolderName &&
+            !BiliUtils.isPublicFav(folder.attr)) {
           return Success(folder.id);
         }
       }
@@ -194,7 +215,7 @@ abstract final class PlaylistImportService {
     final createResult = await FavHttp.addOrEditFolder(
       isAdd: true,
       title: importedFolderName,
-      privacy: 0,
+      privacy: 1,
       cover: '',
       intro: '由 PiliPlus 播放列表导入功能创建',
     );
@@ -205,13 +226,13 @@ abstract final class PlaylistImportService {
   }
 
   static Future<_WriteResult> _importToWatchLater(
-    List<PlaylistVideoItem> videos,
-  ) async {
+    List<String> bvids, {
+    required WatchLaterPlaylistWriter writer,
+  }) async {
     int importedCount = 0;
     final failedBvids = <String>[];
-    for (final video in videos) {
-      final bvid = video.bvid!;
-      final result = await UserHttp.toViewLater(bvid: bvid);
+    for (final bvid in bvids) {
+      final result = await writer(bvid);
       if (result.isSuccess) {
         importedCount++;
       } else {
@@ -224,18 +245,21 @@ abstract final class PlaylistImportService {
     );
   }
 
+  static Future<LoadingState<void>> _writeWatchLaterSilently(String bvid) =>
+      UserHttp.toViewLater(bvid: bvid, showToast: false);
+
   static Future<_WriteResult> _importToFavorite({
-    required List<PlaylistVideoItem> videos,
+    required List<String> bvids,
     required int mediaId,
   }) async {
     int importedCount = 0;
     final failedBvids = <String>[];
-    for (int start = 0; start < videos.length; start += _favoriteBatchSize) {
+    for (int start = 0; start < bvids.length; start += _favoriteBatchSize) {
       final candidateEnd = start + _favoriteBatchSize;
-      final end = candidateEnd < videos.length ? candidateEnd : videos.length;
-      final batch = videos.sublist(start, end);
+      final end = candidateEnd < bvids.length ? candidateEnd : bvids.length;
+      final batch = bvids.sublist(start, end);
       final resources = batch
-          .map((video) => '${IdUtils.bv2av(video.bvid!)}:2')
+          .map((bvid) => '${IdUtils.bv2av(bvid)}:2')
           .join(',');
       final result = await FavHttp.favVideo(
         resources: resources,
@@ -244,7 +268,7 @@ abstract final class PlaylistImportService {
       if (result.isSuccess) {
         importedCount += batch.length;
       } else {
-        failedBvids.addAll(batch.map((video) => video.bvid!));
+        failedBvids.addAll(batch);
       }
     }
     return _WriteResult(
@@ -254,6 +278,13 @@ abstract final class PlaylistImportService {
   }
 
   static ValidationResult validateJson(String jsonString) {
+    if (utf8.encode(jsonString).length > maxImportFileBytes) {
+      return const ValidationResult(
+        isValid: false,
+        message: '播放列表文件过大（最大 8 MiB）',
+      );
+    }
+
     final Object? decoded;
     try {
       decoded = jsonDecode(jsonString);
@@ -283,6 +314,20 @@ abstract final class PlaylistImportService {
       return const ValidationResult(
         isValid: false,
         message: '无效的播放列表来源',
+      );
+    }
+    final count = json['count'];
+    if (count is int && count > maxImportEntries) {
+      return const ValidationResult(
+        isValid: false,
+        message: '播放列表条目过多（最大 10000 条）',
+      );
+    }
+    final videos = json['videos'];
+    if (videos is List && videos.length > maxImportEntries) {
+      return const ValidationResult(
+        isValid: false,
+        message: '播放列表条目过多（最大 10000 条）',
       );
     }
 

@@ -33,6 +33,7 @@ import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/plugin/pl_player/utils/stream_error.dart';
 import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/pip_persistent_service.dart';
 import 'package:pili_plus/services/watch_stats_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
@@ -46,6 +47,7 @@ import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -162,12 +164,9 @@ class PlPlayerController with BlockConfigMixin {
   int? width;
   int? height;
 
-  // Watch stats session tracking
-  DateTime? _sessionStartTime;
-  int _sessionWatchedSeconds = 0;
-  String? _sessionAuthorName;
-  int? _sessionAuthorMid;
-  Timer? _sessionTimer;
+  final WatchSessionTracker _watchSessionTracker = WatchSessionTracker();
+  bool _watchPlaybackActive = false;
+  int _lastPersistedPipPositionMs = -1;
 
   late final tryLook = !Accounts.get(AccountType.video).isLogin && Pref.p1080;
 
@@ -241,9 +240,9 @@ class PlPlayerController with BlockConfigMixin {
     return windowManager.setAlwaysOnTop(value);
   }
 
-  Future<void> exitDesktopPip() {
+  Future<void> exitDesktopPip() async {
     isDesktopPip = false;
-    return Future.wait([
+    await Future.wait([
       if (showWindowTitleBar)
         windowManager.setTitleBarStyle(TitleBarStyle.normal),
       windowManager.setMinimumSize(const Size(400, 700)),
@@ -251,11 +250,13 @@ class PlPlayerController with BlockConfigMixin {
       setAlwaysOnTop(false),
       windowManager.setAspectRatio(0),
     ]);
+    _clearPipState();
   }
 
   Future<void> enterDesktopPip() async {
     if (isFullScreen.value) return;
 
+    _persistPipState(force: true);
     isDesktopPip = true;
 
     _lastWindowBounds = await windowManager.getBounds();
@@ -313,25 +314,13 @@ class PlPlayerController with BlockConfigMixin {
   void enterPip({bool autoEnter = false}) {
     if (videoPlayerController != null) {
       final state = videoPlayerController!.state;
-      // Get video metadata from controller state or media item
-      String? title;
-      String? cover;
-      if (videoPlayerServiceHandler != null) {
-        final mediaItem = videoPlayerServiceHandler!.currentMediaItem;
-        title = mediaItem?.title;
-        cover = mediaItem?.artUri?.toString();
-      }
+      _persistPipState(position: state.position, force: true);
       PageUtils.enterPip(
         autoEnter: autoEnter,
         width: state.width == 0 ? width : state.width,
         height: state.height == 0 ? height : state.height,
         isLive: isLive,
         isPlaying: playerStatus.isPlaying,
-        bvid: _bvid,
-        cid: cid,
-        positionMs: position.value * 1000,
-        title: title,
-        cover: cover,
       );
     }
   }
@@ -579,6 +568,7 @@ class PlPlayerController with BlockConfigMixin {
 
   // 添加一个私有构造函数
   PlPlayerController._({this._isDetached = false}) {
+    PipPersistentService.instance.ensurePlatformCallbacks();
     if (!_isDetached && PlatformUtils.isMobile) {
       _orientationListener = NativeDeviceOrientationPlatform.instance
           .onOrientationChanged(
@@ -661,6 +651,15 @@ class PlPlayerController with BlockConfigMixin {
     Volume? volume,
     bool autoFullScreenFlag = false,
   }) async {
+    _finishWatchStatsSession();
+    _watchPlaybackActive = false;
+    final restoredPipPosition = bvid == null || cid == null
+        ? null
+        : PipPersistentService.instance.restorePositionFor(
+            bvid: bvid,
+            cid: cid,
+          );
+    final initialPosition = restoredPipPosition ?? seekTo;
     try {
       _processing = true;
       this.isLive = isLive;
@@ -681,6 +680,13 @@ class PlPlayerController with BlockConfigMixin {
       _epid = epid;
       _seasonId = seasonId;
       _pgcType = pgcType;
+      if (!isLive && bvid != null) {
+        _watchSessionTracker.begin(
+          metadata: _currentWatchMetadata(),
+          position: initialPosition ?? Duration.zero,
+          at: DateTime.now(),
+        );
+      }
 
       if (showSeekPreview) {
         _clearPreview();
@@ -695,7 +701,7 @@ class PlPlayerController with BlockConfigMixin {
         return;
       }
       // 配置Player 音轨、字幕等等
-      await _createVideoController(dataSource, seekTo, volume);
+      await _createVideoController(dataSource, initialPosition, volume);
 
       if (_playerCount == 0) {
         _removeListeners();
@@ -706,7 +712,7 @@ class PlPlayerController with BlockConfigMixin {
       }
 
       updateDuration(duration ?? _videoPlayerController!.state.duration);
-      position.value = buffered.value = seekTo?.inSeconds ?? 0;
+      position.value = buffered.value = initialPosition?.inSeconds ?? 0;
 
       dataStatus.value = .loaded;
 
@@ -1003,6 +1009,7 @@ class PlPlayerController with BlockConfigMixin {
     _subscriptions = [
       /// playing
       stream.playing.listen((bool playing) {
+        _watchPlaybackActive = playing;
         WakelockPlus.toggle(enable: playing);
         if (playing) {
           if (_isAutoEnterPip) {
@@ -1013,12 +1020,11 @@ class PlPlayerController with BlockConfigMixin {
             }
           }
           playerStatus.value = .playing;
-          _startWatchSession();
         } else {
           _disableAutoEnterPip();
           playerStatus.value = .paused;
-          _stopWatchSession();
         }
+        _handleWatchPlaybackState();
 
         videoPlayerServiceHandler?.onStatusChange(
           playerStatus.value,
@@ -1039,6 +1045,7 @@ class PlPlayerController with BlockConfigMixin {
       ///completed
       stream.completed.listen((bool completed) {
         if (completed) {
+          _watchPlaybackActive = false;
           playerStatus.value = .completed;
 
           for (final element in _statusListeners) {
@@ -1046,11 +1053,14 @@ class PlPlayerController with BlockConfigMixin {
           }
 
           makeHeartBeat(-1, type: .completed);
+          _finishWatchStatsSession();
+          _clearPipState();
         }
       }),
 
       /// position
       stream.position.listen((Duration position) {
+        _handleWatchPosition(position);
         final posInSeconds = position.inSeconds;
 
         if (posInSeconds != this.position.value) {
@@ -1074,6 +1084,7 @@ class PlPlayerController with BlockConfigMixin {
       }),
       stream.buffering.listen((bool buffering) {
         isBuffering.value = buffering;
+        _handleWatchPlaybackState();
         videoPlayerServiceHandler?.onStatusChange(
           playerStatus.value,
           buffering,
@@ -1156,6 +1167,7 @@ class PlPlayerController with BlockConfigMixin {
     if (position < Duration.zero) {
       position = Duration.zero;
     }
+    _watchSessionTracker.markSeek(position: position, at: DateTime.now());
     _heartDuration = position.inSeconds;
 
     Future<void> seek() async {
@@ -1677,9 +1689,8 @@ class PlPlayerController with BlockConfigMixin {
     }
     _timer?.cancel();
     _keyboardSpeedTimer?.cancel();
-    _sessionTimer?.cancel();
-    // Record any pending watch stats session
-    _recordWatchSession();
+    _finishWatchStatsSession();
+    _clearPipState();
     // _position.close();
     // _playerEventSubs?.cancel();
     // _sliderPosition.close();
@@ -1857,61 +1868,106 @@ class PlPlayerController with BlockConfigMixin {
     Get.back();
   }
 
-  // ========== Watch Stats Session Tracking ==========
-
-  /// Start tracking a watch session
-  void _startWatchSession() {
-    if (isLive) return; // Don't track live streams
-
-    _sessionStartTime = DateTime.now();
-    _sessionWatchedSeconds = 0;
-
-    // Get author info from media item if available
+  WatchSessionMetadata _currentWatchMetadata() {
+    final currentBvid = _bvid ?? '';
     final mediaItem = videoPlayerServiceHandler?.currentMediaItem;
-    _sessionAuthorName = mediaItem?.artist ?? '';
-    _sessionAuthorMid = 0; // Not available from media item
-
-    // Start periodic session recording (every 30 seconds of playback)
-    _sessionTimer?.cancel();
-    _sessionTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _recordWatchSession();
-    });
+    final extras = mediaItem?.extras;
+    final metadataBvid = extras?['bvid'] as String?;
+    final metadataMatches = metadataBvid == null || metadataBvid == currentBvid;
+    return WatchSessionMetadata(
+      bvid: currentBvid,
+      title: metadataMatches ? mediaItem?.title ?? '' : '',
+      authorName: metadataMatches ? mediaItem?.artist ?? '' : '',
+      authorMid: metadataMatches
+          ? (extras?['authorMid'] as num?)?.toInt() ?? 0
+          : 0,
+    );
   }
 
-  /// Record the current watch session to stats
-  void _recordWatchSession() {
-    if (_sessionStartTime == null || _bvid == null || cid == null) return;
-    if (isLive) return; // Don't track live streams
-
-    final title = videoPlayerServiceHandler?.currentMediaItem?.title ?? '';
-    final now = DateTime.now();
-    final elapsedSeconds = now.difference(_sessionStartTime!).inSeconds;
-
-    if (elapsedSeconds > 0) {
-      final sessionSeconds = elapsedSeconds - _sessionWatchedSeconds;
-      if (sessionSeconds > 0) {
-        _sessionWatchedSeconds += sessionSeconds;
-
-        // Record to watch stats service
-        WatchStatsService.instance.recordSession(
-          bvid: _bvid!,
-          title: title,
-          authorName: _sessionAuthorName ?? '',
-          authorMid: _sessionAuthorMid ?? 0,
-          watchedSeconds: sessionSeconds,
-        );
-      }
+  void _handleWatchPosition(Duration currentPosition) {
+    if (isLive || _bvid == null) return;
+    _watchSessionTracker.updateMetadata(_currentWatchMetadata());
+    final sessions = _watchSessionTracker.onPosition(
+      position: currentPosition,
+      at: DateTime.now(),
+      isPlaying: _watchPlaybackActive,
+      isBuffering: isBuffering.value,
+      isSeeking: isSeeking.value,
+      playbackSpeed: playbackSpeed,
+    );
+    _persistWatchSessions(sessions);
+    if (isPipMode) {
+      _persistPipState(position: currentPosition);
     }
-
-    _sessionStartTime = now;
   }
 
-  /// Stop tracking watch session
-  void _stopWatchSession() {
-    _sessionTimer?.cancel();
-    _sessionTimer = null;
-    _recordWatchSession();
-    _sessionStartTime = null;
-    _sessionWatchedSeconds = 0;
+  void _handleWatchPlaybackState() {
+    if (isLive || _bvid == null || videoPlayerController == null) return;
+    final now = DateTime.now();
+    _watchSessionTracker.updateMetadata(_currentWatchMetadata());
+    final sessions = <PendingWatchSession>[
+      ..._watchSessionTracker.onPosition(
+        position: videoPlayerController!.state.position,
+        at: now,
+        isPlaying: _watchPlaybackActive,
+        isBuffering: isBuffering.value,
+        isSeeking: isSeeking.value,
+        playbackSpeed: playbackSpeed,
+      ),
+      if (!_watchPlaybackActive || isBuffering.value)
+        ..._watchSessionTracker.flush(now),
+    ];
+    _persistWatchSessions(sessions);
+  }
+
+  void _finishWatchStatsSession() {
+    _persistWatchSessions(_watchSessionTracker.finish(DateTime.now()));
+  }
+
+  void _persistWatchSessions(List<PendingWatchSession> sessions) {
+    for (final session in sessions) {
+      Persistence.background(
+        WatchStatsService.instance.recordPendingSession(session),
+        label: 'watch statistics session',
+      );
+    }
+  }
+
+  void _persistPipState({Duration? position, bool force = false}) {
+    final currentBvid = _bvid;
+    final currentCid = cid;
+    if (isLive || currentBvid == null || currentCid == null) return;
+    final positionMs = position?.inMilliseconds ?? positionInMilliseconds;
+    if (!force &&
+        (positionMs - _lastPersistedPipPositionMs).abs() <
+            const Duration(seconds: 5).inMilliseconds) {
+      return;
+    }
+    _lastPersistedPipPositionMs = positionMs;
+    final mediaItem = videoPlayerServiceHandler?.currentMediaItem;
+    Persistence.background(
+      PipPersistentService.instance.savePipState(
+        bvid: currentBvid,
+        cid: currentCid,
+        positionMs: positionMs,
+        title: mediaItem?.title,
+        cover: mediaItem?.artUri?.toString(),
+      ),
+      label: 'PiP playback state',
+    );
+  }
+
+  void _clearPipState() {
+    final currentBvid = _bvid;
+    final currentCid = cid;
+    _lastPersistedPipPositionMs = -1;
+    if (currentBvid == null || currentCid == null) return;
+    Persistence.background(
+      PipPersistentService.instance.clearIfMatches(
+        bvid: currentBvid,
+        cid: currentCid,
+      ),
+      label: 'PiP playback state cleanup',
+    );
   }
 }

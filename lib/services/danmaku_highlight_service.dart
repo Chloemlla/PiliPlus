@@ -1,12 +1,24 @@
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/models/danmaku/danmaku_highlight_rule.dart';
+import 'package:pili_plus/models/danmaku/danmaku_highlight_style.dart';
 import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
 
 /// Service that manages danmaku highlight rules and applies them.
 class DanmakuHighlightService extends GetxService {
-  static const String _boxKey = 'danmakuHighlightRules';
+  DanmakuHighlightService({
+    Object? Function()? readRules,
+    Future<void> Function(List<Map<String, dynamic>> data)? writeRules,
+  }) : _readRules = readRules ?? _readPersistedRules,
+       _writeRules = writeRules ?? _writePersistedRules;
+
   static const int maxRules = 50;
+
+  final Object? Function() _readRules;
+  final Future<void> Function(List<Map<String, dynamic>> data) _writeRules;
 
   /// All highlight rules.
   final rules = <DanmakuHighlightRule>[].obs;
@@ -30,7 +42,7 @@ class DanmakuHighlightService extends GetxService {
   }
 
   void _loadRules() {
-    final raw = GStorage.setting.get(_boxKey);
+    final raw = _readRules();
     if (raw is List) {
       final loaded = <DanmakuHighlightRule>[];
       for (final item in raw) {
@@ -60,8 +72,15 @@ class DanmakuHighlightService extends GetxService {
   Future<void> _saveRules() async {
     _compilePatterns();
     final data = rules.map((r) => r.toJson()).toList();
-    await GStorage.setting.put(_boxKey, data);
+    await _writeRules(data);
   }
+
+  static Object? _readPersistedRules() =>
+      GStorage.setting.get(SettingBoxKey.danmakuHighlightRules);
+
+  static Future<void> _writePersistedRules(
+    List<Map<String, dynamic>> data,
+  ) => GStorage.setting.put(SettingBoxKey.danmakuHighlightRules, data);
 
   void _compilePatterns() {
     _compiledPatterns.clear();
@@ -99,6 +118,17 @@ class DanmakuHighlightService extends GetxService {
   /// Apply highlights to danmaku text.
   /// Returns the highlight color if matched, null otherwise.
   HighlightColor? applyHighlight(String text) => getMatchingRule(text)?.color;
+
+  /// Resolve the per-item fill and optional outline without changing matching.
+  DanmakuHighlightStyle resolveStyle({
+    required String text,
+    required Color displayedColor,
+  }) {
+    return DanmakuHighlightStyle.resolve(
+      displayedColor: displayedColor,
+      highlightColor: applyHighlight(text)?.value,
+    );
+  }
 
   /// Get the highlight rule that matches the text (for glow/border effect).
   DanmakuHighlightRule? getMatchingRule(String text) {

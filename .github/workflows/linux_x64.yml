@@ -33,6 +33,9 @@ jobs:
           flutter-version-file: pubspec.yaml
           cache: true
 
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Set and Extract version
         shell: pwsh
         run: lib/scripts/build.ps1
@@ -43,7 +46,7 @@ jobs:
 
         #TODO: deb and rpm packages need to be build
       - name: Build Linux
-        run: flutter build linux --release -v --pub --dart-define-from-file=pili_release.json
+        run: flutter build linux --release -v --no-pub --dart-define-from-file=pili_release.json
 
       - name: Package .tar.gz
         run: tar -zcvf PiliPlus_linux_${{ env.version }}_amd64.tar.gz -C build/linux/x64/release/bundle .

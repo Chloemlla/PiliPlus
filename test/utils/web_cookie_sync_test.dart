@@ -49,17 +49,26 @@ void main() {
   });
 
   test('reports the cookie name when a platform write fails', () async {
+    const secretValue = 'session-secret-value';
     await expectLater(
       WebCookieSync.writeAll(
-        [Cookie('SESSDATA', 'session')],
-        write: (_, _) async => throw StateError('platform rejected cookie'),
+        [Cookie('SESSDATA', secretValue)],
+        write: (_, _) async => throw StateError(
+          'platform rejected cookie value=$secretValue',
+        ),
       ),
       throwsA(
-        isA<StateError>().having(
-          (error) => error.message,
-          'message',
-          contains('SESSDATA'),
-        ),
+        isA<StateError>()
+            .having(
+              (error) => error.message,
+              'message',
+              contains('SESSDATA'),
+            )
+            .having(
+              (error) => error.message,
+              'message',
+              isNot(contains(secretValue)),
+            ),
       ),
     );
   });

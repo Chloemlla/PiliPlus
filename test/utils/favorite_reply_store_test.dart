@@ -10,6 +10,7 @@ import 'package:pili_plus/utils/storage_key.dart';
 void main() {
   late Directory hiveDirectory;
   late String favoriteBoxName;
+  late String legacyBoxName;
   late Box<Uint8List> favoriteBox;
   late Box<Uint8List> legacyBox;
   late Box<dynamic> localCache;
@@ -24,14 +25,18 @@ void main() {
   setUp(() async {
     final suffix = DateTime.now().microsecondsSinceEpoch;
     favoriteBoxName = 'favorite_reply_$suffix';
+    legacyBoxName = 'legacy_reply_$suffix';
     favoriteBox = await Hive.openBox<Uint8List>(favoriteBoxName);
-    legacyBox = await Hive.openBox<Uint8List>('legacy_reply_$suffix');
+    legacyBox = await Hive.openBox<Uint8List>(legacyBoxName);
     localCache = await Hive.openBox<dynamic>('local_cache_$suffix');
   });
 
   tearDown(() async {
     if (!favoriteBox.isOpen) {
       favoriteBox = await Hive.openBox<Uint8List>(favoriteBoxName);
+    }
+    if (!legacyBox.isOpen) {
+      legacyBox = await Hive.openBox<Uint8List>(legacyBoxName);
     }
     await favoriteBox.deleteFromDisk();
     await legacyBox.deleteFromDisk();
@@ -115,6 +120,44 @@ void main() {
     expect(store.containsKey('2'), isFalse);
   });
 
+  test('favorite writes use independent order metadata', () async {
+    await localCache.put(LocalCacheKey.replyWriteOrder, ['legacy']);
+    final store = FavoriteReplyStore(
+      favoriteBox,
+      orderStore: localCache,
+    );
+
+    await store.put('1', Uint8List.fromList([1]));
+
+    expect(localCache.get(LocalCacheKey.replyWriteOrder), ['legacy']);
+    expect(localCache.get(LocalCacheKey.favoriteReplyWriteOrder), ['1']);
+  });
+
+  test(
+    'migration while recording is disabled keeps automatic cache disabled',
+    () async {
+      await legacyBox.put('1', Uint8List.fromList([1]));
+      final store = FavoriteReplyStore(
+        favoriteBox,
+        orderStore: localCache,
+      );
+
+      final automaticRecordBox = await prepareLegacyReplyStorage(
+        shouldSaveReply: false,
+        shouldMigrateFavorites: true,
+        openLegacyBox: () async => legacyBox,
+        destination: store,
+        markerStore: localCache,
+        onError: (_, _, {required operation, required reason}) {},
+      );
+
+      expect(automaticRecordBox, isNull);
+      expect(store.containsKey('1'), isTrue);
+      expect(localCache.get(LocalCacheKey.favoriteReplyMigrationV1), isTrue);
+      expect(legacyBox.isOpen, isFalse);
+    },
+  );
+
   test(
     'completed migration skips the legacy box when recording is disabled',
     () async {
@@ -186,6 +229,41 @@ void main() {
       expect(succeeded, isFalse);
       expect(reportedError, isNotNull);
       expect(localCache.get(LocalCacheKey.favoriteReplyMigrationV1), isNull);
+      expect(legacyBox.containsKey('1'), isTrue);
+    },
+  );
+
+  test(
+    'copy failure disables recording for the session and stays retryable',
+    () async {
+      await legacyBox.put('1', Uint8List.fromList([1]));
+      final store = FavoriteReplyStore(
+        favoriteBox,
+        orderStore: localCache,
+      );
+      await favoriteBox.close();
+      String? reportedOperation;
+      String? reportedReason;
+
+      final automaticRecordBox = await prepareLegacyReplyStorage(
+        shouldSaveReply: true,
+        shouldMigrateFavorites: true,
+        openLegacyBox: () async => legacyBox,
+        destination: store,
+        markerStore: localCache,
+        onError: (_, _, {required operation, required reason}) {
+          reportedOperation = operation;
+          reportedReason = reason;
+        },
+      );
+
+      expect(automaticRecordBox, isNull);
+      expect(reportedOperation, 'favoriteReply.legacyMigration');
+      expect(reportedReason, 'favorite_reply_legacy_migration_failed');
+      expect(localCache.get(LocalCacheKey.favoriteReplyMigrationV1), isNull);
+      expect(legacyBox.isOpen, isFalse);
+
+      legacyBox = await Hive.openBox<Uint8List>(legacyBoxName);
       expect(legacyBox.containsKey('1'), isTrue);
     },
   );

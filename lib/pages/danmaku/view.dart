@@ -122,11 +122,22 @@ class _PlDanmakuState extends State<PlDanmaku> {
         if (e.weight < danmakuWeight) return;
         if (e.mode == 7) {
           try {
+            final specialData =
+                jsonDecode(
+                      e.content.replaceAll('\n', '\\n'),
+                    )
+                    as List<dynamic>;
+            final displayedColor = DmUtils.decimalToColor(e.color);
+            final highlightStyle = _highlightService.resolveStyle(
+              text: (specialData[4] as String).trimRight(),
+              displayedColor: displayedColor,
+            );
             _controller!.addDanmaku(
               SpecialDanmakuContentItem.fromList(
-                DmUtils.decimalToColor(e.color),
+                highlightStyle.fillColor,
                 e.fontsize.toDouble(),
-                jsonDecode(e.content.replaceAll('\n', '\\n')),
+                specialData,
+                strokeColor: highlightStyle.strokeColor,
                 extra: VideoDanmaku(
                   id: e.id.toInt(),
                   mid: e.midHash,
@@ -136,19 +147,19 @@ class _PlDanmakuState extends State<PlDanmaku> {
             );
           } catch (_) {}
         } else {
-          // Apply keyword highlighting
-          Color danmakuColor = blockColorful
+          final displayedColor = blockColorful
               ? Colors.white
               : DmUtils.decimalToColor(e.color);
-          final highlightColor = _highlightService.applyHighlight(e.content);
-          if (highlightColor != null) {
-            danmakuColor = highlightColor.value;
-          }
+          final highlightStyle = _highlightService.resolveStyle(
+            text: e.content,
+            displayedColor: displayedColor,
+          );
 
           _controller!.addDanmaku(
             DanmakuContentItem(
               e.content,
-              color: danmakuColor,
+              color: highlightStyle.fillColor,
+              strokeColor: highlightStyle.strokeColor,
               type: DmUtils.getPosition(e.mode),
               isColorful:
                   playerController.showVipDanmaku &&

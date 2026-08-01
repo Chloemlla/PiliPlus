@@ -169,6 +169,7 @@ abstract final class UserHttp {
   static Future<LoadingState<void>> toViewLater({
     String? bvid,
     Object? aid,
+    bool showToast = true,
   }) async {
     assert(aid != null || bvid != null);
     final res = await Request().post(
@@ -181,10 +182,14 @@ abstract final class UserHttp {
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
-      SmartDialog.showToast('yeah！稍后再看');
+      if (showToast) {
+        SmartDialog.showToast('yeah！稍后再看');
+      }
       return const Success(null);
     } else {
-      SmartDialog.showToast(res.data['message'].toString());
+      if (showToast) {
+        SmartDialog.showToast(res.data['message'].toString());
+      }
       return const Error(null);
     }
   }

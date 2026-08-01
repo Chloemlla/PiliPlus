@@ -23,6 +23,7 @@ internal class SealDownloadChannel(
     messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler {
     private val channel = MethodChannel(messenger, SealDownloadStatusBridge.CHANNEL_NAME)
+    private var pendingTaskActionResult: MethodChannel.Result? = null
 
     init {
         // Attach early so queued Application-level events can flush to Dart.
@@ -38,6 +39,7 @@ internal class SealDownloadChannel(
             }
             "isInstalled" -> result.success(resolveSealPackage() != null)
             "delegateDownload" -> delegateDownload(call, result)
+            "taskAction" -> taskAction(call, result)
             "openContentUri" -> openContentUri(call, result)
             "shareContentUri" -> shareContentUri(call, result)
             else -> result.notImplemented()
@@ -45,6 +47,22 @@ internal class SealDownloadChannel(
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode == TASK_ACTION_REQUEST_CODE) {
+            val pending = pendingTaskActionResult
+            pendingTaskActionResult = null
+            if (pending == null) return true
+            val payload = SealDownloadStatusBridge.buildStatusMap(data).toMutableMap()
+            payload["result_code"] = resultCode
+            if (resultCode == Activity.RESULT_OK) {
+                pending.success(payload)
+            } else {
+                val errorCode = payload["error_code"]?.toString() ?: "internal_error"
+                val errorMessage =
+                    payload["error_message"]?.toString() ?: "Seal task action failed"
+                pending.error(errorCode, errorMessage, payload)
+            }
+            return true
+        }
         if (requestCode != DOWNLOAD_REQUEST_CODE) return false
         val payload = SealDownloadStatusBridge.buildStatusMap(data).toMutableMap()
         if (payload["status"] == null) {
@@ -64,6 +82,12 @@ internal class SealDownloadChannel(
     }
 
     fun dispose() {
+        pendingTaskActionResult?.error(
+            "activity_detached",
+            "PiliPlus activity detached before Seal returned the task action result",
+            null,
+        )
+        pendingTaskActionResult = null
         channel.setMethodCallHandler(null)
         // Keep Application receiver alive; only detach this messenger if it is ours.
         SealDownloadStatusBridge.detachChannel(channel)
@@ -176,6 +200,54 @@ internal class SealDownloadChannel(
         }
     }
 
+    private fun taskAction(call: MethodCall, result: MethodChannel.Result) {
+        if (pendingTaskActionResult != null) {
+            result.error("action_in_progress", "另一个 Seal 任务操作尚未完成", null)
+            return
+        }
+        val action = call.argument<String>("action")?.trim()?.lowercase().orEmpty()
+        if (action !in TASK_ACTIONS) {
+            result.error("unsupported_action", "Seal 不支持任务操作：$action", null)
+            return
+        }
+        val taskId = call.argument<String>("taskId")?.trim()?.takeIf { it.isNotEmpty() }
+        val requestId =
+            call.argument<String>("requestId")?.trim()?.takeIf { it.isNotEmpty() }
+        if (taskId == null && requestId == null) {
+            result.error("task_not_found", "下载任务标识为空", null)
+            return
+        }
+        val sealPackage = resolveSealPackage()
+        if (sealPackage == null) {
+            result.error("not_installed", "请先安装 Seal", null)
+            return
+        }
+        val intent =
+            Intent(ACTION_CONTROL_DOWNLOAD).apply {
+                component =
+                    ComponentName(
+                        sealPackage,
+                        "com.chloemlla.seal.ExternalDownloadControlActivity",
+                    )
+                setPackage(sealPackage)
+                putExtra(EXTRA_PROTOCOL_VERSION, PROTOCOL_VERSION_V3)
+                putExtra(EXTRA_CONTROL_ACTION, action)
+                taskId?.let { putExtra(EXTRA_TASK_ID, it) }
+                requestId?.let { putExtra(EXTRA_CALLER_REQUEST_ID, it) }
+            }
+        pendingTaskActionResult = result
+        try {
+            // The Seal control surface authorizes only Activity.callingPackage.
+            activity.startActivityForResult(intent, TASK_ACTION_REQUEST_CODE)
+        } catch (_: ActivityNotFoundException) {
+            pendingTaskActionResult = null
+            result.error("not_installed", "当前 Seal 版本不支持下载任务控制", null)
+        } catch (error: Exception) {
+            pendingTaskActionResult = null
+            result.error("launch_failed", error.message ?: "无法控制 Seal 下载任务", null)
+        }
+    }
+
     private fun openContentUri(call: MethodCall, result: MethodChannel.Result) {
         val uriString = call.argument<String>("uri")?.trim().orEmpty()
         if (uriString.isEmpty()) {
@@ -254,8 +326,10 @@ internal class SealDownloadChannel(
 
     private companion object {
         const val DOWNLOAD_REQUEST_CODE = 0x7201
+        const val TASK_ACTION_REQUEST_CODE = 0x7202
 
         const val ACTION_DOWNLOAD = "com.chloemlla.seal.action.DOWNLOAD"
+        const val ACTION_CONTROL_DOWNLOAD = "com.chloemlla.seal.action.CONTROL_DOWNLOAD"
         const val PROTOCOL_VERSION = 1
         const val PROTOCOL_VERSION_V2 = 2
         const val PROTOCOL_VERSION_V3 = 3
@@ -266,6 +340,8 @@ internal class SealDownloadChannel(
         const val EXTRA_AUTO_START = "auto_start"
         const val EXTRA_OPEN_UI = "open_ui"
         const val EXTRA_CALLER_REQUEST_ID = "caller_request_id"
+        const val EXTRA_TASK_ID = "task_id"
+        const val EXTRA_CONTROL_ACTION = "control_action"
         const val EXTRA_CALLER_PACKAGE = "caller_package"
         const val EXTRA_STRIP_SEGMENTS = "strip_segments"
         const val EXTRA_KEEP_SECTIONS = "keep_sections"
@@ -275,6 +351,8 @@ internal class SealDownloadChannel(
         const val EXTRA_COOKIES_DOMAIN_HINT = "cookies_domain_hint"
         const val EXTRA_USE_COOKIES = "use_cookies"
         const val EXTRA_COOKIES_REQUIRED = "cookies_required"
+
+        val TASK_ACTIONS = setOf("pause", "resume", "retry", "delete")
 
         val SEAL_PACKAGES = listOf(
             "com.chloemlla.seal",

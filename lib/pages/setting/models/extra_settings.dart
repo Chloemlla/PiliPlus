@@ -249,8 +249,7 @@ List<SettingsModel> get extraSettings => [
   ),
   const SwitchModel(
     title: '下载时去除标记广告片段',
-    subtitle:
-        '使用空降助手（SponsorBlock）已标记片段，经 Seal 分段合成正片；默认赞助/自我推广，不含精彩时刻',
+    subtitle: '使用空降助手（SponsorBlock）已标记片段，经 Seal 分段合成正片；默认赞助/自我推广，不含精彩时刻',
     leading: Icon(Icons.content_cut_rounded),
     setKey: SettingBoxKey.stripMarkedSegmentsEnabled,
     defaultVal: false,
@@ -320,6 +319,12 @@ List<SettingsModel> get extraSettings => [
       await Pref.clearSealCookieRemember();
       setState();
     },
+  ),
+  NormalModel(
+    title: '直播提醒设置',
+    subtitle: '按账号订阅 UP 主直播标题或分区关键词',
+    leading: const Icon(Icons.notifications_active_outlined),
+    onTap: (context, setState) => Get.toNamed('/liveAlerts'),
   ),
   NormalModel(
     title: '下载管理',
@@ -684,7 +689,8 @@ List<SettingsModel> get extraSettings => [
   SplitModel(
     normalModel: NormalModel.split(
       title: 'Clash VPN 自动适配',
-      getSubtitle: () => ClashCompat.statusLabel(autoAdaptEnabled: Pref.clashAutoAdapt),
+      getSubtitle: () =>
+          ClashCompat.statusLabel(autoAdaptEnabled: Pref.clashAutoAdapt),
       leading: const Icon(Icons.vpn_lock_outlined),
     ),
     switchModel: SwitchModel.split(
@@ -1358,7 +1364,6 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
     ),
   );
 }
-
 
 Future<void> _showStripCategoriesDialog(
   BuildContext context,

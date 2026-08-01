@@ -6,6 +6,7 @@ import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/in_app_mini_player.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:pili_plus/controllers/quality_recommendation_controller.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
 import 'package:pili_plus/grpc/dm.dart';
@@ -117,6 +118,7 @@ class VideoDetailController extends GetxController
 
   /// 播放器配置 画质 音质 解码格式
   final Rxn<VideoQuality> currentVideoQa = Rxn<VideoQuality>();
+  late final QualityRecommendationController qualityRecommendationController;
   AudioQuality? currentAudioQa;
   late VideoDecodeFormatType currentDecodeFormats;
 
@@ -377,6 +379,9 @@ class VideoDetailController extends GetxController
     seasonId = args['seasonId'];
     pgcType = args['pgcType'];
     heroTag = args['heroTag'];
+    qualityRecommendationController = QualityRecommendationController(
+      onApplyQuality: _applyRecommendedQuality,
+    );
     cover = RxString(args['cover'] ?? '');
     isVertical = RxBool(args['isVertical'] ?? false);
 
@@ -682,6 +687,32 @@ class VideoDetailController extends GetxController
     return bestVideo ?? videoList.first;
   }
 
+  Uri? _qualityProbeUri(Iterable<VideoItem> videos) {
+    for (final url in videos.expand((video) => video.playUrls)) {
+      final uri = Uri.tryParse(url);
+      if (uri != null &&
+          uri.hasScheme &&
+          (uri.scheme == 'http' || uri.scheme == 'https')) {
+        return uri;
+      }
+    }
+    return null;
+  }
+
+  bool _applyRecommendedQuality(int qualityCode) {
+    final videos = data.dash?.video;
+    final quality = videos
+        ?.firstWhereOrNull((video) => video.quality.code == qualityCode)
+        ?.quality;
+    if (quality == null) return false;
+    if (currentVideoQa.value?.code == quality.code) return true;
+
+    plPlayerController.cacheVideoQa = quality.code;
+    currentVideoQa.value = quality;
+    updatePlayer();
+    return true;
+  }
+
   /// 更新画质、音质
   void updatePlayer() {
     final currentVideoQa = this.currentVideoQa.value;
@@ -751,6 +782,9 @@ class VideoDetailController extends GetxController
       videoType: videoType,
       onInit: () {
         videoState.value = true;
+        qualityRecommendationController.onPlaybackReady(
+          currentVideoQa.value?.code,
+        );
         setSubtitle(vttSubtitlesIndex.value);
       },
       width: firstVideo.width,
@@ -957,6 +991,10 @@ class VideoDetailController extends GetxController
           _setVideoHeight();
           currentDecodeFormats = VideoDecodeFormatType.AVC;
           currentVideoQa.value = videoQuality;
+          await qualityRecommendationController.setAvailableQualities(
+            [videoQuality.code],
+            currentQualityCode: plPlayerController.cacheVideoQa,
+          );
           await _initPlayerIfNeeded(autoFullScreenFlag);
           isQuerying = false;
           return;
@@ -976,16 +1014,19 @@ class VideoDetailController extends GetxController
       // if (kDebugMode) debugPrint("allVideosList:${allVideosList}");
       // 当前可播放的最高质量视频
       final curHighestVideoQa = videoList.first.quality.code;
-      // 预设的画质为null，则当前可用的最高质量
-      int targetVideoQa = curHighestVideoQa;
-      if (data.acceptQuality?.isNotEmpty == true &&
-          plPlayerController.cacheVideoQa! <= curHighestVideoQa) {
-        // 如果预设的画质低于当前最高
-        targetVideoQa = data.acceptQuality!.findClosestTarget(
-          (e) => e <= plPlayerController.cacheVideoQa!,
-          (a, b) => a > b ? a : b,
-        );
-      }
+      final availableQualities = videoList
+          .map((video) => video.quality.code)
+          .toSet();
+      final recommendation = await qualityRecommendationController
+          .setAvailableQualities(
+            availableQualities,
+            probeUri: _qualityProbeUri(videoList),
+            currentQualityCode: plPlayerController.cacheVideoQa,
+          );
+      // RecommendationService only returns qn values from the supplied DASH
+      // set. Keep the existing highest-quality fallback for malformed data.
+      final targetVideoQa = recommendation?.qualityCode ?? curHighestVideoQa;
+      plPlayerController.cacheVideoQa = targetVideoQa;
       currentVideoQa.value = VideoQuality.fromCode(targetVideoQa);
 
       /// 优先顺序 设置中指定解码格式 -> 当前可选的首个解码格式
@@ -1317,6 +1358,7 @@ class VideoDetailController extends GetxController
       ..dispose();
     subtitles.clear();
     vttSubtitles.clear();
+    qualityRecommendationController.dispose();
     super.onClose();
   }
 
@@ -1329,6 +1371,7 @@ class VideoDetailController extends GetxController
     defaultST = null;
     videoUrl = null;
     audioUrl = null;
+    qualityRecommendationController.clearRecommendation();
 
     // danmaku
     savedDanmaku = null;

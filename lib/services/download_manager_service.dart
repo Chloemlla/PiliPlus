@@ -4,140 +4,256 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/models/download/download_stats.dart';
 import 'package:pili_plus/models/download/download_task.dart';
-import 'package:pili_plus/pages/video/seal_download_utils.dart';
+import 'package:pili_plus/models/download/seal_download_status.dart';
+import 'package:pili_plus/services/crash/crash_context.dart';
+import 'package:pili_plus/services/crash/crash_reporter.dart';
+import 'package:pili_plus/services/download_task_repository.dart';
+import 'package:pili_plus/services/seal_download_channel_dispatcher.dart';
 import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 
-/// Service that bridges Seal download status to PiliPlus.
-///
-/// Syncs download tasks from Seal broadcasts and exposes reactive state.
+typedef DownloadManagerErrorReporter =
+    void Function(
+      Object error,
+      StackTrace stackTrace, {
+      required String operation,
+    });
+
+/// Syncs Seal task broadcasts into a persisted, reactive task list.
 class DownloadManagerService extends GetxService {
-  static const _channel = MethodChannel('pili_plus/seal_download');
+  DownloadManagerService({
+    DownloadTaskRepository? repository,
+    SealDownloadChannelDispatcher? channel,
+    DownloadManagerErrorReporter? errorReporter,
+  }) : _repository = repository ?? DownloadTaskRepository(),
+       _channel = channel ?? SealDownloadChannelDispatcher.instance,
+       _errorReporter = errorReporter ?? _recordDownloadManagerError;
+
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
 
-  /// All known download tasks.
+  final DownloadTaskRepository _repository;
+  final SealDownloadChannelDispatcher _channel;
+  final DownloadManagerErrorReporter _errorReporter;
+
   final tasks = <DownloadTask>[].obs;
-
-  /// Currently selected task ids for batch operations.
   final selectedIds = <String>{}.obs;
-
-  /// Whether multi-select mode is active.
   final isSelectionMode = false.obs;
-
-  /// Stats: completed, downloading, waiting, failed counts.
-  final stats = DownloadStats.empty().obs;
-
-  /// Whether Seal is installed.
+  final stats = (const DownloadStats.empty()).obs;
   final isSealInstalled = Platform.isAndroid.obs;
 
-  bool _listening = false;
+  Future<void>? _initialization;
+  bool _listenerRegistered = false;
 
   @override
   void onInit() {
     super.onInit();
-    _ensureListening();
-    unawaited(refreshStatus());
+    unawaited(initialize());
   }
 
-  void _ensureListening() {
-    if (!Platform.isAndroid || _listening) return;
-    _listening = true;
-    _channel.setMethodCallHandler(_onMethodCall);
+  @override
+  void onClose() {
+    if (_listenerRegistered) {
+      _channel.removeStatusListener(_handleStatusEvent);
+      _listenerRegistered = false;
+    }
+    super.onClose();
   }
 
-  /// Refresh the Seal availability state and flush queued status broadcasts.
+  /// Restores bounded history before asking the native bridge for queued events.
+  ///
+  /// Download management is optional at startup. Initialization failures are
+  /// recorded as handled diagnostics and never abort the rest of app startup.
+  Future<void> initialize() => _initialization ??= _initializeSafely();
+
+  Future<void> _initializeSafely() async {
+    try {
+      await _initialize();
+    } catch (error, stackTrace) {
+      _reportHandledError(
+        error,
+        stackTrace,
+        operation: 'DownloadManagerService.initialize',
+      );
+    }
+  }
+
+  Future<void> _initialize() async {
+    _registerStatusListener();
+    try {
+      final restored = await _repository.load();
+      _mergeRestoredTasks(restored);
+    } catch (error, stackTrace) {
+      _reportHandledError(
+        error,
+        stackTrace,
+        operation: 'DownloadManagerService.restoreHistory',
+      );
+    }
+    _refreshStats();
+    await refreshStatus();
+  }
+
+  void _registerStatusListener() {
+    if (_listenerRegistered || !Platform.isAndroid) return;
+    _listenerRegistered = true;
+    _channel.addStatusListener(_handleStatusEvent);
+  }
+
+  void _mergeRestoredTasks(Iterable<DownloadTask> restored) {
+    final liveIdentities = tasks.map((task) => task.identity).toSet();
+    for (final task in restored) {
+      if (liveIdentities.add(task.identity)) tasks.add(task);
+    }
+    tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Refresh Seal availability and flush Application-scoped native events.
   Future<void> refreshStatus() async {
     if (!Platform.isAndroid) {
       isSealInstalled.value = false;
       return;
     }
-
     try {
       isSealInstalled.value =
           await _channel.invokeMethod<bool>('isInstalled') ?? false;
       if (isSealInstalled.value) {
         await _channel.invokeMethod<void>('readyForStatus');
       }
-    } on PlatformException catch (error) {
+    } on PlatformException catch (error, stackTrace) {
       isSealInstalled.value = false;
       if (kDebugMode) {
         debugPrint('Failed to refresh Seal state: ${error.message}');
       }
-    } on MissingPluginException catch (error) {
+      _reportHandledError(
+        error,
+        stackTrace,
+        operation: 'DownloadManagerService.refreshStatus',
+      );
+    } on MissingPluginException catch (error, stackTrace) {
       isSealInstalled.value = false;
+      if (kDebugMode) debugPrint('Seal channel is unavailable: $error');
+      _reportHandledError(
+        error,
+        stackTrace,
+        operation: 'DownloadManagerService.refreshStatus',
+      );
+    } catch (error, stackTrace) {
+      isSealInstalled.value = false;
+      _reportHandledError(
+        error,
+        stackTrace,
+        operation: 'DownloadManagerService.refreshStatus',
+      );
+    }
+  }
+
+  void _reportHandledError(
+    Object error,
+    StackTrace stackTrace, {
+    required String operation,
+  }) {
+    try {
+      _errorReporter(error, stackTrace, operation: operation);
+    } catch (reportingError) {
       if (kDebugMode) {
-        debugPrint('Seal channel is unavailable: $error');
+        debugPrint(
+          'Download manager error reporting failed: $reportingError',
+        );
       }
     }
   }
 
-  Future<dynamic> _onMethodCall(MethodCall call) async {
-    if (call.method != 'onDownloadStatus') return null;
-    final args = call.arguments;
-    if (args is! Map) return null;
-    final status = SealDownloadStatus.fromMap(args);
-    _handleStatusEvent(status);
-    return null;
-  }
-
-  void _handleStatusEvent(SealDownloadStatus status) {
-    if (kDebugMode) {
-      debugPrint(
-        'DownloadManager received: ${status.status} '
-        'task=${status.taskId} req=${status.callerRequestId}',
-      );
+  Future<void> _handleStatusEvent(SealDownloadStatus status) async {
+    var changed = false;
+    for (final taskStatus in status.expandTaskIds()) {
+      changed = _applyStatus(taskStatus) || changed;
     }
-
-    final requestId = status.callerRequestId;
-    if (requestId == null || requestId.isEmpty) return;
-
-    final existingIndex = tasks.indexWhere((t) => t.requestId == requestId);
-    final newStatus = _mapSealStatus(status);
-
-    if (newStatus == null) return;
-
-    if (existingIndex >= 0) {
-      // Update existing task
-      final existing = tasks[existingIndex];
-      final updated = _mergeTaskUpdate(existing, status, newStatus);
-      tasks[existingIndex] = updated;
-    } else {
-      // New task
-      final task = _createTaskFromStatus(requestId, status, newStatus);
-      tasks.insert(0, task);
-    }
-
+    if (!changed) return;
     _refreshStats();
+    _persistTasks();
   }
 
-  DownloadStatus? _mapSealStatus(SealDownloadStatus status) {
-    return switch (status.status) {
-      'waiting' || 'queued' => DownloadStatus.waiting,
-      'downloading' || 'accepted' || 'progress' => DownloadStatus.downloading,
+  bool _applyStatus(SealDownloadStatus status) {
+    final identity = status.stableIdentity;
+    if (identity == null) return false;
+
+    if (status.status == 'canceled') {
+      final previousLength = tasks.length;
+      tasks.removeWhere((task) => task.identity == identity);
+      selectedIds.remove(identity);
+      return tasks.length != previousLength;
+    }
+
+    final mappedStatus = _mapSealStatus(status.status);
+    if (mappedStatus == null) return false;
+    final existingIndex = _findTaskIndex(status);
+    if (existingIndex >= 0) {
+      tasks[existingIndex] = _mergeTaskUpdate(
+        tasks[existingIndex],
+        status,
+        mappedStatus,
+      );
+    } else {
+      tasks.insert(0, _createTaskFromStatus(status, mappedStatus));
+    }
+    return true;
+  }
+
+  int _findTaskIndex(SealDownloadStatus status) {
+    final taskId = status.taskId?.trim();
+    if (taskId != null && taskId.isNotEmpty) {
+      final exact = tasks.indexWhere((task) => task.taskId == taskId);
+      if (exact >= 0) return exact;
+    }
+    final requestId = status.callerRequestId?.trim();
+    if (requestId == null || requestId.isEmpty) return -1;
+    return tasks.indexWhere(
+      (task) =>
+          task.requestId == requestId &&
+          (task.taskId == null || task.taskId!.isEmpty),
+    );
+  }
+
+  DownloadStatus? _mapSealStatus(String status) {
+    return switch (status) {
+      'waiting' || 'queued' || 'accepted' => DownloadStatus.waiting,
+      'fetching' || 'downloading' || 'progress' => DownloadStatus.downloading,
       'paused' => DownloadStatus.paused,
       'completed' => DownloadStatus.completed,
       'failed' || 'error' => DownloadStatus.failed,
-      'canceled' || 'rejected' => null,
       _ => null,
     };
   }
 
   DownloadTask _createTaskFromStatus(
-    String requestId,
     SealDownloadStatus status,
     DownloadStatus mappedStatus,
   ) {
+    final identity = status.stableIdentity!;
+    final requestId = _nonEmpty(status.callerRequestId) ?? identity;
+    final totalBytes = status.totalBytes ?? 0;
+    final downloadedBytes =
+        status.downloadedBytes ??
+        (mappedStatus == DownloadStatus.completed ? totalBytes : 0);
+    final sourceUrl = status.sourceUrl;
     return DownloadTask(
       requestId: requestId,
-      bvid: _extractBvid(status.source),
-      title: status.displayName ?? 'Seal 下载',
-      quality: '',
+      bvid: _extractBvid(sourceUrl),
+      title:
+          _nonEmpty(status.title) ?? _nonEmpty(status.displayName) ?? 'Seal 下载',
+      quality: status.quality ?? '',
       format: status.isAudioHint ? 'audio' : 'video',
       status: mappedStatus,
-      progress: _extractProgress(status),
-      downloadedBytes: 0,
-      totalBytes: 0,
-      errorMessage: status.userFacingErrorMessage,
+      progress:
+          status.progress ??
+          (mappedStatus == DownloadStatus.completed ? 1.0 : 0.0),
+      downloadedBytes: downloadedBytes,
+      totalBytes: totalBytes,
+      errorMessage: mappedStatus == DownloadStatus.failed
+          ? status.userFacingErrorMessage
+          : null,
       createdAt: DateTime.now(),
       completedAt: mappedStatus == DownloadStatus.completed
           ? DateTime.now()
@@ -145,8 +261,8 @@ class DownloadManagerService extends GetxService {
       taskId: status.taskId,
       contentUri: status.contentUri,
       displayName: status.displayName,
-      source: status.source,
-      extractAudio: status.isAudioHint,
+      source: sourceUrl,
+      extractAudio: status.extractAudio ?? status.isAudioHint,
     );
   }
 
@@ -155,193 +271,178 @@ class DownloadManagerService extends GetxService {
     SealDownloadStatus status,
     DownloadStatus newStatus,
   ) {
-    final progress = _extractProgress(status);
+    final totalBytes = status.totalBytes ?? existing.totalBytes;
+    final downloadedBytes =
+        status.downloadedBytes ??
+        (newStatus == DownloadStatus.completed
+            ? totalBytes
+            : existing.downloadedBytes);
+    final sourceUrl = _nonEmpty(status.sourceUrl) ?? existing.source;
     return existing.copyWith(
+      bvid: _extractBvid(sourceUrl).isEmpty
+          ? existing.bvid
+          : _extractBvid(sourceUrl),
+      title:
+          _nonEmpty(status.title) ??
+          _nonEmpty(status.displayName) ??
+          existing.title,
+      quality: _nonEmpty(status.quality) ?? existing.quality,
+      format: status.extractAudio == null
+          ? existing.format
+          : (status.extractAudio! ? 'audio' : 'video'),
       status: newStatus,
-      progress: progress,
-      downloadedBytes: _extractDownloadedBytes(status),
-      totalBytes: _extractTotalBytes(status),
-      errorMessage: status.userFacingErrorMessage,
-      completedAt: newStatus == DownloadStatus.completed
-          ? DateTime.now()
+      progress:
+          status.progress ??
+          (newStatus == DownloadStatus.completed ? 1.0 : existing.progress),
+      downloadedBytes: downloadedBytes,
+      totalBytes: totalBytes,
+      errorMessage: newStatus == DownloadStatus.failed
+          ? status.userFacingErrorMessage
           : null,
+      completedAt: newStatus == DownloadStatus.completed
+          ? existing.completedAt ?? DateTime.now()
+          : null,
+      taskId: status.taskId ?? existing.taskId,
       contentUri: status.contentUri ?? existing.contentUri,
       displayName: status.displayName ?? existing.displayName,
+      source: sourceUrl,
+      extractAudio: status.extractAudio ?? existing.extractAudio,
     );
   }
 
-  double _extractProgress(SealDownloadStatus status) {
-    // Seal may send progress via custom data; default to deterministic values
-    return switch (status.status) {
-      'completed' => 1.0,
-      'downloading' || 'progress' => 0.5, // Placeholder until real progress
-      _ => 0.0,
-    };
-  }
-
-  int _extractDownloadedBytes(SealDownloadStatus status) {
-    return 0; // Placeholder
-  }
-
-  int _extractTotalBytes(SealDownloadStatus status) {
-    return 0; // Placeholder
-  }
-
-  String _extractBvid(String? source) {
-    if (source == null || source.isEmpty) return '';
-    // Try to extract bvid from URL pattern
-    final match = RegExp(r'BV\w+').firstMatch(source);
-    return match?.group(0) ?? '';
+  String _extractBvid(String? sourceUrl) {
+    if (sourceUrl == null || sourceUrl.isEmpty) return '';
+    return RegExp(r'BV\w+').firstMatch(sourceUrl)?.group(0) ?? '';
   }
 
   void _refreshStats() {
-    int completed = 0;
-    int downloading = 0;
-    int waiting = 0;
-    int failed = 0;
-    int totalBytes = 0;
-
+    var completed = 0;
+    var downloading = 0;
+    var waiting = 0;
+    var failed = 0;
+    var downloadedBytes = 0;
     for (final task in tasks) {
+      downloadedBytes += task.downloadedBytes;
       switch (task.status) {
         case DownloadStatus.completed:
           completed++;
-          totalBytes += task.totalBytes;
         case DownloadStatus.downloading:
           downloading++;
-          totalBytes += task.downloadedBytes;
         case DownloadStatus.waiting:
           waiting++;
         case DownloadStatus.failed:
           failed++;
         case DownloadStatus.paused:
-          totalBytes += task.totalBytes;
+          break;
       }
     }
-
     stats.value = DownloadStats(
       total: tasks.length,
       completed: completed,
       downloading: downloading,
       waiting: waiting,
       failed: failed,
-      totalBytes: totalBytes,
+      totalBytes: downloadedBytes,
     );
   }
 
-  /// Enter multi-select mode.
+  void _persistTasks() {
+    Persistence.background(
+      _repository.replaceAll(tasks),
+      label: 'seal_download_task_history',
+    );
+  }
+
   void enterSelectionMode() {
     isSelectionMode.value = true;
     selectedIds.clear();
   }
 
-  /// Exit multi-select mode.
   void exitSelectionMode() {
     isSelectionMode.value = false;
     selectedIds.clear();
   }
 
-  /// Toggle selection of a task.
-  void toggleSelection(String requestId) {
-    if (selectedIds.contains(requestId)) {
-      selectedIds.remove(requestId);
-    } else {
-      selectedIds.add(requestId);
-    }
+  void toggleSelection(String taskIdentity) {
+    if (!selectedIds.remove(taskIdentity)) selectedIds.add(taskIdentity);
   }
 
-  /// Select all tasks.
-  void selectAll() {
-    selectedIds.addAll(tasks.map((t) => t.requestId));
-  }
+  void selectAll() => selectedIds.addAll(tasks.map((task) => task.identity));
 
-  /// Deselect all tasks.
-  void deselectAll() {
-    selectedIds.clear();
-  }
+  void deselectAll() => selectedIds.clear();
 
-  /// Get selected tasks.
-  List<DownloadTask> get selectedTasks {
-    return tasks.where((t) => selectedIds.contains(t.requestId)).toList();
-  }
+  List<DownloadTask> get selectedTasks => tasks
+      .where((task) => selectedIds.contains(task.identity))
+      .toList(growable: false);
 
-  /// Pause a task.
   Future<void> pauseTask(DownloadTask task) async {
     if (!task.canPause) return;
     if (await _sendTaskAction(task, 'pause')) {
-      _updateTaskStatus(task.requestId, DownloadStatus.paused);
+      _updateTaskStatus(task.identity, DownloadStatus.paused);
     }
   }
 
-  /// Resume a task.
   Future<void> resumeTask(DownloadTask task) async {
     if (!task.canResume) return;
     if (await _sendTaskAction(task, 'resume')) {
-      _updateTaskStatus(task.requestId, DownloadStatus.downloading);
+      _updateTaskStatus(task.identity, DownloadStatus.waiting);
     }
   }
 
-  /// Retry a failed task.
   Future<void> retryTask(DownloadTask task) async {
     if (!task.canRetry) return;
     if (await _sendTaskAction(task, 'retry')) {
-      _updateTaskStatus(task.requestId, DownloadStatus.waiting);
+      _updateTaskStatus(task.identity, DownloadStatus.waiting);
     }
   }
 
-  /// Delete a task.
   Future<void> deleteTask(DownloadTask task) async {
-    if (await _sendTaskAction(task, 'delete')) {
-      tasks.removeWhere((t) => t.requestId == task.requestId);
-      selectedIds.remove(task.requestId);
-      _refreshStats();
-    }
+    if (!await _sendTaskAction(task, 'delete')) return;
+    tasks.removeWhere((item) => item.identity == task.identity);
+    selectedIds.remove(task.identity);
+    _refreshStats();
+    _persistTasks();
   }
 
-  /// Open completed task file.
   Future<void> openTask(DownloadTask task) async {
     if (!task.canOpen || task.contentUri == null) return;
-    await SealDownloadUtils.openContentUri(
-      uri: task.contentUri!,
-      mimeType: task.isAudio ? 'audio/*' : 'video/*',
-    );
+    await _channel.invokeMethod<bool>('openContentUri', {
+      'uri': task.contentUri,
+      'mimeType': task.isAudio ? 'audio/*' : 'video/*',
+    });
   }
 
-  /// Share completed task.
   Future<void> shareTask(DownloadTask task) async {
     if (!task.canOpen || task.contentUri == null) return;
-    await SealDownloadUtils.shareContentUri(
-      uri: task.contentUri!,
-      mimeType: task.isAudio ? 'audio/*' : 'video/*',
-      displayName: task.displayName,
-    );
+    await _channel.invokeMethod<bool>('shareContentUri', {
+      'uri': task.contentUri,
+      'mimeType': task.isAudio ? 'audio/*' : 'video/*',
+      'displayName': task.displayName,
+    });
   }
 
-  /// Batch pause selected tasks.
   Future<void> pauseSelected() async {
     for (final task in selectedTasks) {
       await pauseTask(task);
     }
   }
 
-  /// Batch resume selected tasks.
   Future<void> resumeSelected() async {
     for (final task in selectedTasks) {
       await resumeTask(task);
     }
   }
 
-  /// Batch delete selected tasks.
   Future<void> deleteSelected() async {
-    for (final task in selectedTasks.toList()) {
+    for (final task in selectedTasks.toList(growable: false)) {
       await deleteTask(task);
     }
     exitSelectionMode();
   }
 
-  /// Batch retry failed selected tasks.
   Future<void> retryFailedSelected() async {
     for (final task in selectedTasks.where(
-      (t) => t.status == DownloadStatus.failed,
+      (task) => task.status == DownloadStatus.failed,
     )) {
       await retryTask(task);
     }
@@ -349,71 +450,55 @@ class DownloadManagerService extends GetxService {
 
   Future<bool> _sendTaskAction(DownloadTask task, String action) async {
     try {
-      await _channel.invokeMethod<void>('taskAction', {
+      await _channel.invokeMethod<Map<dynamic, dynamic>>('taskAction', {
         'requestId': task.requestId,
         'taskId': task.taskId,
         'action': action,
       });
       return true;
-    } on PlatformException catch (e) {
+    } on PlatformException catch (error) {
       if (kDebugMode) {
-        debugPrint('Failed to send task action $action: ${e.message}');
+        debugPrint(
+          'Seal task action $action failed: ${error.code} ${error.message}',
+        );
       }
-    } on MissingPluginException catch (e) {
-      if (kDebugMode) {
-        debugPrint('Seal task action $action is unavailable: $e');
-      }
+    } on MissingPluginException catch (error) {
+      if (kDebugMode) debugPrint('Seal task action unavailable: $error');
     }
     return false;
   }
 
-  void _updateTaskStatus(String requestId, DownloadStatus newStatus) {
-    final index = tasks.indexWhere((t) => t.requestId == requestId);
-    if (index >= 0) {
-      tasks[index] = tasks[index].copyWith(status: newStatus);
-      _refreshStats();
-    }
+  void _updateTaskStatus(String identity, DownloadStatus newStatus) {
+    final index = tasks.indexWhere((task) => task.identity == identity);
+    if (index < 0) return;
+    tasks[index] = tasks[index].copyWith(
+      status: newStatus,
+      errorMessage: null,
+      completedAt: null,
+    );
+    _refreshStats();
+    _persistTasks();
   }
 
-  /// Open Seal releases page.
-  Future<void> openSealReleases() async {
-    await PageUtils.launchURL(releasesUrl);
-  }
+  Future<void> openSealReleases() => PageUtils.launchURL(releasesUrl);
 }
 
-class DownloadStats {
-  const DownloadStats({
-    required this.total,
-    required this.completed,
-    required this.downloading,
-    required this.waiting,
-    required this.failed,
-    required this.totalBytes,
-  });
+String? _nonEmpty(String? value) {
+  final text = value?.trim();
+  return text == null || text.isEmpty ? null : text;
+}
 
-  factory DownloadStats.empty() => const DownloadStats(
-    total: 0,
-    completed: 0,
-    downloading: 0,
-    waiting: 0,
-    failed: 0,
-    totalBytes: 0,
+void _recordDownloadManagerError(
+  Object error,
+  StackTrace stackTrace, {
+  required String operation,
+}) {
+  CrashReporter.recordErrorSync(
+    error,
+    stackTrace,
+    severity: CrashSeverity.handled,
+    module: 'download_manager',
+    operation: operation,
+    reason: 'optional_download_manager_operation_failed',
   );
-
-  final int total;
-  final int completed;
-  final int downloading;
-  final int waiting;
-  final int failed;
-  final int totalBytes;
-
-  String get formattedStorageUsed {
-    final bytes = totalBytes;
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
 }

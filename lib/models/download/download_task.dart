@@ -50,6 +50,11 @@ class DownloadTask {
   final String? source;
   final bool extractAudio;
 
+  String get identity {
+    final sealTaskId = taskId?.trim();
+    return sealTaskId == null || sealTaskId.isEmpty ? requestId : sealTaskId;
+  }
+
   bool get isAudio => format == 'audio';
   bool get canPause => status.isActive;
   bool get canResume => status == DownloadStatus.paused;
@@ -81,6 +86,68 @@ class DownloadTask {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
+  factory DownloadTask.fromJson(Map<String, dynamic> json) {
+    final rawRequestId = json['requestId']?.toString().trim() ?? '';
+    final rawTaskId = json['taskId']?.toString().trim();
+    final requestId = rawRequestId.isNotEmpty ? rawRequestId : rawTaskId ?? '';
+    if (requestId.isEmpty) {
+      throw const FormatException('Download task identity is missing');
+    }
+    final statusName = json['status']?.toString();
+    final status = DownloadStatus.values.where(
+      (value) => value.name == statusName,
+    );
+    if (status.isEmpty) {
+      throw FormatException('Unknown download status: $statusName');
+    }
+    final createdAt = _readDateTime(json['createdAt']);
+    if (createdAt == null) {
+      throw const FormatException('Download task createdAt is missing');
+    }
+    final progress = _readDouble(json['progress']) ?? 0;
+    return DownloadTask(
+      requestId: requestId,
+      bvid: json['bvid']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Seal 下载',
+      quality: json['quality']?.toString() ?? '',
+      format: json['format']?.toString() == 'audio' ? 'audio' : 'video',
+      status: status.first,
+      progress: progress.clamp(0.0, 1.0).toDouble(),
+      downloadedBytes: _readInt(
+        json['downloadedBytes'],
+      ).clamp(0, 1 << 62).toInt(),
+      totalBytes: _readInt(json['totalBytes']).clamp(0, 1 << 62).toInt(),
+      errorMessage: _readNullableString(json['errorMessage']),
+      createdAt: createdAt,
+      completedAt: _readDateTime(json['completedAt']),
+      taskId: _readNullableString(json['taskId']),
+      contentUri: _readNullableString(json['contentUri']),
+      displayName: _readNullableString(json['displayName']),
+      source: _readNullableString(json['source']),
+      extractAudio: _readBool(json['extractAudio']) ?? false,
+    );
+  }
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'requestId': requestId,
+    'bvid': bvid,
+    'title': title,
+    'quality': quality,
+    'format': format,
+    'status': status.name,
+    'progress': progress,
+    'downloadedBytes': downloadedBytes,
+    'totalBytes': totalBytes,
+    'errorMessage': errorMessage,
+    'createdAt': createdAt.millisecondsSinceEpoch,
+    'completedAt': completedAt?.millisecondsSinceEpoch,
+    'taskId': taskId,
+    'contentUri': contentUri,
+    'displayName': displayName,
+    'source': source,
+    'extractAudio': extractAudio,
+  };
+
   DownloadTask copyWith({
     String? requestId,
     String? bvid,
@@ -91,13 +158,13 @@ class DownloadTask {
     double? progress,
     int? downloadedBytes,
     int? totalBytes,
-    String? errorMessage,
+    Object? errorMessage = _unsetDownloadTaskField,
     DateTime? createdAt,
-    DateTime? completedAt,
-    String? taskId,
-    String? contentUri,
-    String? displayName,
-    String? source,
+    Object? completedAt = _unsetDownloadTaskField,
+    Object? taskId = _unsetDownloadTaskField,
+    Object? contentUri = _unsetDownloadTaskField,
+    Object? displayName = _unsetDownloadTaskField,
+    Object? source = _unsetDownloadTaskField,
     bool? extractAudio,
   }) {
     return DownloadTask(
@@ -110,13 +177,25 @@ class DownloadTask {
       progress: progress ?? this.progress,
       downloadedBytes: downloadedBytes ?? this.downloadedBytes,
       totalBytes: totalBytes ?? this.totalBytes,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: identical(errorMessage, _unsetDownloadTaskField)
+          ? this.errorMessage
+          : errorMessage as String?,
       createdAt: createdAt ?? this.createdAt,
-      completedAt: completedAt ?? this.completedAt,
-      taskId: taskId ?? this.taskId,
-      contentUri: contentUri ?? this.contentUri,
-      displayName: displayName ?? this.displayName,
-      source: source ?? this.source,
+      completedAt: identical(completedAt, _unsetDownloadTaskField)
+          ? this.completedAt
+          : completedAt as DateTime?,
+      taskId: identical(taskId, _unsetDownloadTaskField)
+          ? this.taskId
+          : taskId as String?,
+      contentUri: identical(contentUri, _unsetDownloadTaskField)
+          ? this.contentUri
+          : contentUri as String?,
+      displayName: identical(displayName, _unsetDownloadTaskField)
+          ? this.displayName
+          : displayName as String?,
+      source: identical(source, _unsetDownloadTaskField)
+          ? this.source
+          : source as String?,
       extractAudio: extractAudio ?? this.extractAudio,
     );
   }
@@ -124,9 +203,48 @@ class DownloadTask {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is DownloadTask && other.requestId == requestId;
+    return other is DownloadTask && other.identity == identity;
   }
 
   @override
-  int get hashCode => requestId.hashCode;
+  int get hashCode => identity.hashCode;
+}
+
+const Object _unsetDownloadTaskField = Object();
+
+int _readInt(Object? value) {
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double? _readDouble(Object? value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
+bool? _readBool(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  return switch (value?.toString().toLowerCase()) {
+    'true' || '1' => true,
+    'false' || '0' => false,
+    _ => null,
+  };
+}
+
+DateTime? _readDateTime(Object? value) {
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+  }
+  final text = value?.toString();
+  if (text == null || text.isEmpty) return null;
+  final epoch = int.tryParse(text);
+  return epoch != null
+      ? DateTime.fromMillisecondsSinceEpoch(epoch)
+      : DateTime.tryParse(text);
+}
+
+String? _readNullableString(Object? value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }

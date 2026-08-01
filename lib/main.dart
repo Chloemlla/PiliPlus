@@ -25,9 +25,10 @@ import 'package:pili_plus/services/crash/crash_reporter.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
 import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
-import 'package:pili_plus/services/whats_new_guide_service.dart';
+import 'package:pili_plus/services/live_alert_lifecycle_observer.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
@@ -159,6 +160,7 @@ Future<void> _main() async {
   Get
     ..lazyPut(AccountService.new)
     ..lazyPut(DownloadService.new);
+  await registerFeatureServices();
   HttpOverrides.global = _CustomHttpOverrides();
 
   if (PlatformUtils.isMobile) {
@@ -185,6 +187,23 @@ Future<void> _main() async {
   Request();
   await LoginUtils.initializeSession();
   RequestUtils.syncHistoryStatus();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(
+      LiveAlertLifecycleObserver.instance.init().catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        CrashReporter.recordErrorSync(
+          error,
+          stackTrace,
+          severity: CrashSeverity.handled,
+          module: 'live_alert',
+          operation: 'LiveAlertLifecycleObserver.init',
+          reason: 'live_alert_startup_failed',
+        );
+      }),
+    );
+  });
 
   SmartDialog.config.toast = SmartConfigToast(displayType: .onlyRefresh);
 

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/services/playlist_import_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -146,6 +149,18 @@ void main() {
       expect(result.isValid, isFalse);
       expect(result.message, '第 1 个视频的 bvid 无效');
     });
+
+    test('rejects oversized import text before parsing', () {
+      final oversized = String.fromCharCodes(
+        Uint8List(PlaylistImportService.maxImportFileBytes + 1),
+      );
+      final result = PlaylistImportService.validateJson(
+        oversized,
+      );
+
+      expect(result.isValid, isFalse);
+      expect(result.message, contains('文件过大'));
+    });
   });
 
   group('PlaylistImportService.importPlaylist', () {
@@ -172,7 +187,7 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(result.data.importedCount, 0);
       expect(result.data.duplicateCount, 1);
-      expect(result.data.summary, '已导入 0 个视频，跳过 1 个重复');
+      expect(result.data.summary, '已导入 0 个视频，已跳过 1 个重复');
     });
 
     test(
@@ -200,6 +215,41 @@ void main() {
         expect(result.data.importedCount, 0);
         expect(result.data.unsupportedCount, 1);
         expect(result.data.summary, '已导入 0 个视频，忽略 1 个追番/追剧条目');
+      },
+    );
+
+    test(
+      'writes each unique watch-later BVID once and reports repeats',
+      () async {
+        const json = '''
+      {
+        "version": 1,
+        "app": "PiliPlus",
+        "exportedAt": "2026-07-31T00:00:00.000Z",
+        "playlistName": "Repeated",
+        "count": 2,
+        "videos": [
+          {"bvid": "BV1MM4y1s7NZ", "title": "Video 1"},
+          {"bvid": "BV1MM4y1s7NZ", "title": "Video 1 again"}
+        ]
+      }
+      ''';
+        final writtenBvids = <String>[];
+
+        final result = await PlaylistImportService.importPlaylist(
+          jsonString: json,
+          destination: ImportDestination.watchLater,
+          existingBvids: const {},
+          watchLaterWriter: (bvid) async {
+            writtenBvids.add(bvid);
+            return const Success(null);
+          },
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(writtenBvids, const ['BV1MM4y1s7NZ']);
+        expect(result.data.importedCount, 1);
+        expect(result.data.duplicateCount, 1);
       },
     );
   });

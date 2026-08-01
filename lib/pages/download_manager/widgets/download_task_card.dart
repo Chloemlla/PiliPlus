@@ -31,7 +31,7 @@ class DownloadTaskCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           if (isSelectionMode) {
-            controller.toggleSelection(task.requestId);
+            controller.toggleSelection(task.identity);
           } else {
             onTap?.call();
           }
@@ -40,7 +40,7 @@ class DownloadTaskCard extends StatelessWidget {
           if (!isSelectionMode) {
             controller
               ..enterSelectionMode()
-              ..toggleSelection(task.requestId);
+              ..toggleSelection(task.identity);
           }
           onLongPress?.call();
         },
@@ -60,7 +60,7 @@ class DownloadTaskCard extends StatelessWidget {
                   Checkbox(
                     value: isSelected,
                     onChanged: (_) =>
-                        controller.toggleSelection(task.requestId),
+                        controller.toggleSelection(task.identity),
                   ),
                   const SizedBox(width: 4),
                 ],

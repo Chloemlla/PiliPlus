@@ -142,6 +142,26 @@ def source_imports(source: Path) -> set[str]:
     return set(PACKAGE_IMPORT.findall(source.read_text(encoding="utf-8")))
 
 
+IMPORT_GRAPH = {
+    source.relative_to(ROOT / "lib").as_posix(): source_imports(source)
+    for source in (ROOT / "lib").rglob("*.dart")
+}
+
+
+def find_import_path(start: str, target: str) -> list[str] | None:
+    pending = [(start, [start])]
+    visited = {start}
+    while pending:
+        current, path = pending.pop(0)
+        if current == target:
+            return path
+        for dependency in sorted(IMPORT_GRAPH.get(current, set())):
+            if dependency not in visited:
+                visited.add(dependency)
+                pending.append((dependency, [*path, dependency]))
+    return None
+
+
 violations: list[str] = []
 
 for base in (ROOT / "lib/models", ROOT / "lib/utils"):
@@ -173,6 +193,15 @@ for target in sorted(transport_imports):
 storage_imports = source_imports(ROOT / "lib/utils/storage.dart")
 if "utils/storage_pref.dart" in storage_imports:
     violations.append("storage initialization must not import storage_pref.dart")
+storage_pref_path = find_import_path(
+    "utils/storage.dart",
+    "utils/storage_pref.dart",
+)
+if storage_pref_path is not None:
+    violations.append(
+        "storage initialization transitively depends on storage_pref.dart: "
+        + " -> ".join(storage_pref_path)
+    )
 
 for source in (ROOT / "lib/pages").rglob("*.dart"):
     relative = source.relative_to(ROOT).as_posix()

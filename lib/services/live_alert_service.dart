@@ -1,248 +1,304 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:pili_plus/http/live.dart';
 import 'package:pili_plus/models/live_keyword_rule.dart';
-import 'package:pili_plus/models_new/live/live_room_info_h5/data.dart';
+import 'package:pili_plus/services/live_alert_data_source.dart';
+import 'package:pili_plus/services/live_alert_decision.dart';
+import 'package:pili_plus/services/live_alert_notification_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 
 class LiveAlertService {
-  LiveAlertService._();
+  LiveAlertService._({
+    LiveAlertStatusSource? statusSource,
+    LiveAlertNotificationGateway? notificationGateway,
+    DateTime Function()? clock,
+  }) : _statusSource = statusSource ?? BiliLiveAlertStatusSource(),
+       _notificationGateway =
+           notificationGateway ?? LiveAlertNotificationService.instance,
+       _clock = clock ?? DateTime.now;
 
   static final LiveAlertService instance = LiveAlertService._();
 
   static const String boxName = 'liveKeywordRules';
-  static const int rateLimitHours = 4; // Don't notify same UP more than once per 4 hours
-  static const int pollingIntervalMinutes = 15;
+  static const String notificationHistoryBoxName = 'liveAlertLastNotified';
+  static const Duration rateLimit = Duration(hours: 4);
+  static const Duration pollingInterval = Duration(minutes: 15);
+
+  final LiveAlertStatusSource _statusSource;
+  final LiveAlertNotificationGateway _notificationGateway;
+  final DateTime Function() _clock;
 
   Box<LiveKeywordRule>? _box;
-  Box<LiveKeywordRule> get box {
-    if (_box == null) {
-      throw StateError('LiveAlertService not initialized. Call init() first.');
-    }
-    return _box!;
-  }
-
-  bool _isInitialized = false;
-  bool get isInitialized => _isInitialized;
-
+  Box<int>? _notificationHistoryBox;
+  Future<void>? _initializing;
   Timer? _pollingTimer;
-  final _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  bool _isInitialized = false;
+  bool _pollInFlight = false;
+  bool _pollingEnabled = false;
+  int _pollGeneration = 0;
 
-  /// Initialize the service
-  Future<void> init() async {
-    if (_isInitialized) return;
+  bool get isInitialized => _isInitialized;
+  bool get isPolling => _pollingTimer?.isActive == true;
+  bool get hasActiveAccount => currentAccountMid > 0;
+  int get currentAccountMid => Accounts.main.isLogin ? Accounts.main.mid : 0;
 
-    if (!Hive.isAdapterRegistered(101)) {
-      Hive.registerAdapter(LiveKeywordRuleAdapter());
-    }
+  Box<LiveKeywordRule> get _rulesBox =>
+      _box ?? (throw StateError('LiveAlertService is not initialized'));
 
-    _box = await Hive.openBox<LiveKeywordRule>(boxName);
+  Box<int> get _historyBox =>
+      _notificationHistoryBox ??
+      (throw StateError('LiveAlertService is not initialized'));
 
-    // Initialize local notifications
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-    await _flutterLocalNotificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-
-    _isInitialized = true;
+  Future<void> init() {
+    if (_isInitialized) return Future<void>.value();
+    return _initializing ??= _initialize();
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap - deep link to live room
-    if (kDebugMode) {
-      debugPrint('Notification tapped: ${response.payload}');
+  Future<void> _initialize() async {
+    try {
+      if (!Hive.isAdapterRegistered(101)) {
+        Hive.registerAdapter(LiveKeywordRuleAdapter());
+      }
+      _box = await Hive.openBox<LiveKeywordRule>(boxName);
+      _notificationHistoryBox = await Hive.openBox<int>(
+        notificationHistoryBoxName,
+      );
+      await _notificationGateway.init();
+      _isInitialized = true;
+      await activateCurrentAccount();
+    } finally {
+      _initializing = null;
     }
   }
 
-  /// Start polling for live status
+  Future<void> activateCurrentAccount() async {
+    if (!_isInitialized) return;
+    final accountMid = currentAccountMid;
+    if (accountMid <= 0) return;
+
+    final legacyUpdates = <dynamic, LiveKeywordRule>{};
+    for (final entry in _rulesBox.toMap().entries) {
+      if (entry.value.accountMid == 0) {
+        legacyUpdates[entry.key] = entry.value.copyWith(accountMid: accountMid);
+      }
+    }
+    if (legacyUpdates.isNotEmpty) {
+      await _rulesBox.putAll(legacyUpdates);
+    }
+
+    final latestByMid = <int, int>{};
+    for (final rule in _rulesForAccount(accountMid)) {
+      if (rule.lastNotifiedAt > (latestByMid[rule.mid] ?? 0)) {
+        latestByMid[rule.mid] = rule.lastNotifiedAt;
+      }
+    }
+    for (final entry in latestByMid.entries) {
+      final key = _historyKey(accountMid, entry.key);
+      if (entry.value > (_historyBox.get(key) ?? 0)) {
+        await _historyBox.put(key, entry.value);
+      }
+    }
+  }
+
   void startPolling() {
     if (!_isInitialized) return;
     stopPolling();
-
-    // Poll immediately
-    checkLiveStatus();
-
-    // Then poll every 15 minutes
+    _pollingEnabled = true;
+    _pollGeneration++;
+    unawaited(_notificationGateway.flushPendingNavigation());
+    unawaited(checkLiveStatus());
     _pollingTimer = Timer.periodic(
-      Duration(minutes: pollingIntervalMinutes),
-      (_) => checkLiveStatus(),
+      pollingInterval,
+      (_) => unawaited(checkLiveStatus()),
     );
   }
 
-  /// Stop polling
   void stopPolling() {
+    _pollingEnabled = false;
+    _pollGeneration++;
     _pollingTimer?.cancel();
     _pollingTimer = null;
   }
 
-  /// Check live status for all followed UPs with rules
   Future<void> checkLiveStatus() async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_pollingEnabled || _pollInFlight) return;
+    final pollGeneration = _pollGeneration;
+    _pollInFlight = true;
+    try {
+      await activateCurrentAccount();
+      final accountMid = currentAccountMid;
+      if (!_isCurrentPoll(pollGeneration, accountMid)) return;
 
-    final rules = getAllRules();
-    if (rules.isEmpty) return;
-
-    // Get unique mids from rules
-    final midsToCheck = rules.map((r) => r.mid).toSet();
-
-    for (final mid in midsToCheck) {
-      await _checkUpLiveStatus(mid);
-    }
-  }
-
-  Future<void> _checkUpLiveStatus(int mid) async {
-    final result = await LiveHttp.liveRoomInfoH5(roomId: mid);
-
-    if (result case Success(:final response)) {
-      final isLive = response.roomInfo?.liveStatus == 1;
-      if (isLive) {
-        await _handleLiveStatus(mid, response);
+      final mids = _rulesForAccount(
+        accountMid,
+      ).where((rule) => rule.enabled).map((rule) => rule.mid).toSet();
+      for (final mid in mids) {
+        if (!_isCurrentPoll(pollGeneration, accountMid)) return;
+        await _checkUpLiveStatus(
+          accountMid: accountMid,
+          mid: mid,
+          pollGeneration: pollGeneration,
+        );
+      }
+    } on Exception {
+      return;
+    } finally {
+      _pollInFlight = false;
+      if (_pollingEnabled && pollGeneration != _pollGeneration) {
+        unawaited(checkLiveStatus());
       }
     }
   }
 
-  Future<void> _handleLiveStatus(int mid, RoomInfoH5Data roomInfo) async {
-    final rules = getRulesForMid(mid);
-    if (rules.isEmpty) return;
-
-    final title = roomInfo.roomInfo?.title ?? '';
-    final areaName = roomInfo.roomInfo?.areaName ?? '';
-    final roomId = roomInfo.roomInfo?.roomId?.toString() ?? mid.toString();
-
-    for (final rule in rules) {
-      if (_shouldNotify(rule)) {
-        if (rule.matches(streamTitle: title, areaName: areaName)) {
-          await _sendNotification(rule, title, roomId);
-          await _updateLastNotified(rule);
-        }
-      }
+  Future<void> _checkUpLiveStatus({
+    required int accountMid,
+    required int mid,
+    required int pollGeneration,
+  }) async {
+    final historyKey = _historyKey(accountMid, mid);
+    final nowSeconds = _clock().millisecondsSinceEpoch ~/ 1000;
+    if (isLiveAlertRateLimited(
+      lastNotifiedAt: _historyBox.get(historyKey) ?? 0,
+      nowSeconds: nowSeconds,
+      cooldown: rateLimit,
+    )) {
+      return;
     }
+
+    final snapshot = await _statusSource.resolveByMid(mid);
+    if (snapshot == null || !_isCurrentPoll(pollGeneration, accountMid)) {
+      return;
+    }
+
+    final rules = _rulesForAccount(
+      accountMid,
+    ).where((rule) => rule.mid == mid).toList();
+    final decision = chooseLiveAlertDecision(
+      rules: rules,
+      snapshot: snapshot,
+    );
+    if (decision == null) return;
+
+    final upName = snapshot.upName.isNotEmpty
+        ? snapshot.upName
+        : decision.rule.upName;
+    final didShow = await _notificationGateway.showLiveAlert(
+      accountMid: accountMid,
+      mid: mid,
+      roomId: snapshot.roomId,
+      upName: upName,
+      streamTitle: snapshot.title,
+      matchedKeyword: decision.matchedKeyword,
+    );
+    if (!didShow) return;
+
+    await _markNotified(
+      accountMid: accountMid,
+      mid: mid,
+      notifiedAt: nowSeconds,
+    );
   }
 
-  bool _shouldNotify(LiveKeywordRule rule) {
-    if (!rule.enabled) return false;
-
-    // Rate limit: check if we notified for this UP recently
-    if (rule.lastNotifiedAt > 0) {
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final hoursSinceLastNotify =
-          (now - rule.lastNotifiedAt) / 3600;
-      if (hoursSinceLastNotify < rateLimitHours) {
-        return false;
+  Future<void> _markNotified({
+    required int accountMid,
+    required int mid,
+    required int notifiedAt,
+  }) async {
+    await _historyBox.put(_historyKey(accountMid, mid), notifiedAt);
+    final updates = <dynamic, LiveKeywordRule>{};
+    for (final entry in _rulesBox.toMap().entries) {
+      final rule = entry.value;
+      if (rule.accountMid == accountMid && rule.mid == mid) {
+        updates[entry.key] = rule.copyWith(lastNotifiedAt: notifiedAt);
       }
     }
+    if (updates.isNotEmpty) await _rulesBox.putAll(updates);
+  }
+
+  List<LiveKeywordRule> getAllRules() {
+    if (!_isInitialized || currentAccountMid <= 0) return const [];
+    final rules = _rulesForAccount(currentAccountMid);
+    rules.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return rules;
+  }
+
+  List<LiveKeywordRule> _rulesForAccount(int accountMid) =>
+      _rulesBox.values.where((rule) => rule.accountMid == accountMid).toList();
+
+  Future<LiveAlertRoomSnapshot?> resolveUp(int mid) =>
+      _statusSource.resolveByMid(mid);
+
+  Future<bool> addRule(LiveKeywordRule rule) async {
+    final accountMid = currentAccountMid;
+    if (!_isInitialized || accountMid <= 0 || !_isValidRule(rule)) {
+      return false;
+    }
+    await _rulesBox.put(rule.id, rule.copyWith(accountMid: accountMid));
     return true;
   }
 
-  Future<void> _sendNotification(
-    LiveKeywordRule rule,
-    String streamTitle,
-    String roomId,
-  ) async {
-    const androidDetails = AndroidNotificationDetails(
-      'live_alerts',
-      '直播提醒',
-      channelDescription: '直播开播提醒通知',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _flutterLocalNotificationsPlugin.show(
-      rule.mid,
-      '${rule.upName} 正在直播',
-      streamTitle,
-      details,
-      payload: 'bilibili://live/$roomId',
-    );
-  }
-
-  Future<void> _updateLastNotified(LiveKeywordRule rule) async {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final updated = rule.copyWith(lastNotifiedAt: now);
-    await rule.delete();
-    await box.put(rule.id, updated);
-  }
-
-  /// Get all rules
-  List<LiveKeywordRule> getAllRules() {
-    if (!_isInitialized) return [];
-    return box.values.toList();
-  }
-
-  /// Get rules for a specific UP
-  List<LiveKeywordRule> getRulesForMid(int mid) {
-    if (!_isInitialized) return [];
-    return box.values.where((r) => r.mid == mid).toList();
-  }
-
-  /// Get all enabled rules
-  List<LiveKeywordRule> getEnabledRules() {
-    if (!_isInitialized) return [];
-    return box.values.where((r) => r.enabled).toList();
-  }
-
-  /// Add a new rule
-  Future<void> addRule(LiveKeywordRule rule) async {
-    if (!_isInitialized) return;
-    await box.put(rule.id, rule);
-  }
-
-  /// Update a rule
-  Future<void> updateRule(LiveKeywordRule rule) async {
-    if (!_isInitialized) return;
-    await box.put(rule.id, rule);
-  }
-
-  /// Delete a rule
-  Future<void> deleteRule(String ruleId) async {
-    if (!_isInitialized) return;
-    await box.delete(ruleId);
-  }
-
-  /// Toggle rule enabled status
-  Future<void> toggleRule(String ruleId) async {
-    if (!_isInitialized) return;
-    final rule = box.get(ruleId);
-    if (rule != null) {
-      final updated = rule.copyWith(enabled: !rule.enabled);
-      await box.put(ruleId, updated);
+  Future<bool> updateRule(LiveKeywordRule rule) async {
+    final accountMid = currentAccountMid;
+    if (!_isInitialized || accountMid <= 0 || !_isValidRule(rule)) {
+      return false;
     }
+    final existing = _rulesBox.get(rule.id);
+    if (existing == null || existing.accountMid != accountMid) return false;
+    await _rulesBox.put(rule.id, rule.copyWith(accountMid: accountMid));
+    return true;
   }
 
-  /// Generate a unique rule ID
-  String generateRuleId() {
-    return '${DateTime.now().millisecondsSinceEpoch}_${Accounts.main.mid}';
+  Future<bool> deleteRule(String ruleId) async {
+    final accountMid = currentAccountMid;
+    if (!_isInitialized || accountMid <= 0) return false;
+    final existing = _rulesBox.get(ruleId);
+    if (existing == null || existing.accountMid != accountMid) return false;
+    await _rulesBox.delete(ruleId);
+    return true;
   }
 
-  /// Close the service
+  Future<bool> toggleRule(String ruleId) async {
+    final accountMid = currentAccountMid;
+    if (!_isInitialized || accountMid <= 0) return false;
+    final rule = _rulesBox.get(ruleId);
+    if (rule == null || rule.accountMid != accountMid) return false;
+    await _rulesBox.put(ruleId, rule.copyWith(enabled: !rule.enabled));
+    return true;
+  }
+
+  String generateRuleId() =>
+      '${currentAccountMid}_${DateTime.now().microsecondsSinceEpoch}';
+
+  Future<void> clearAllData() async {
+    await init();
+    stopPolling();
+    await Future.wait([
+      _rulesBox.clear(),
+      _historyBox.clear(),
+    ]);
+  }
+
   Future<void> close() async {
     stopPolling();
     await _box?.close();
+    await _notificationHistoryBox?.close();
+    _box = null;
+    _notificationHistoryBox = null;
     _isInitialized = false;
   }
+
+  static String _historyKey(int accountMid, int mid) => '$accountMid:$mid';
+
+  static bool _isValidRule(LiveKeywordRule rule) =>
+      rule.id.trim().isNotEmpty &&
+      rule.mid > 0 &&
+      rule.keyword.trim().isNotEmpty &&
+      rule.matchTargetIndex >= 0 &&
+      rule.matchTargetIndex < MatchTarget.values.length;
+
+  bool _isCurrentPoll(int generation, int accountMid) =>
+      _pollingEnabled &&
+      generation == _pollGeneration &&
+      accountMid > 0 &&
+      currentAccountMid == accountMid;
 }

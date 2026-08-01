@@ -29,6 +29,7 @@ import 'package:pili_plus/pages/hot/view.dart';
 import 'package:pili_plus/pages/later/view.dart';
 import 'package:pili_plus/pages/later_search/view.dart';
 import 'package:pili_plus/pages/live_dm_block/view.dart';
+import 'package:pili_plus/pages/live_alert/live_alert_settings_page.dart';
 import 'package:pili_plus/pages/live_room/view.dart';
 import 'package:pili_plus/pages/login/view.dart';
 import 'package:pili_plus/pages/main/view.dart';
@@ -49,6 +50,8 @@ import 'package:pili_plus/pages/msg_feed_top/reply_me/view.dart';
 import 'package:pili_plus/pages/msg_feed_top/sys_msg/view.dart';
 import 'package:pili_plus/pages/music/view.dart';
 import 'package:pili_plus/pages/my_reply/view.dart';
+import 'package:pili_plus/pages/playlist/playlist_export_page.dart';
+import 'package:pili_plus/pages/playlist/playlist_import_page.dart';
 import 'package:pili_plus/pages/popular_precious/view.dart';
 import 'package:pili_plus/pages/popular_series/view.dart';
 import 'package:pili_plus/pages/search/view.dart';
@@ -67,6 +70,8 @@ import 'package:pili_plus/pages/sponsor_block/view.dart';
 import 'package:pili_plus/pages/subscription/view.dart';
 import 'package:pili_plus/pages/subscription_detail/view.dart';
 import 'package:pili_plus/pages/video/view.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_list_page.dart';
+import 'package:pili_plus/pages/watch_stats/watch_stats_dashboard_page.dart';
 import 'package:pili_plus/pages/webview/view.dart';
 import 'package:pili_plus/pages/web_qr_auth/view.dart';
 import 'package:pili_plus/pages/whisper/view.dart';
@@ -182,6 +187,17 @@ class Routes {
     GetPage(name: '/memberGuard', page: () => const MemberGuard()),
     GetPage(name: '/bubble', page: () => const BubblePage()),
     GetPage(name: '/downloadManager', page: () => const DownloadManagerPage()),
-    GetPage(name: '/danmakuHighlight', page: () => const DanmakuHighlightPage()),
+    GetPage(
+      name: '/danmakuHighlight',
+      page: () => const DanmakuHighlightPage(),
+    ),
+    GetPage(name: '/liveAlerts', page: () => const LiveAlertSettingsPage()),
+    GetPage(name: '/watchStats', page: () => const WatchStatsDashboardPage()),
+    GetPage(
+      name: '/videoBookmarks',
+      page: () => const VideoBookmarkListPage(),
+    ),
+    GetPage(name: '/playlistImport', page: () => const PlaylistImportPage()),
+    GetPage(name: '/playlistExport', page: () => const PlaylistExportPage()),
   ];
 }

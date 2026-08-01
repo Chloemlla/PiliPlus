@@ -247,6 +247,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   }
 
   void setMediaItem(MediaItem newMediaItem) {
+    _currentMediaItem = newMediaItem;
     if (!enableBackgroundPlay) return;
     // if (kDebugMode) {
     //   debugPrint("此时调用栈为：");
@@ -254,7 +255,6 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     //   debugPrint(newMediaItem.title);
     //   debugPrint(StackTrace.current.toString());
     // }
-    _currentMediaItem = newMediaItem;
     _lastPosition = Duration.zero;
     _lastPushedPosition = Duration.zero;
     _lastBuffered = Duration.zero;
@@ -460,7 +460,6 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     String? artist,
     String? cover,
   }) {
-    if (!enableBackgroundPlay) return;
     // if (kDebugMode) {
     //   debugPrint('当前调用栈为：');
     //   debugPrint(StackTrace.current);
@@ -469,6 +468,14 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     if (data == null) return;
 
     Uri getUri(String? cover) => Uri.parse(ImageUtils.safeThumbnailUrl(cover));
+
+    final previousExtras = _currentMediaItem?.extras;
+    final previousBvid = previousExtras?['bvid'] as String?;
+    final previousAuthorMid = (previousExtras?['authorMid'] as num?)?.toInt();
+    Map<String, dynamic> watchMetadata({String? bvid, int? authorMid}) => {
+      if (bvid != null && bvid.isNotEmpty) 'bvid': bvid,
+      if (authorMid != null && authorMid > 0) 'authorMid': authorMid,
+    };
 
     late final id = '$cid$herotag';
     final MediaItem mediaItem;
@@ -484,6 +491,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
             artist: data.owner?.name,
             duration: Duration(seconds: current?.duration ?? 0),
             artUri: getUri(data.pic),
+            extras: watchMetadata(
+              bvid: data.bvid,
+              authorMid: data.owner?.mid,
+            ),
           );
         } else {
           mediaItem = MediaItem(
@@ -492,6 +503,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
             artist: data.owner?.name,
             duration: Duration(seconds: data.duration ?? 0),
             artUri: getUri(data.pic),
+            extras: watchMetadata(
+              bvid: data.bvid,
+              authorMid: data.owner?.mid,
+            ),
           );
         }
       case EpisodeItem():
@@ -504,6 +519,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
               ? Duration(seconds: data.duration ?? 0)
               : Duration(milliseconds: data.duration ?? 0),
           artUri: getUri(data.cover),
+          extras: watchMetadata(bvid: data.bvid),
         );
       case RoomInfoH5Data():
         mediaItem = MediaItem(
@@ -521,6 +537,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
           artist: artist,
           duration: Duration(seconds: data.duration ?? 0),
           artUri: getUri(cover),
+          extras: watchMetadata(
+            bvid: previousBvid,
+            authorMid: previousAuthorMid,
+          ),
         );
       case DetailItem(:final arc):
         mediaItem = MediaItem(
@@ -529,6 +549,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
           artist: data.owner.name,
           duration: Duration(seconds: arc.duration.toInt()),
           artUri: getUri(arc.cover),
+          extras: watchMetadata(authorMid: data.owner.mid.toInt()),
         );
       case BiliDownloadEntryInfo():
         videoActions = true;
@@ -544,19 +565,30 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
           artist: data.ownerName,
           duration: Duration(milliseconds: data.totalTimeMilli),
           artUri: uri,
+          extras: watchMetadata(
+            bvid: data.bvid,
+            authorMid: data.ownerId,
+          ),
         );
       default:
         return;
     }
     // if (kDebugMode) debugPrint("exist: ${PlPlayerController.instanceExists()}");
     if (!_hasPlaybackTarget) return;
-    _item.add(mediaItem);
+    if (enableBackgroundPlay) {
+      _item.add(mediaItem);
+    }
     _lastVideoActions = videoActions;
     setMediaItem(mediaItem);
   }
 
   void onVideoDetailDispose(String herotag) {
-    if (!enableBackgroundPlay) return;
+    if (!enableBackgroundPlay) {
+      if (_currentMediaItem?.id.endsWith(herotag) ?? false) {
+        _currentMediaItem = null;
+      }
+      return;
+    }
 
     if (_item.isNotEmpty) {
       _item.removeWhere((item) => item.id.endsWith(herotag));
@@ -583,9 +615,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   }
 
   void clear() {
+    _currentMediaItem = null;
     if (!enableBackgroundPlay) return;
     if (_useNativeAndroidNotification) {
-      _currentMediaItem = null;
       _lastPosition = Duration.zero;
       _lastPushedPosition = Duration.zero;
       _lastBuffered = Duration.zero;

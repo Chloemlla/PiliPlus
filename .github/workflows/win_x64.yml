@@ -26,6 +26,9 @@ jobs:
           channel: stable
           flutter-version-file: pubspec.yaml
 
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Apply Patch
         shell: pwsh
         run: lib/scripts/patch.ps1 windows
@@ -46,7 +49,7 @@ jobs:
 
       - name: Build Windows
         run: |
-          fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json"
+          fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json,no-pub"
 
       - name: Prepare Upload
         run: |

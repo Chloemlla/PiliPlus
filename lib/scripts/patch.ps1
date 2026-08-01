@@ -2,6 +2,11 @@ param(
     [string]$platform = ""
 )
 
+$RepositoryRootPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
+
+$CanvasDanmakuRef = "697d4516df2fc3ba7417c7ce9aba079d34ba13e5"
+$CanvasDanmakuPatch = Join-Path $PSScriptRoot "canvas_danmaku_stroke_color.patch"
+
 # TODO: remove
 # https://github.com/flutter/flutter/issues/182281
 $NewOverScrollIndicator = "362b1de29974ffc1ed6faa826e1df870d7bec75f";
@@ -84,6 +89,132 @@ $MouseCursorPatch = "lib/scripts/mouse_cursor.patch"
 
 $GeetestIOSPatch = "lib/scripts/geetest_ios.patch"
 
+function Get-PubCacheRootPath {
+    if (-not [string]::IsNullOrWhiteSpace($env:PUB_CACHE)) {
+        return [System.IO.Path]::GetFullPath($env:PUB_CACHE)
+    }
+
+    if ($IsWindows) {
+        $localAppData = [Environment]::GetFolderPath(
+            [Environment+SpecialFolder]::LocalApplicationData
+        )
+        return Join-Path $localAppData "Pub/Cache"
+    }
+
+    $userProfile = [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::UserProfile
+    )
+    return Join-Path $userProfile ".pub-cache"
+}
+
+function Apply-CanvasDanmakuPatch {
+    $packageConfigPath = Join-Path $RepositoryRootPath ".dart_tool/package_config.json"
+    if (-not (Test-Path -LiteralPath $packageConfigPath)) {
+        throw "Missing $packageConfigPath. Run flutter pub get before lib/scripts/patch.ps1."
+    }
+
+    try {
+        $packageConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $packageConfigPath |
+            ConvertFrom-Json
+    }
+    catch {
+        throw "Failed to read Dart package config at $packageConfigPath`: $($_.Exception.Message)"
+    }
+
+    $packageEntries = @(
+        $packageConfig.packages | Where-Object { $_.name -eq "canvas_danmaku" }
+    )
+    if ($packageEntries.Count -ne 1) {
+        throw "Expected exactly one canvas_danmaku entry in $packageConfigPath; found $($packageEntries.Count)."
+    }
+
+    $packageUri = [Uri]$packageEntries[0].rootUri
+    if (-not $packageUri.IsFile) {
+        throw "canvas_danmaku rootUri is not a local file URI: $packageUri"
+    }
+
+    $pubCacheRootPath = Get-PubCacheRootPath
+    $expectedPackagePath = Join-Path (
+        Join-Path $pubCacheRootPath "git"
+    ) "canvas_danmaku-$CanvasDanmakuRef"
+    if (-not (Test-Path -LiteralPath $expectedPackagePath)) {
+        throw "Pinned canvas_danmaku checkout not found at $expectedPackagePath. Run flutter pub get first."
+    }
+
+    $resolvedPackagePath = (Resolve-Path -LiteralPath $packageUri.LocalPath).Path
+    $resolvedExpectedPath = (Resolve-Path -LiteralPath $expectedPackagePath).Path
+    if ($resolvedPackagePath -ne $resolvedExpectedPath) {
+        throw "canvas_danmaku resolved to unexpected checkout $resolvedPackagePath; expected $resolvedExpectedPath."
+    }
+
+    $packageName = Get-Content -Encoding UTF8 -LiteralPath (
+        Join-Path $resolvedPackagePath "pubspec.yaml"
+    ) | Where-Object { $_ -match '^name:\s*canvas_danmaku\s*$' }
+    if (-not $packageName) {
+        throw "Refusing to patch checkout without name: canvas_danmaku at $resolvedPackagePath."
+    }
+
+    $headOutput = @(& git -C $resolvedPackagePath rev-parse HEAD 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to inspect canvas_danmaku checkout at $resolvedPackagePath`: $($headOutput -join [Environment]::NewLine)"
+    }
+    $head = ($headOutput | Select-Object -Last 1).Trim()
+    if ($head -ne $CanvasDanmakuRef) {
+        throw "canvas_danmaku HEAD is $head; expected pinned ref $CanvasDanmakuRef."
+    }
+
+    if (-not (Test-Path -LiteralPath $CanvasDanmakuPatch)) {
+        throw "canvas_danmaku patch file not found: $CanvasDanmakuPatch"
+    }
+
+    $statusOutput = @(
+        & git -C $resolvedPackagePath status --porcelain=v1 --untracked-files=all 2>&1
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to inspect canvas_danmaku worktree state: $($statusOutput -join [Environment]::NewLine)"
+    }
+
+    $applyCheckOutput = @(
+        & git -C $resolvedPackagePath apply --check -- $CanvasDanmakuPatch 2>&1
+    )
+    if ($LASTEXITCODE -eq 0) {
+        if ($statusOutput.Count -ne 0) {
+            throw "Refusing to patch a dirty canvas_danmaku checkout: $($statusOutput -join [Environment]::NewLine)"
+        }
+        $applyOutput = @(
+            & git -C $resolvedPackagePath apply --whitespace=nowarn -- $CanvasDanmakuPatch 2>&1
+        )
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to apply $CanvasDanmakuPatch`: $($applyOutput -join [Environment]::NewLine)"
+        }
+        Write-Host "$CanvasDanmakuPatch applied to canvas_danmaku@$CanvasDanmakuRef"
+        return
+    }
+
+    $reverseCheckOutput = @(
+        & git -C $resolvedPackagePath apply --reverse --check -- $CanvasDanmakuPatch 2>&1
+    )
+    if ($LASTEXITCODE -eq 0) {
+        $expectedStatus = @(
+            " M lib/models/danmaku_content_item.dart",
+            " M lib/utils/utils.dart"
+        )
+        if (@(Compare-Object $expectedStatus $statusOutput).Count -ne 0) {
+            throw "canvas_danmaku contains changes beyond the expected patch: $($statusOutput -join [Environment]::NewLine)"
+        }
+        Write-Host "$CanvasDanmakuPatch already applied to canvas_danmaku@$CanvasDanmakuRef"
+        return
+    }
+
+    throw @"
+$CanvasDanmakuPatch neither applies cleanly nor appears already applied.
+Apply check:
+$($applyCheckOutput -join [Environment]::NewLine)
+Reverse check:
+$($reverseCheckOutput -join [Environment]::NewLine)
+"@
+}
+
 function Remove-AndroidManifestPackageAttribute {
     param(
         [Parameter(Mandatory=$true)]
@@ -106,13 +237,7 @@ function Remove-AndroidManifestPackageAttribute {
 }
 
 function Remove-PubCacheAndroidManifestPackageAttributes {
-    if (-not [string]::IsNullOrWhiteSpace($env:PUB_CACHE)) {
-        $pubCachePath = $env:PUB_CACHE
-    }
-    else {
-        $pubCachePath = Join-Path $HOME ".pub-cache"
-    }
-
+    $pubCachePath = Get-PubCacheRootPath
     $hostedPath = Join-Path $pubCachePath "hosted"
     if (-not (Test-Path -LiteralPath $hostedPath)) {
         Write-Host "Pub cache hosted directory not found: $hostedPath"
@@ -132,6 +257,8 @@ function Remove-PubCacheAndroidManifestPackageAttributes {
 
     Write-Host "Removed AndroidManifest package attributes from $patchedCount pub-cache package(s)."
 }
+
+Apply-CanvasDanmakuPatch
 
 if ($platform.ToLower() -eq "ios") {
     git apply $BottomSheetIOSPiliPlusPatch
@@ -153,11 +280,8 @@ if ([string]::IsNullOrWhiteSpace($env:FLUTTER_ROOT)) {
 }
 
 $FlutterRootPath = Resolve-Path -LiteralPath $env:FLUTTER_ROOT
-if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE)) {
-    $WorkspacePath = Resolve-Path -LiteralPath $env:GITHUB_WORKSPACE
-    if ($FlutterRootPath.Path -eq $WorkspacePath.Path) {
-        throw "FLUTTER_ROOT points at GITHUB_WORKSPACE; refusing to reset the project repository."
-    }
+if ($FlutterRootPath.Path -eq $RepositoryRootPath) {
+    throw "FLUTTER_ROOT points at the project repository; refusing to reset it."
 }
 
 Set-Location $FlutterRootPath
@@ -216,7 +340,7 @@ foreach ($revert in $reverts) {
 }
 
 foreach ($patch in $patches) {
-    git apply "$env:GITHUB_WORKSPACE/$patch"
+    git apply (Join-Path $RepositoryRootPath $patch)
     if ($LASTEXITCODE -eq 0) {
         Write-Host "$patch applied"
     }

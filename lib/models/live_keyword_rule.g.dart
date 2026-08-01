@@ -25,13 +25,14 @@ class LiveKeywordRuleAdapter extends TypeAdapter<LiveKeywordRule> {
       enabled: fields[5] as bool,
       createdAt: fields[6] as int,
       lastNotifiedAt: fields[7] as int? ?? 0,
+      accountMid: fields[8] as int? ?? 0,
     );
   }
 
   @override
   void write(BinaryWriter writer, LiveKeywordRule obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class LiveKeywordRuleAdapter extends TypeAdapter<LiveKeywordRule> {
       ..writeByte(6)
       ..write(obj.createdAt)
       ..writeByte(7)
-      ..write(obj.lastNotifiedAt);
+      ..write(obj.lastNotifiedAt)
+      ..writeByte(8)
+      ..write(obj.accountMid);
   }
 
   @override

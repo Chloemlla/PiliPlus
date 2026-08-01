@@ -120,10 +120,15 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
         if (keysJson == null) return false;
         final decoded = jsonDecode(keysJson);
         if (decoded is! List) return false;
+        final encodedKeys = decoded.whereType<String>().toList(growable: false);
+        if (encodedKeys.length != decoded.length) return false;
+        for (final key in encodedKeys) {
+          _decodeKey(key);
+        }
         _cache.clear();
         _pendingEncodedKeys
           ..clear()
-          ..addAll(decoded.whereType<String>());
+          ..addAll(encodedKeys);
         _resetNextAutoKey();
         return true;
       }
@@ -157,10 +162,9 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     if (encoded == null) return false;
 
     final previous = _store.exportBox(name);
+    if (previous == null) return false;
     if (!_store.replaceBox(name, jsonEncode(encoded))) {
-      if (previous == null || !_store.replaceBox(name, previous)) {
-        return false;
-      }
+      _restoreSnapshot(previous);
       return false;
     }
 
@@ -300,9 +304,20 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     }
 
     final snapshot = _store.exportBox(name);
+    if (snapshot == null) {
+      return Future.error(
+        StateError('MMKV putAll snapshot failed for $name'),
+      );
+    }
     if (!_store.putAllRaw(name, encoded)) {
-      _restoreSnapshot(snapshot);
-      return Future.error(StateError('MMKV putAll failed for $name'));
+      final restored = _restoreSnapshot(snapshot);
+      return Future.error(
+        StateError(
+          restored
+              ? 'MMKV putAll failed for $name'
+              : 'MMKV putAll failed and rollback could not be verified for $name',
+        ),
+      );
     }
 
     for (final key in encoded.keys) {
@@ -367,9 +382,20 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     if (encodedKeys.isEmpty) return Future.value();
 
     final snapshot = _store.exportBox(name);
+    if (snapshot == null) {
+      return Future.error(
+        StateError('MMKV deleteAll snapshot failed for $name'),
+      );
+    }
     if (!_store.removeAllRaw(name, encodedKeys)) {
-      _restoreSnapshot(snapshot);
-      return Future.error(StateError('MMKV deleteAll failed for $name'));
+      final restored = _restoreSnapshot(snapshot);
+      return Future.error(
+        StateError(
+          restored
+              ? 'MMKV deleteAll failed for $name'
+              : 'MMKV deleteAll failed and rollback could not be verified for $name',
+        ),
+      );
     }
 
     for (final MapEntry(:key, :value) in deleted) {
@@ -460,16 +486,19 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     }
     final raw = _store.getRaw(name, encodedKey);
     if (raw == null) {
-      _pendingEncodedKeys.remove(encodedKey);
-      return false;
+      throw StateError(
+        'MMKV value for $name.$key is missing after its key was exported',
+      );
     }
     try {
       final value = _decodeEntry(raw, _valueDecoder);
       _cache[key] = value;
       _pendingEncodedKeys.remove(encodedKey);
       return true;
-    } catch (_) {
-      return false;
+    } catch (error) {
+      throw StateError(
+        'MMKV value for $name.$key cannot be decoded: $error',
+      );
     }
   }
 
@@ -482,12 +511,16 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
         try {
           final decoded = jsonDecode(json);
           if (decoded is Map) {
-            for (final MapEntry(:key, :value) in decoded.entries) {
-              if (key is! String || value is! String) continue;
-              final logical = _decodeKey(key);
-              if (_cache.containsKey(logical)) continue;
-              _cache[logical] = _decodeEntry(value, _valueDecoder);
+            final materialized = <dynamic, E>{};
+            for (final encoded in _pendingEncodedKeys) {
+              final value = decoded[encoded];
+              if (value is! String) {
+                throw StateError('Missing MMKV value for $name.$encoded');
+              }
+              final logical = _decodeKey(encoded);
+              materialized[logical] = _decodeEntry(value, _valueDecoder);
             }
+            _cache.addAll(materialized);
             _pendingEncodedKeys.clear();
             return;
           }
@@ -506,10 +539,14 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
     }
   }
 
-  void _restoreSnapshot(String? snapshot) {
-    if (snapshot != null) {
-      _store.replaceBox(name, snapshot);
+  bool _restoreSnapshot(String snapshot) {
+    final current = _store.exportBox(name);
+    if (current != null && _sameEncodedBoxSnapshot(current, snapshot)) {
+      return true;
     }
+    if (!_store.replaceBox(name, snapshot)) return false;
+    final restored = _store.exportBox(name);
+    return restored != null && _sameEncodedBoxSnapshot(restored, snapshot);
   }
 
   void _checkOpen() {
@@ -776,6 +813,24 @@ Set<dynamic> _decodeSet(Map<dynamic, dynamic> value) {
     return decoded.cast<bool>().toSet();
   }
   return decoded.toSet();
+}
+
+bool _sameEncodedBoxSnapshot(String left, String right) {
+  try {
+    final leftMap = jsonDecode(left);
+    final rightMap = jsonDecode(right);
+    if (leftMap is! Map ||
+        rightMap is! Map ||
+        leftMap.length != rightMap.length) {
+      return false;
+    }
+    for (final MapEntry(:key, :value) in leftMap.entries) {
+      if (!rightMap.containsKey(key) || rightMap[key] != value) return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 abstract final class _AndroidMmkvBindings {

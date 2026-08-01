@@ -26,6 +26,9 @@ jobs:
           channel: stable
           flutter-version-file: pubspec.yaml
 
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
       - name: Set and Extract version
         shell: pwsh
         run: lib/scripts/build.ps1
@@ -35,7 +38,7 @@ jobs:
         run: lib/scripts/patch.ps1 macOS
 
       - name: Build Mac
-        run: flutter build macos --release --dart-define-from-file=pili_release.json
+        run: flutter build macos --release --no-pub --dart-define-from-file=pili_release.json
 
       - name: Prepare Upload
         run: |

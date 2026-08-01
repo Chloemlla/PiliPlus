@@ -34,6 +34,9 @@ class LiveKeywordRule extends HiveObject {
   @HiveField(7)
   final int lastNotifiedAt;
 
+  @HiveField(8)
+  final int accountMid;
+
   LiveKeywordRule({
     required this.id,
     required this.mid,
@@ -43,9 +46,13 @@ class LiveKeywordRule extends HiveObject {
     required this.enabled,
     required this.createdAt,
     this.lastNotifiedAt = 0,
+    this.accountMid = 0,
   });
 
-  MatchTarget get matchTarget => MatchTarget.values[matchTargetIndex];
+  MatchTarget get matchTarget =>
+      matchTargetIndex >= 0 && matchTargetIndex < MatchTarget.values.length
+      ? MatchTarget.values[matchTargetIndex]
+      : MatchTarget.titleOnly;
 
   LiveKeywordRule copyWith({
     String? id,
@@ -56,6 +63,7 @@ class LiveKeywordRule extends HiveObject {
     bool? enabled,
     int? createdAt,
     int? lastNotifiedAt,
+    int? accountMid,
   }) {
     return LiveKeywordRule(
       id: id ?? this.id,
@@ -66,6 +74,7 @@ class LiveKeywordRule extends HiveObject {
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       lastNotifiedAt: lastNotifiedAt ?? this.lastNotifiedAt,
+      accountMid: accountMid ?? this.accountMid,
     );
   }
 
@@ -76,7 +85,8 @@ class LiveKeywordRule extends HiveObject {
   }) {
     if (!enabled) return false;
 
-    final keywordLower = keyword.toLowerCase();
+    final keywordLower = keyword.trim().toLowerCase();
+    if (keywordLower.isEmpty) return false;
 
     switch (matchTarget) {
       case MatchTarget.titleOnly:
@@ -98,19 +108,32 @@ class LiveKeywordRule extends HiveObject {
     'enabled': enabled,
     'createdAt': createdAt,
     'lastNotifiedAt': lastNotifiedAt,
+    'accountMid': accountMid,
   };
 
   factory LiveKeywordRule.fromJson(Map<String, dynamic> json) {
+    final matchTargetIndex = MatchTarget.values.indexWhere(
+      (item) => item.name == json['matchTarget'],
+    );
     return LiveKeywordRule(
-      id: json['id'] as String,
-      mid: json['mid'] as int,
-      upName: json['upName'] as String,
-      keyword: json['keyword'] as String,
-      matchTargetIndex: MatchTarget.values
-          .indexWhere((e) => e.name == json['matchTarget']),
-      enabled: json['enabled'] as bool,
-      createdAt: json['createdAt'] as int,
-      lastNotifiedAt: json['lastNotifiedAt'] as int? ?? 0,
+      id: json['id']?.toString() ?? '',
+      mid: _readInt(json['mid']),
+      upName: json['upName']?.toString() ?? '',
+      keyword: json['keyword']?.toString() ?? '',
+      matchTargetIndex: matchTargetIndex < 0
+          ? MatchTarget.titleOnly.index
+          : matchTargetIndex,
+      enabled: json['enabled'] is bool ? json['enabled'] as bool : true,
+      createdAt: _readInt(json['createdAt']),
+      lastNotifiedAt: _readInt(json['lastNotifiedAt']),
+      accountMid: _readInt(json['accountMid']),
     );
   }
+
+  static int _readInt(Object? value) => switch (value) {
+    int number => number,
+    num number => number.toInt(),
+    String text => int.tryParse(text) ?? 0,
+    _ => 0,
+  };
 }

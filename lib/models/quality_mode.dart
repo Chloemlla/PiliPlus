@@ -1,112 +1,122 @@
-/// Video quality modes for smart recommendation
+/// Video quality modes for smart recommendation.
 enum QualityMode {
-  /// Always prefer the highest available quality
+  /// Always prefer the highest available quality.
   qualityFirst,
 
-  /// Prefer lower resolution with higher frame rate
+  /// Prefer a stable high-frame-rate stream without maximizing resolution.
   smoothFirst,
 
-  /// Prefer lowest stable resolution to save battery
+  /// Prefer the lowest stable resolution to reduce power consumption.
   batterySaver,
 
-  /// Smart recommendation based on network and battery
+  /// Recommend a quality from the current network and battery conditions.
   auto,
 }
 
 extension QualityModeExtension on QualityMode {
-  String get label {
-    switch (this) {
-      case QualityMode.qualityFirst:
-        return '画质优先';
-      case QualityMode.smoothFirst:
-        return '流畅优先';
-      case QualityMode.batterySaver:
-        return '省电模式';
-      case QualityMode.auto:
-        return '自动';
-    }
-  }
+  String get label => switch (this) {
+    QualityMode.qualityFirst => '画质优先',
+    QualityMode.smoothFirst => '流畅优先',
+    QualityMode.batterySaver => '省电模式',
+    QualityMode.auto => '自动',
+  };
 
-  String get description {
-    switch (this) {
-      case QualityMode.qualityFirst:
-        return '始终使用最高画质';
-      case QualityMode.smoothFirst:
-        return '优先保证流畅度';
-      case QualityMode.batterySaver:
-        return '降低画质以节省电量';
-      case QualityMode.auto:
-        return '根据网络和电量智能推荐';
-    }
-  }
+  String get description => switch (this) {
+    QualityMode.qualityFirst => '始终使用当前可用的最高画质',
+    QualityMode.smoothFirst => '优先选择稳定的高帧率画质',
+    QualityMode.batterySaver => '降低分辨率以减少解码功耗',
+    QualityMode.auto => '根据实测网速和电量智能推荐',
+  };
+
+  /// Stable value used by persistent storage.
+  String get storageValue => name;
 }
 
-/// Bilibili quality codes mapping
-class VideoQualityCode {
+/// Backwards-compatible decoding for the persisted quality mode.
+abstract final class QualityModeCodec {
+  static QualityMode decode(Object? value) {
+    if (value is String) {
+      final normalized = value.trim();
+      for (final mode in QualityMode.values) {
+        if (mode.name == normalized || mode.label == normalized) {
+          return mode;
+        }
+      }
+      final legacyIndex = int.tryParse(normalized);
+      if (legacyIndex != null) {
+        return _fromLegacyIndex(legacyIndex);
+      }
+    } else if (value is num && value.isFinite) {
+      return _fromLegacyIndex(value.toInt());
+    }
+    return QualityMode.auto;
+  }
+
+  static QualityMode _fromLegacyIndex(int index) =>
+      index >= 0 && index < QualityMode.values.length
+      ? QualityMode.values[index]
+      : QualityMode.auto;
+}
+
+/// Bilibili on-demand quality codes used by the player API.
+///
+/// These values intentionally match `VideoQuality` in
+/// `models/common/video/video_quality.dart`. In particular, 80 is 1080P and
+/// 64 is 720P; treating them as 720P and 480P selects the wrong DASH stream.
+abstract final class VideoQualityCode {
+  static const int kHdrVivid = 129;
+  static const int k8k = 127;
+  static const int kDolbyVision = 126;
+  static const int kHdr = 125;
   static const int k4k = 120;
   static const int k1080p60 = 116;
-  static const int k1080p = 112;
-  static const int k720p = 80;
+  static const int k1080pPlus = 112;
+  static const int k1080p = 80;
   static const int k720p60 = 74;
-  static const int k480p = 64;
-  static const int k360p = 32;
-  static const int k240p = 16;
+  static const int k720p = 64;
+  static const int k480p = 32;
+  static const int k360p = 16;
+  static const int k240p = 6;
   static const int kAuto = 0;
 
-  /// Get label for quality code
-  static String getLabel(int code) {
-    switch (code) {
-      case k4k:
-        return '4K';
-      case k1080p60:
-        return '1080P60';
-      case k1080p:
-        return '1080P';
-      case k720p:
-        return '720P';
-      case k720p60:
-        return '720P60';
-      case k480p:
-        return '480P';
-      case k360p:
-        return '360P';
-      case k240p:
-        return '240P';
-      case kAuto:
-        return '自动';
-      default:
-        return '未知';
-    }
-  }
+  static String getLabel(int code) => switch (code) {
+    kHdrVivid => 'HDR Vivid',
+    k8k => '8K',
+    kDolbyVision => '杜比',
+    kHdr => 'HDR',
+    k4k => '4K',
+    k1080p60 => '1080P60',
+    k1080pPlus => '1080P+',
+    k1080p => '1080P',
+    k720p60 => '720P60',
+    k720p => '720P',
+    k480p => '480P',
+    k360p => '360P',
+    k240p => '240P',
+    kAuto => '自动',
+    _ => '未知',
+  };
 
-  /// Get quality code from label
-  static int? fromLabel(String label) {
-    switch (label) {
-      case '4K':
-        return k4k;
-      case '1080P60':
-        return k1080p60;
-      case '1080P':
-        return k1080p;
-      case '720P':
-        return k720p;
-      case '720P60':
-        return k720p60;
-      case '480P':
-        return k480p;
-      case '360P':
-        return k360p;
-      case '240P':
-        return k240p;
-      case '自动':
-        return kAuto;
-      default:
-        return null;
-    }
-  }
+  static int? fromLabel(String label) => switch (label) {
+    'HDR Vivid' => kHdrVivid,
+    '8K' => k8k,
+    '杜比' || '杜比视界' => kDolbyVision,
+    'HDR' => kHdr,
+    '4K' => k4k,
+    '1080P60' => k1080p60,
+    '1080P+' => k1080pPlus,
+    '1080P' => k1080p,
+    '720P60' => k720p60,
+    '720P' => k720p,
+    '480P' => k480p,
+    '360P' => k360p,
+    '240P' => k240p,
+    '自动' => kAuto,
+    _ => null,
+  };
 }
 
-/// Network type for quality recommendation
+/// Coarse network type used when a CDN speed probe is unavailable.
 enum NetworkType {
   wifi,
   cellular5g,
@@ -117,76 +127,60 @@ enum NetworkType {
 }
 
 extension NetworkTypeExtension on NetworkType {
-  String get label {
-    switch (this) {
-      case NetworkType.wifi:
-        return 'WiFi';
-      case NetworkType.cellular5g:
-        return '5G';
-      case NetworkType.cellular4g:
-        return '4G';
-      case NetworkType.cellular3g:
-        return '3G';
-      case NetworkType.cellular2g:
-        return '2G';
-      case NetworkType.none:
-        return '无网络';
-    }
-  }
+  String get label => switch (this) {
+    NetworkType.wifi => 'WiFi',
+    NetworkType.cellular5g => '5G',
+    NetworkType.cellular4g => '4G',
+    NetworkType.cellular3g => '3G',
+    NetworkType.cellular2g => '2G',
+    NetworkType.none => '无网络',
+  };
 
-  /// Get recommended quality tier (0-5, higher = better quality)
-  int get qualityTier {
-    switch (this) {
-      case NetworkType.wifi:
-        return 5;
-      case NetworkType.cellular5g:
-        return 4;
-      case NetworkType.cellular4g:
-        return 3;
-      case NetworkType.cellular3g:
-        return 2;
-      case NetworkType.cellular2g:
-      case NetworkType.none:
-        return 0;
-    }
-  }
+  int get qualityTier => switch (this) {
+    NetworkType.wifi => 5,
+    NetworkType.cellular5g => 4,
+    NetworkType.cellular4g => 3,
+    NetworkType.cellular3g => 2,
+    NetworkType.cellular2g || NetworkType.none => 0,
+  };
 }
 
-/// Quality recommendation result
+/// Result produced by the quality recommendation engine.
 class QualityRecommendation {
-  final int qualityCode;
-  final String qualityLabel;
-  final String? reason;
-  final bool isAuto;
-
-  QualityRecommendation({
+  const QualityRecommendation({
+    required this.mode,
     required this.qualityCode,
     required this.qualityLabel,
     this.reason,
-    this.isAuto = false,
   });
 
   factory QualityRecommendation.auto({
     required int qualityCode,
     required String qualityLabel,
     String? reason,
-  }) {
-    return QualityRecommendation(
-      qualityCode: qualityCode,
-      qualityLabel: qualityLabel,
-      reason: reason,
-      isAuto: true,
-    );
-  }
+  }) => QualityRecommendation(
+    mode: QualityMode.auto,
+    qualityCode: qualityCode,
+    qualityLabel: qualityLabel,
+    reason: reason,
+  );
 
   factory QualityRecommendation.manual({
     required int qualityCode,
     required String qualityLabel,
-  }) {
-    return QualityRecommendation(
-      qualityCode: qualityCode,
-      qualityLabel: qualityLabel,
-      isAuto: false,
-    );
-  }
+    QualityMode mode = QualityMode.qualityFirst,
+    String? reason,
+  }) => QualityRecommendation(
+    mode: mode,
+    qualityCode: qualityCode,
+    qualityLabel: qualityLabel,
+    reason: reason,
+  );
+
+  final QualityMode mode;
+  final int qualityCode;
+  final String qualityLabel;
+  final String? reason;
+
+  bool get isAuto => mode == QualityMode.auto;
 }

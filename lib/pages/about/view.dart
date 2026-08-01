@@ -10,6 +10,7 @@ import 'package:pili_plus/common/widgets/dialog/export_import.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/services/app_data_reset_service.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
 import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
 import 'package:pili_plus/services/whats_new_guide_service.dart';
@@ -313,7 +314,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
                     DialogOption(
                       onPressed: () async {
                         Get.back();
-                        await GStorage.clear();
+                        await AppDataResetService.clearAll();
                         SmartDialog.showToast('重置成功');
                       },
                       child: const Text('重置所有数据（含登录信息）', style: style),

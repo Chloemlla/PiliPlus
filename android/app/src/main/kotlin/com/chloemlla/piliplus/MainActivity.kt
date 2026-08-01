@@ -18,6 +18,7 @@ class MainActivity : AudioServiceActivity() {
     private var nativeCrashChannel: NativeCrashChannel? = null
     private var sealDownloadChannel: SealDownloadChannel? = null
     private var clashCompatChannel: ClashCompatChannel? = null
+    private var pipChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -34,6 +35,10 @@ class MainActivity : AudioServiceActivity() {
         clashCompatChannel = ClashCompatChannel(
             applicationContext,
             flutterEngine.dartExecutor.binaryMessenger,
+        )
+        pipChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "pili_plus/pip",
         )
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -59,6 +64,7 @@ class MainActivity : AudioServiceActivity() {
         sealDownloadChannel = null
         clashCompatChannel?.dispose()
         clashCompatChannel = null
+        pipChannel = null
         NativeMediaService.detachFlutterEngine()
         super.cleanUpFlutterEngine(flutterEngine)
     }
@@ -80,6 +86,10 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onDestroy() {
+        if (AndroidHelper.isPipMode) {
+            AndroidHelper.isPipMode = false
+            pipChannel?.invokeMethod("modeChanged", false)
+        }
         stopService(Intent(this, com.ryanheise.audioservice.AudioService::class.java))
         stopService(Intent(this, NativeMediaService::class.java))
         super.onDestroy()
@@ -108,6 +118,7 @@ class MainActivity : AudioServiceActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration?) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         AndroidHelper.isPipMode = isInPictureInPictureMode
+        pipChannel?.invokeMethod("modeChanged", isInPictureInPictureMode)
     }
 
     private fun confirmDeviceCredential(

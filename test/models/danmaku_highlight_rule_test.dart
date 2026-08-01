@@ -175,13 +175,13 @@ void main() {
       expect(danmakuQuickRules[0].color, HighlightColor.yellow);
 
       expect(danmakuQuickRules[1].keyword, '谢谢');
-      expect(danmakuQuickRules[1].color, HighlightColor.green);
+      expect(danmakuQuickRules[1].color, HighlightColor.yellow);
 
       expect(danmakuQuickRules[2].keyword, '厉害');
-      expect(danmakuQuickRules[2].color, HighlightColor.orange);
+      expect(danmakuQuickRules[2].color, HighlightColor.yellow);
 
       expect(danmakuQuickRules[3].keyword, '注意');
-      expect(danmakuQuickRules[3].color, HighlightColor.red);
+      expect(danmakuQuickRules[3].color, HighlightColor.yellow);
     });
   });
 }

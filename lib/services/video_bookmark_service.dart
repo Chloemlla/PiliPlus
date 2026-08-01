@@ -1,34 +1,60 @@
 import 'dart:convert';
-import 'package:pili_plus/models/video_bookmark.dart';
-import 'package:pili_plus/utils/storage.dart';
+
 import 'package:hive_ce/hive.dart';
+import 'package:pili_plus/models/video_bookmark.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:uuid/v4.dart';
 
 class VideoBookmarkService {
   static const String boxName = 'videoBookmarks';
+  static const int exportVersion = 1;
+  static const String exportApp = 'PiliPlus';
   static const int maxBookmarksPerVideo = 200;
-  static const String _bookmarkIdKey = 'bookmarkIdCounter';
+  static const int maxImportEntries = 10000;
+  static const int maxImportJsonBytes = 8 * 1024 * 1024;
 
   static Box<VideoBookmark>? _box;
+  static Object? _lastInitializationError;
 
-  static Future<void> init() async {
-    if (!Hive.isAdapterRegistered(100)) {
-      Hive.registerAdapter(VideoBookmarkAdapter());
+  static bool get isInitialized => _box?.isOpen == true;
+
+  static Object? get lastInitializationError => _lastInitializationError;
+
+  /// Opens bookmark storage without making a feature failure fatal to startup.
+  static Future<bool> init() async {
+    if (_box?.isOpen == true) {
+      return true;
     }
-    _box = await Hive.openBox<VideoBookmark>(boxName);
+    try {
+      if (!Hive.isAdapterRegistered(100)) {
+        Hive.registerAdapter(VideoBookmarkAdapter());
+      }
+      _box = await Hive.openBox<VideoBookmark>(boxName);
+      _lastInitializationError = null;
+      return true;
+    } catch (error) {
+      _box = null;
+      _lastInitializationError = error;
+      return false;
+    }
   }
 
   static Box<VideoBookmark> get box {
     if (_box == null || !_box!.isOpen) {
-      throw StateError('VideoBookmarkService not initialized. Call init() first.');
+      throw StateError(
+        'VideoBookmarkService is unavailable: '
+        '${_lastInitializationError ?? 'call init() first'}',
+      );
     }
     return _box!;
   }
 
-  /// Generate unique bookmark ID
   static String _generateId() {
-    final counter = box.get(_bookmarkIdKey, defaultValue: 0) as int;
-    box.put(_bookmarkIdKey, counter + 1);
-    return 'bm_${DateTime.now().millisecondsSinceEpoch}_$counter';
+    late String id;
+    do {
+      id = 'bm_${const UuidV4().generate()}';
+    } while (box.containsKey(id));
+    return id;
   }
 
   /// Get all bookmarks for a specific video
@@ -56,22 +82,36 @@ class VideoBookmarkService {
     String? name,
     String? note,
   }) async {
-    if (!canAddBookmark(bvid)) {
+    final normalizedBvid = bvid.trim();
+    final normalizedVideoTitle = videoTitle.trim();
+    _validateNewBookmarkMetadata(
+      bvid: normalizedBvid,
+      videoTitle: normalizedVideoTitle,
+      authorMid: authorMid,
+    );
+    if (!canAddBookmark(normalizedBvid)) {
       return null;
     }
 
+    final safeTimestamp = timestampSeconds < 0 ? 0 : timestampSeconds;
+    final trimmedName = name?.trim();
+    final trimmedNote = note?.trim();
     final now = DateTime.now();
-    final defaultName = name ?? '标记 @ ${_formatTimestamp(timestampSeconds)}';
+    final bookmarkName = trimmedName == null || trimmedName.isEmpty
+        ? '标记 @ ${VideoBookmark.formatTimestamp(safeTimestamp)}'
+        : trimmedName;
 
-    final bookmark = VideoBookmark(
-      id: _generateId(),
-      bvid: bvid,
-      videoTitle: videoTitle,
-      authorMid: authorMid,
-      timestampSeconds: timestampSeconds,
-      name: defaultName,
-      note: note,
-      createdAt: now,
+    final bookmark = _normalizeBookmark(
+      VideoBookmark(
+        id: _generateId(),
+        bvid: normalizedBvid,
+        videoTitle: normalizedVideoTitle,
+        authorMid: authorMid,
+        timestampSeconds: safeTimestamp,
+        name: bookmarkName,
+        note: trimmedNote == null || trimmedNote.isEmpty ? null : trimmedNote,
+        createdAt: now,
+      ),
     );
 
     await box.put(bookmark.id, bookmark);
@@ -80,7 +120,16 @@ class VideoBookmarkService {
 
   /// Update a bookmark's name or note
   static Future<void> updateBookmark(VideoBookmark bookmark) async {
-    await box.put(bookmark.id, bookmark);
+    final existing = box.get(bookmark.id);
+    if (existing == null) {
+      throw StateError('Bookmark ${bookmark.id} does not exist.');
+    }
+    await box.put(
+      existing.id,
+      _normalizeBookmark(
+        existing.copyWithDetails(name: bookmark.name, note: bookmark.note),
+      ),
+    );
   }
 
   /// Delete a bookmark by ID
@@ -105,12 +154,10 @@ class VideoBookmarkService {
 
   /// Search bookmarks by name or note
   static List<VideoBookmark> searchBookmarks(String query) {
-    final lowerQuery = query.toLowerCase();
-    return box.values.where((b) {
-      return b.name.toLowerCase().contains(lowerQuery) ||
-          (b.note?.toLowerCase().contains(lowerQuery) ?? false);
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return getBookmarksSorted(
+      sortType: SortType.mostRecent,
+      searchQuery: query,
+    );
   }
 
   /// Get bookmarks grouped by video
@@ -129,8 +176,8 @@ class VideoBookmarkService {
   static String exportAllBookmarks() {
     final bookmarks = getAllBookmarks();
     return jsonEncode({
-      'version': 1,
-      'app': 'PiliPlus',
+      'version': exportVersion,
+      'app': exportApp,
       'exportedAt': DateTime.now().toIso8601String(),
       'count': bookmarks.length,
       'bookmarks': bookmarks.map((b) => b.toJson()).toList(),
@@ -139,20 +186,121 @@ class VideoBookmarkService {
 
   /// Import bookmarks from JSON
   static Future<int> importBookmarks(String jsonString) async {
-    final data = jsonDecode(jsonString) as Map<String, dynamic>;
-    final bookmarks = (data['bookmarks'] as List)
-        .map((j) => VideoBookmark.fromJson(j as Map<String, dynamic>))
-        .toList();
+    if (utf8.encode(jsonString).length > maxImportJsonBytes) {
+      throw const FormatException('Bookmark export exceeds 8 MiB.');
+    }
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(jsonString);
+    } on FormatException catch (error) {
+      throw FormatException('Bookmark JSON is invalid: ${error.message}');
+    }
+    if (decoded is! Map) {
+      throw const FormatException('Bookmark export must be a JSON object.');
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (data['version'] != exportVersion) {
+      throw FormatException(
+        'Unsupported bookmark export version: ${data['version']}',
+      );
+    }
+    if (data['app'] != exportApp) {
+      throw const FormatException('Bookmark export source is invalid.');
+    }
+    final exportedAt = data['exportedAt'];
+    if (exportedAt is! String || DateTime.tryParse(exportedAt) == null) {
+      throw const FormatException('Bookmark export time is invalid.');
+    }
+    final rawBookmarks = data['bookmarks'];
+    if (rawBookmarks is! List) {
+      throw const FormatException('Bookmark export is missing bookmarks.');
+    }
+    if (rawBookmarks.length > maxImportEntries) {
+      throw const FormatException(
+        'Bookmark export contains more than 10000 entries.',
+      );
+    }
+    final declaredCount = data['count'];
+    if (declaredCount is! int || declaredCount != rawBookmarks.length) {
+      throw FormatException(
+        'Bookmark count mismatch: declared $declaredCount, '
+        'actual ${rawBookmarks.length}.',
+      );
+    }
 
-    int importedCount = 0;
-    for (final bookmark in bookmarks) {
-      // Skip duplicates by ID
-      if (!box.containsKey(bookmark.id)) {
-        await box.put(bookmark.id, bookmark);
-        importedCount++;
+    final countsByBvid = <String, int>{};
+    for (final bookmark in box.values) {
+      countsByBvid.update(
+        bookmark.bvid,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
+
+    final pending = <String, VideoBookmark>{};
+    for (final (index, rawBookmark) in rawBookmarks.indexed) {
+      if (rawBookmark is! Map) {
+        throw FormatException('Bookmark entry ${index + 1} must be an object.');
+      }
+      final VideoBookmark bookmark;
+      try {
+        bookmark = _normalizeBookmark(
+          VideoBookmark.fromJson(Map<String, dynamic>.from(rawBookmark)),
+        );
+      } on FormatException catch (error) {
+        throw FormatException(
+          'Bookmark entry ${index + 1} is invalid: ${error.message}',
+        );
+      } catch (_) {
+        throw FormatException('Bookmark entry ${index + 1} is invalid.');
+      }
+      if (!_isValidBvid(bookmark.bvid)) {
+        throw FormatException(
+          'Bookmark entry ${index + 1} has an invalid bvid.',
+        );
+      }
+      if (box.containsKey(bookmark.id) || pending.containsKey(bookmark.id)) {
+        continue;
+      }
+
+      final count = countsByBvid[bookmark.bvid] ?? 0;
+      if (count < maxBookmarksPerVideo) {
+        pending[bookmark.id] = bookmark;
+        countsByBvid[bookmark.bvid] = count + 1;
       }
     }
-    return importedCount;
+
+    if (pending.isNotEmpty) {
+      await box.putAll(pending);
+    }
+    return pending.length;
+  }
+
+  static void _validateNewBookmarkMetadata({
+    required String bvid,
+    required String videoTitle,
+    required int? authorMid,
+  }) {
+    if (bvid.length > VideoBookmark.maxBvidLength || !_isValidBvid(bvid)) {
+      throw const FormatException('bvid is invalid.');
+    }
+    if (videoTitle.isEmpty ||
+        videoTitle.length > VideoBookmark.maxVideoTitleLength) {
+      throw const FormatException('videoTitle is invalid.');
+    }
+    if (authorMid != null && authorMid <= 0) {
+      throw const FormatException('authorMid must be a positive integer.');
+    }
+  }
+
+  static bool _isValidBvid(String bvid) {
+    if (!IdUtils.bvRegexExact.hasMatch(bvid)) return false;
+    try {
+      IdUtils.bv2av(bvid);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Clear all bookmarks
@@ -160,21 +308,12 @@ class VideoBookmarkService {
     await box.clear();
   }
 
-  static String _formatTimestamp(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
   /// Get bookmarks sorted by different criteria
   static List<VideoBookmark> getBookmarksSorted({
     required SortType sortType,
     String? bvidFilter,
     int? authorMidFilter,
+    String? searchQuery,
   }) {
     var bookmarks = box.values.toList();
 
@@ -183,7 +322,16 @@ class VideoBookmarkService {
       bookmarks = bookmarks.where((b) => b.bvid == bvidFilter).toList();
     }
     if (authorMidFilter != null) {
-      bookmarks = bookmarks.where((b) => b.authorMid == authorMidFilter).toList();
+      bookmarks = bookmarks
+          .where((b) => b.authorMid == authorMidFilter)
+          .toList();
+    }
+    final normalizedQuery = searchQuery?.trim().toLowerCase();
+    if (normalizedQuery != null && normalizedQuery.isNotEmpty) {
+      bookmarks = bookmarks.where((bookmark) {
+        return bookmark.name.toLowerCase().contains(normalizedQuery) ||
+            (bookmark.note?.toLowerCase().contains(normalizedQuery) ?? false);
+      }).toList();
     }
 
     // Apply sorting
@@ -199,12 +347,51 @@ class VideoBookmarkService {
         });
         break;
       case SortType.timestamp:
-        bookmarks.sort((a, b) => a.timestampSeconds.compareTo(b.timestampSeconds));
+        bookmarks.sort(
+          (a, b) => a.timestampSeconds.compareTo(b.timestampSeconds),
+        );
         break;
     }
 
     return bookmarks;
   }
+
+  static List<int> getAuthorMids() {
+    return box.values
+        .map((bookmark) => bookmark.authorMid)
+        .whereType<int>()
+        .toSet()
+        .toList()
+      ..sort();
+  }
+
+  static VideoBookmark _normalizeBookmark(VideoBookmark bookmark) {
+    final trimmedName = bookmark.name.trim();
+    final trimmedNote = bookmark.note?.trim();
+    final safeTimestamp = bookmark.timestampSeconds < 0
+        ? 0
+        : bookmark.timestampSeconds;
+    return VideoBookmark(
+      id: bookmark.id,
+      bvid: bookmark.bvid,
+      videoTitle: bookmark.videoTitle,
+      authorMid: bookmark.authorMid,
+      timestampSeconds: safeTimestamp,
+      name: _truncate(
+        trimmedName.isEmpty
+            ? '标记 @ ${VideoBookmark.formatTimestamp(safeTimestamp)}'
+            : trimmedName,
+        VideoBookmark.maxNameLength,
+      ),
+      note: trimmedNote == null || trimmedNote.isEmpty
+          ? null
+          : _truncate(trimmedNote, VideoBookmark.maxNoteLength),
+      createdAt: bookmark.createdAt,
+    );
+  }
+
+  static String _truncate(String value, int maxLength) =>
+      value.length <= maxLength ? value : value.substring(0, maxLength);
 }
 
 enum SortType {

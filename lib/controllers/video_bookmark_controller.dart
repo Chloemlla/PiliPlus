@@ -8,6 +8,9 @@ class VideoBookmarkController extends GetxController {
   final RxString currentBvid = ''.obs;
   final RxString searchQuery = ''.obs;
   final Rx<SortType> sortType = SortType.mostRecent.obs;
+  final Rx<BookmarkFilterType> filterType = BookmarkFilterType.all.obs;
+  final RxnString bvidFilter = RxnString();
+  final RxnInt authorMidFilter = RxnInt();
 
   void loadBookmarksForVideo(String bvid) {
     currentBvid.value = bvid;
@@ -15,8 +18,15 @@ class VideoBookmarkController extends GetxController {
   }
 
   void loadAllBookmarks() {
+    _refreshAllBookmarks();
+  }
+
+  void _refreshAllBookmarks() {
     allBookmarks.value = VideoBookmarkService.getBookmarksSorted(
       sortType: sortType.value,
+      bvidFilter: bvidFilter.value,
+      authorMidFilter: authorMidFilter.value,
+      searchQuery: searchQuery.value,
     );
   }
 
@@ -65,16 +75,33 @@ class VideoBookmarkController extends GetxController {
 
   void search(String query) {
     searchQuery.value = query;
-    if (query.isEmpty) {
-      loadAllBookmarks();
-    } else {
-      allBookmarks.value = VideoBookmarkService.searchBookmarks(query);
-    }
+    _refreshAllBookmarks();
   }
 
   void setSortType(SortType type) {
     sortType.value = type;
-    loadAllBookmarks();
+    _refreshAllBookmarks();
+  }
+
+  void clearFilter() {
+    filterType.value = BookmarkFilterType.all;
+    bvidFilter.value = null;
+    authorMidFilter.value = null;
+    _refreshAllBookmarks();
+  }
+
+  void filterByCurrentVideo(String bvid) {
+    filterType.value = BookmarkFilterType.currentVideo;
+    bvidFilter.value = bvid;
+    authorMidFilter.value = null;
+    _refreshAllBookmarks();
+  }
+
+  void filterByCreator(int authorMid) {
+    filterType.value = BookmarkFilterType.creator;
+    bvidFilter.value = null;
+    authorMidFilter.value = authorMid;
+    _refreshAllBookmarks();
   }
 
   bool canAddBookmark(String bvid) {
@@ -85,13 +112,18 @@ class VideoBookmarkController extends GetxController {
     return VideoBookmarkService.getBookmarkCountForVideo(bvid);
   }
 
+  List<int> get availableAuthorMids => VideoBookmarkService.getAuthorMids();
+
   String exportAllBookmarks() {
     return VideoBookmarkService.exportAllBookmarks();
   }
 
   Future<int> importBookmarks(String jsonString) async {
     final count = await VideoBookmarkService.importBookmarks(jsonString);
-    loadAllBookmarks();
+    if (currentBvid.value.isNotEmpty) {
+      loadBookmarksForVideo(currentBvid.value);
+    }
+    _refreshAllBookmarks();
     return count;
   }
 
@@ -100,4 +132,10 @@ class VideoBookmarkController extends GetxController {
     bookmarks.clear();
     allBookmarks.clear();
   }
+}
+
+enum BookmarkFilterType {
+  all,
+  currentVideo,
+  creator,
 }

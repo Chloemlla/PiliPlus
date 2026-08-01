@@ -34,6 +34,7 @@ import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
 import 'package:pili_plus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:pili_plus/pages/video/post_panel/view.dart';
+import 'package:pili_plus/pages/video/quality/quality_widgets.dart';
 import 'package:pili_plus/pages/video/widgets/header_control.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/bottom_control_type.dart';
@@ -61,6 +62,7 @@ import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -84,6 +86,8 @@ import 'package:screen_brightness_platform_interface/screen_brightness_platform_
 import 'package:window_manager/window_manager.dart';
 
 part 'widgets.dart';
+
+enum _QualityMenuAction { mode }
 
 class PLVideoPlayer extends StatefulWidget {
   const PLVideoPlayer({
@@ -385,6 +389,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       FlutterVolumeController.removeListener();
     }
     super.dispose();
+  }
+
+  Future<void> _persistSelectedVideoQuality(int quality) async {
+    await GStorage.setting.put(
+      await ConnectivityUtils.isWiFi
+          ? SettingBoxKey.defaultVideoQa
+          : SettingBoxKey.defaultVideoQaCellular,
+      quality,
+    );
   }
 
   // 动态构建底部控制条
@@ -811,45 +824,57 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               .map((i) => i.id)
               .toSet()
               .length;
-          return PopupMenuButton<int>(
+          return PopupMenuButton<Object>(
             tooltip: '画质',
             requestFocus: false,
             initialValue: currentVideoQa.code,
             color: Colors.black.withValues(alpha: 0.8),
+            onSelected: (value) {
+              if (value == _QualityMenuAction.mode) {
+                unawaited(
+                  showQualityModeSelector(
+                    context,
+                    videoDetailController.qualityRecommendationController,
+                  ),
+                );
+                return;
+              }
+              if (value is! int || currentVideoQa.code == value) return;
+
+              final newQa = VideoQuality.fromCode(value);
+              videoDetailController
+                ..plPlayerController.cacheVideoQa = newQa.code
+                ..currentVideoQa.value = newQa
+                ..updatePlayer();
+
+              SmartDialog.showToast("画质已变为：${newQa.desc}");
+
+              if (!plPlayerController.tempPlayerConf) {
+                Persistence.background(
+                  _persistSelectedVideoQuality(value),
+                  label: 'selected video quality',
+                );
+              }
+            },
             itemBuilder: (context) {
-              return List.generate(
-                totalQaSam,
-                (index) {
+              return <PopupMenuEntry<Object>>[
+                PopupMenuItem<Object>(
+                  value: _QualityMenuAction.mode,
+                  height: 42,
+                  child: QualityModeIndicator(
+                    controller:
+                        videoDetailController.qualityRecommendationController,
+                  ),
+                ),
+                const PopupMenuDivider(),
+                ...List.generate(totalQaSam, (index) {
                   final item = videoFormat[index];
                   final enabled = index >= totalQaSam - usefulQaSam;
-                  return PopupMenuItem<int>(
+                  return PopupMenuItem<Object>(
                     enabled: enabled,
                     height: 35,
                     padding: const EdgeInsets.only(left: 15, right: 10),
                     value: item.quality,
-                    onTap: () async {
-                      if (currentVideoQa.code == item.quality) {
-                        return;
-                      }
-                      final int quality = item.quality!;
-                      final newQa = VideoQuality.fromCode(quality);
-                      videoDetailController
-                        ..plPlayerController.cacheVideoQa = newQa.code
-                        ..currentVideoQa.value = newQa
-                        ..updatePlayer();
-
-                      SmartDialog.showToast("画质已变为：${newQa.desc}");
-
-                      // update
-                      if (!plPlayerController.tempPlayerConf) {
-                        GStorage.setting.put(
-                          await ConnectivityUtils.isWiFi
-                              ? SettingBoxKey.defaultVideoQa
-                              : SettingBoxKey.defaultVideoQaCellular,
-                          quality,
-                        );
-                      }
-                    },
                     child: Text(
                       item.newDesc ?? '',
                       style: enabled
@@ -860,8 +885,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                             ),
                     ),
                   );
-                },
-              );
+                }),
+              ];
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1367,6 +1392,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         if (widget.danmuWidget case final danmaku?)
           Positioned.fill(top: 4, child: danmaku),
 
+        if (!isLive && widget.videoDetailController case final controller?)
+          QualityChipOverlay(
+            controller: controller.qualityRecommendationController,
+          ),
+
         if (!isLive)
           Positioned.fill(
             child: IgnorePointer(
@@ -1439,7 +1469,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         Obx(
           () => AnimatedOpacity(
             curve: Curves.easeInOut,
-            opacity: plPlayerController.keyboardSpeedToast.value > 0 ? 1.0 : 0.0,
+            opacity: plPlayerController.keyboardSpeedToast.value > 0
+                ? 1.0
+                : 0.0,
             duration: const Duration(milliseconds: 150),
             child: Align(
               alignment: const Alignment(0, 0.65),

@@ -45,15 +45,13 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
           const SizedBox(height: 8),
           RadioGroup<ImportDestination>(
             groupValue: _destination,
-            onChanged: _isImporting
-                ? null
-                : (value) {
-                    if (value != null) {
-                      setState(() => _destination = value);
-                    }
-                  },
-            child: Column(
-              children: const [
+            onChanged: (value) {
+              if (!_isImporting && value != null) {
+                setState(() => _destination = value);
+              }
+            },
+            child: const Column(
+              children: [
                 RadioListTile<ImportDestination>(
                   value: ImportDestination.watchLater,
                   title: Text('稍后再看'),
@@ -63,7 +61,7 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
                 RadioListTile<ImportDestination>(
                   value: ImportDestination.importedFavorite,
                   title: Text('“已导入”收藏夹'),
-                  subtitle: Text('自动创建或复用专用收藏夹，并跳过重复视频'),
+                  subtitle: Text('自动创建或复用专用私密收藏夹，并跳过重复视频'),
                   secondary: Icon(Icons.folder_copy_outlined),
                 ),
               ],
@@ -213,9 +211,10 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(item.referenceLabel),
-                trailing: item.duration == null
-                    ? null
-                    : Text(_formatDuration(item.duration!)),
+                trailing: switch (item.duration) {
+                  final duration? => Text(_formatDuration(duration)),
+                  null => null,
+                },
               );
             },
           ),
@@ -242,7 +241,25 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
       if (result == null) {
         return;
       }
+      final fileLength = await result.xFile.length();
+      if (fileLength > PlaylistImportService.maxImportFileBytes) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _sourceContent = null;
+          _previewData = null;
+          _validationResult = const ValidationResult(
+            isValid: false,
+            message: '播放列表文件过大（最大 8 MiB）',
+          );
+        });
+        return;
+      }
       final content = await result.xFile.readAsString();
+      if (!mounted) {
+        return;
+      }
       _validateAndPreview(content);
     } catch (error) {
       SmartDialog.showToast('读取文件失败: $error');

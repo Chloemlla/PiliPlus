@@ -8,7 +8,7 @@ part of 'watch_stats_session.dart';
 
 class WatchStatsSessionAdapter extends TypeAdapter<WatchStatsSession> {
   @override
-  final int typeId = 100;
+  final int typeId = 102;
 
   @override
   WatchStatsSession read(BinaryReader reader) {
