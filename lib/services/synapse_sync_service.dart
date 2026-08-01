@@ -434,7 +434,6 @@ class _SynapseAuthorizationDialog extends StatefulWidget {
 }
 
 class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog> {
-  web.InAppWebViewController? _controller;
   Timer? _poller;
   bool _checking = false;
   bool _completed = false;
@@ -470,7 +469,6 @@ class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog
   @override
   void dispose() {
     _poller?.cancel();
-    _controller = null;
     super.dispose();
   }
 
@@ -488,7 +486,6 @@ class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog
               thirdPartyCookiesEnabled: true,
             ),
             initialUrlRequest: web.URLRequest(url: web.WebUri(widget.loginUrl)),
-            onWebViewCreated: (controller) => _controller = controller,
             onLoadStop: (_, __) => _readSession(),
             onUpdateVisitedHistory: (_, __, ___) => _readSession(),
           ),
