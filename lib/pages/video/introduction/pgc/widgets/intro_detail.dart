@@ -1,4 +1,4 @@
-import 'package:pili_plus/common/widgets/flutter/page/tabs.dart';
+// TabBar/TabBarView is from package:flutter/material.dart
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';

@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:pili_plus/common/style.dart';
-import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
+// DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/marquee.dart';
 import 'package:pili_plus/models/common/video/live_quality.dart';
 import 'package:pili_plus/pages/live_room/controller.dart';

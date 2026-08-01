@@ -7,7 +7,7 @@ import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/extra_hittest_stack.dart';
-import 'package:pili_plus/common/widgets/flutter/page/page_view.dart';
+// PageView is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';

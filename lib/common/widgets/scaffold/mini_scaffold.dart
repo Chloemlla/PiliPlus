@@ -1,6 +1,6 @@
 import 'dart:async' show Completer;
 
-import 'package:PiliPlus/common/widgets/scaffold/bottom_sheet.dart';
+import 'package:pili_plus/common/widgets/scaffold/bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show RenderStack, BoxHitTestResult, StackParentData;

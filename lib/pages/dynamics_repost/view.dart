@@ -1,4 +1,4 @@
-import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
+// DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart'

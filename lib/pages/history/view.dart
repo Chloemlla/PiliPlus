@@ -1,5 +1,5 @@
 import 'package:pili_plus/common/widgets/appbar/appbar.dart';
-import 'package:pili_plus/common/widgets/flutter/page/tabs.dart';
+// TabBar/TabBarView is from package:flutter/material.dart
 import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';

@@ -4,7 +4,7 @@ import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/button/toolbar_icon_button.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
-import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
+// DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/pair.dart';

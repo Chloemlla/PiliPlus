@@ -19,7 +19,7 @@ import 'dart:io' show File, Platform;
 
 import 'package:pili_plus/common/widgets/colored_box_transition.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:pili_plus/common/widgets/flutter/page/page_view.dart';
+// PageView is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/gesture/image_horizontal_drag_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image_viewer/image.dart';
 import 'package:pili_plus/common/widgets/image_viewer/loading_indicator.dart';

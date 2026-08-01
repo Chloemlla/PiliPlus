@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
+// DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_pinned_header.dart';

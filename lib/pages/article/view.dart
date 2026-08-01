@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
-import 'package:pili_plus/common/widgets/flutter/page/page_view.dart';
+// PageView is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
