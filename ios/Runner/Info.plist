@@ -124,6 +124,15 @@
 					<string>bilibili</string>
 				</array>
 			</dict>
+			<!-- piliplus:// deep link scheme -->
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.chloemlla.piliplus</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>piliplus</string>
+				</array>
+			</dict>
 		</array>
 		<key>UIBackgroundModes</key>
 		<array>

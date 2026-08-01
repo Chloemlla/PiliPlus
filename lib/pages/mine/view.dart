@@ -101,36 +101,44 @@ class _MediaPageState extends CommonPageState<MinePage>
   }
 
   Widget _buildActions(Color primary) {
-    return Row(
-      mainAxisAlignment: .spaceEvenly,
-      children: controller.list
-          .map(
-            (e) => Flexible(
-              child: InkWell(
-                onTap: e.onTap,
-                borderRadius: Style.mdRadius,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 80),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        children: controller.list
+            .map(
+              (e) => SizedBox(
+                width: 72,
+                child: InkWell(
+                  onTap: e.onTap,
+                  borderRadius: Style.mdRadius,
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: Column(
-                      spacing: 6,
+                      spacing: 4,
                       mainAxisSize: .min,
                       mainAxisAlignment: .center,
                       children: [
-                        Icon(e.icon, color: primary),
-                        Text(
-                          e.title,
-                          style: const TextStyle(fontSize: 13),
+                        Icon(e.icon, color: primary, size: 22),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            e.title,
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-          )
-          .toList(),
+            )
+            .toList(),
+      ),
     );
   }
 
@@ -408,29 +416,29 @@ class _MediaPageState extends CommonPageState<MinePage>
     required TextStyle? labelStyle,
     required VoidCallback onTap,
   }) {
-    return Flexible(
+    return Expanded(
       child: InkWell(
         onTap: onTap,
         borderRadius: Style.mdRadius,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 80),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Column(
-              spacing: 4,
-              mainAxisSize: .min,
-              mainAxisAlignment: .center,
-              children: [
-                Text(
-                  count?.toString() ?? '-',
-                  style: countStyle,
-                ),
-                Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            spacing: 2,
+            mainAxisSize: .min,
+            mainAxisAlignment: .center,
+            children: [
+              Text(
+                count?.toString() ?? '-',
+                style: countStyle,
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
                   name,
                   style: labelStyle,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

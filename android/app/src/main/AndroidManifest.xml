@@ -225,6 +225,13 @@
                     android:host="auth"
                     android:path="/launch" />
             </intent-filter>
+            <!-- piliplus:// deep link scheme for auth callback -->
+            <intent-filter android:label="PiliPlus Deep Link">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="piliplus" />
+            </intent-filter>
         </activity>
         <service
             android:name="com.ryanheise.audioservice.AudioService"

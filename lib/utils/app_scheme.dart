@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-import 'dart:async' show StreamSubscription;
+import 'dart:async';
 
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
@@ -34,6 +34,10 @@ abstract final class PiliScheme {
   static final uriDigitRegExp = RegExp(r'/(\d+)');
   static final _prefixRegex = RegExp(r'^\S+://');
 
+  /// Stream controller for pending auth token from deep link
+  static final _pendingAuthTokenController = StreamController<String>.broadcast();
+  static Stream<String> get pendingAuthToken => _pendingAuthTokenController.stream;
+
   static void init() {
     // Register our protocol only on Windows platform
     // registerProtocolHandler('bilibili');
@@ -41,6 +45,11 @@ abstract final class PiliScheme {
 
     listener?.cancel();
     listener = appLinks.uriLinkStream.listen(routePush);
+  }
+
+  static void dispose() {
+    listener?.cancel();
+    _pendingAuthTokenController.close();
   }
 
   static int? _videoProgress(Map<String, String> queryParameters) {
@@ -98,6 +107,17 @@ abstract final class PiliScheme {
     final String path = uri.path;
 
     switch (scheme) {
+      case 'piliplus':
+        // piliplus://synapse-auth?token=xxx
+        if (host == 'synapse-auth') {
+          final token = uri.queryParameters['token'];
+          if (token != null && token.isNotEmpty) {
+            // Return token to the pending auth dialog via a global stream
+            _pendingAuthTokenController.add(token);
+            return true;
+          }
+        }
+        return false;
       case 'bilibili':
         switch (host) {
           case 'root':
