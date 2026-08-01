@@ -9,8 +9,6 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/fav_order_type.dart';
 import 'package:pili_plus/models_new/fav/fav_detail/media.dart';
 import 'package:pili_plus/models_new/fav/fav_folder/list.dart';
-import 'package:pili_plus/pages/common/fab_mixin.dart'
-    show NoRightMarginFabLocation;
 import 'package:pili_plus/pages/dynamics_repost/view.dart';
 import 'package:pili_plus/pages/fav_detail/controller.dart';
 import 'package:pili_plus/pages/fav_detail/widget/fav_video_card.dart';
