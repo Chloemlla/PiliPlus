@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/msg_feed_top.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -10,6 +11,21 @@ import 'package:pili_plus/pages/msg_feed_top/like_detail/controller.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
+=======
+import 'package:PiliPlus/common/skeleton/msg_feed_top.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/image_type.dart';
+import 'package:PiliPlus/models_new/msg/msg_like_detail/card.dart';
+import 'package:PiliPlus/models_new/msg/msg_like_detail/item.dart';
+import 'package:PiliPlus/pages/msg_feed_top/like_detail/controller.dart';
+import 'package:PiliPlus/utils/app_scheme.dart';
+import 'package:PiliPlus/utils/date_utils.dart';
+import 'package:PiliPlus/utils/utils.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -29,8 +45,7 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(title: const Text('点赞详情')),
       body: refreshIndicator(
         onRefresh: _controller.onRefresh,

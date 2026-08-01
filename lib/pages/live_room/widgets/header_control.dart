@@ -1,12 +1,21 @@
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
+<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
 import 'package:pili_plus/common/widgets/marquee.dart';
 import 'package:pili_plus/models/common/video/live_quality.dart';
 import 'package:pili_plus/pages/live_room/controller.dart';
 import 'package:pili_plus/pages/setting/models/play_settings.dart'
+=======
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/draggable_sheet/dyn.dart';
+import 'package:PiliPlus/common/widgets/marquee.dart';
+import 'package:PiliPlus/models/common/video/live_quality.dart';
+import 'package:PiliPlus/pages/live_room/controller.dart';
+import 'package:PiliPlus/pages/setting/models/play_settings.dart'
+>>>>>>> upstream/main
     show showPlayerVolumeDialog;
 import 'package:pili_plus/pages/video/widgets/header_control.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';

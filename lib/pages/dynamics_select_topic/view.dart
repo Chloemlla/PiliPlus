@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/draggable_scrollable_sheet.dart';
 import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -10,6 +11,16 @@ import 'package:pili_plus/pages/dynamics_select_topic/widgets/item.dart';
 import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState;
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
+=======
+import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models_new/dynamic/dyn_topic_top/topic_item.dart';
+import 'package:PiliPlus/pages/dynamics_select_topic/controller.dart';
+import 'package:PiliPlus/pages/dynamics_select_topic/widgets/item.dart';
+import 'package:PiliPlus/pages/search/controller.dart' show DebounceStreamState;
+import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -35,7 +46,7 @@ class SelectTopicPanel extends StatefulWidget {
       constraints: BoxConstraints(
         maxWidth: min(600, context.mediaQueryShortestSide),
       ),
-      builder: (context) => TopicDraggableScrollableSheet(
+      builder: (context) => DraggableScrollableSheet(
         expand: false,
         snap: true,
         minChildSize: 0,

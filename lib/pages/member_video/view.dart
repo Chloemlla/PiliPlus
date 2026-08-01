@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -11,6 +12,23 @@ import 'package:pili_plus/pages/member/controller.dart';
 import 'package:pili_plus/pages/member_video/controller.dart';
 import 'package:pili_plus/pages/member_video/widgets/video_card_h_member_video.dart';
 import 'package:pili_plus/utils/grid.dart';
+=======
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+    show ReloadScrollPhysics;
+import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/member/contribute_type.dart';
+import 'package:PiliPlus/models_new/space/space_archive/item.dart';
+import 'package:PiliPlus/pages/common/fab_mixin.dart';
+import 'package:PiliPlus/pages/member/controller.dart';
+import 'package:PiliPlus/pages/member_video/controller.dart';
+import 'package:PiliPlus/pages/member_video/widgets/video_card_h_member_video.dart';
+import 'package:PiliPlus/utils/grid.dart';
+>>>>>>> upstream/main
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -116,50 +134,44 @@ class _MemberVideoState extends State<MemberVideo>
       ),
     );
     if (_controller.isVideo && _controller.fromViewAid?.isNotEmpty == true) {
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          fabAnimWrapper(child: child),
-          Obx(
-            () => !_controller.isLocating.value
-                ? Positioned(
-                    right: kFloatingActionButtonMargin,
-                    bottom: 0,
-                    child: SlideTransition(
-                      position: fabAnimation,
-                      child: Padding(
-                        padding: .only(
-                          bottom: padding.bottom + kFloatingActionButtonMargin,
-                        ),
-                        child: FloatingActionButton.extended(
-                          onPressed: () {
-                            final fromViewAid = _controller.fromViewAid;
-                            _controller.isLocating.value = true;
-                            final locatedIndex =
-                                _controller.loadingState.value.dataOrNull
-                                    ?.indexWhere(
-                                      (i) => i.param == fromViewAid,
-                                    ) ??
-                                -1;
-                            if (locatedIndex == -1) {
-                              _controller
-                                ..lastAid = fromViewAid
-                                ..reload = true
-                                ..page = 0
-                                ..loadingState.value = LoadingState.loading()
-                                ..queryData();
-                            } else {
-                              _jumpToIndex(locatedIndex);
-                            }
-                          },
-                          label: const Text('定位至上次观看'),
-                        ),
-                      ),
+      return ScaffoldLayout(
+        body: fabAnimWrapper(child: child),
+        fab: Obx(
+          () => !_controller.isLocating.value
+              ? SlideTransition(
+                  position: fabAnimation,
+                  child: Padding(
+                    padding: .only(
+                      right: kFloatingActionButtonMargin,
+                      bottom: kFloatingActionButtonMargin + padding.bottom,
                     ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
+                    child: FloatingActionButton.extended(
+                      onPressed: () {
+                        final fromViewAid = _controller.fromViewAid;
+                        _controller.isLocating.value = true;
+                        final locatedIndex =
+                            _controller.loadingState.value.dataOrNull
+                                ?.indexWhere(
+                                  (i) => i.param == fromViewAid,
+                                ) ??
+                            -1;
+                        if (locatedIndex == -1) {
+                          _controller
+                            ..lastAid = fromViewAid
+                            ..reload = true
+                            ..page = 0
+                            ..loadingState.value = LoadingState.loading()
+                            ..queryData();
+                        } else {
+                          _jumpToIndex(locatedIndex);
+                        }
+                      },
+                      label: const Text('定位至上次观看'),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       );
     }
     return child;

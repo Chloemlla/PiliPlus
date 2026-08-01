@@ -20,8 +20,13 @@ if (!isBuiltInKotlinEnabled) {
 val targetAndroidSdk = rootProject.extra["targetAndroidSdk"] as Int
 
 android {
+<<<<<<< HEAD
     namespace = "com.chloemlla.piliplus"
     compileSdk = targetAndroidSdk
+=======
+    namespace = "com.example.piliplus"
+    compileSdk = 37
+>>>>>>> upstream/main
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -31,10 +36,16 @@ android {
     }
 
     defaultConfig {
+<<<<<<< HEAD
         applicationId = "com.chloemlla.piliplus"
         // lumen-crash requires minSdk 26.
         minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = targetAndroidSdk
+=======
+        applicationId = "com.example.piliplus"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 37
+>>>>>>> upstream/main
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

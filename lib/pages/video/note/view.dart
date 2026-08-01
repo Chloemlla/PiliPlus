@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/video_reply.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -12,6 +13,22 @@ import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
+=======
+import 'package:PiliPlus/common/skeleton/video_reply.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/image_type.dart';
+import 'package:PiliPlus/models_new/video/video_note_list/list.dart';
+import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
+import 'package:PiliPlus/pages/video/note/controller.dart';
+import 'package:PiliPlus/pages/webview/view.dart';
+import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/bili_utils.dart';
+import 'package:PiliPlus/utils/extension/theme_ext.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -56,81 +73,75 @@ class _NoteListPageState extends State<NoteListPage>
 
   @override
   Widget buildPage(ThemeData theme) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Column(
-        children: [
-          SizedBox(
-            height: 45,
-            child: AppBar(
-              primary: false,
-              automaticallyImplyLeading: false,
-              titleSpacing: 16,
-              toolbarHeight: 45,
-              backgroundColor: Colors.transparent,
-              title: Obx(() {
-                final count = _controller.count.value;
-                return Text('笔记${count == -1 ? '' : '($count)'}');
-              }),
-              shape: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.1),
+    return Material(
+      child: MiniScaffold(
+        body: Column(
+          children: [
+            SizedBox(
+              height: 45,
+              child: AppBar(
+                primary: false,
+                automaticallyImplyLeading: false,
+                titleSpacing: 16,
+                toolbarHeight: 45,
+                backgroundColor: Colors.transparent,
+                title: Obx(() {
+                  final count = _controller.count.value;
+                  return Text('笔记${count == -1 ? '' : '($count)'}');
+                }),
+                shape: Border(
+                  bottom: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                  ),
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: '关闭',
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: Get.back,
+                  ),
+                  const SizedBox(width: 2),
+                ],
               ),
-              actions: [
-                IconButton(
-                  tooltip: '关闭',
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: Get.back,
-                ),
-                const SizedBox(width: 2),
-              ],
             ),
-          ),
-          Expanded(child: enableSlide ? slideList(theme) : buildList(theme)),
-        ],
+            Expanded(child: enableSlide ? slideList(theme) : buildList(theme)),
+          ],
+        ),
       ),
     );
   }
 
   late Key _key;
-  late bool _isNested;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final controller = PrimaryScrollController.of(context);
-    _isNested = controller is ExtendedNestedScrollController;
     _key = ValueKey(controller.hashCode);
   }
 
   @override
   Widget buildList(ThemeData theme) {
-    Widget child = refreshIndicator(
-      onRefresh: _controller.onRefresh,
-      child: CustomScrollView(
-        key: _key,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.only(bottom: 100),
-            sliver: Obx(
-              () => _buildBody(theme, _controller.loadingState.value),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (_isNested) {
-      child = ExtendedVisibilityDetector(
-        uniqueKey: const ValueKey(NoteListPage),
-        child: child,
-      );
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: child),
+        Expanded(
+          child: refreshIndicator(
+            onRefresh: _controller.onRefresh,
+            child: CustomScrollView(
+              key: _key,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const .only(bottom: 100),
+                  sliver: Obx(
+                    () => _buildBody(theme, _controller.loadingState.value),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         Container(
           padding: EdgeInsets.only(
             left: 12,
@@ -161,7 +172,7 @@ class _NoteListPageState extends State<NoteListPage>
                   SmartDialog.showToast('账号未登录');
                   return;
                 }
-                Scaffold.of(context).showBottomSheet(
+                MiniScaffold.of(context).showBottomSheet(
                   constraints: const BoxConstraints(),
                   (context) => WebviewPage(
                     oid: widget.oid,

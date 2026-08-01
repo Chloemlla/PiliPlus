@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/video_reply.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/colored_box_transition.dart';
@@ -6,6 +7,19 @@ import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_pinned_header.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
+=======
+import 'package:PiliPlus/common/skeleton/video_reply.dart';
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/colored_box_transition.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/simple_colored_box.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_pinned_header.dart';
+import 'package:PiliPlus/common/widgets/view_safe_area.dart';
+import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
+>>>>>>> upstream/main
     show ReplyInfo;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
@@ -65,8 +79,7 @@ class VideoReplyReplyPanel extends CommonSlidePage {
         'type': type,
         'enterUri': ?uri?.toString(), // save panel
       },
-      () => Scaffold(
-        resizeToAvoidBottomInset: false,
+      () => SimpleScaffold(
         appBar: AppBar(
           title: const Text('评论详情'),
           actions: [
@@ -140,38 +153,40 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
   @override
   Widget buildPage(ThemeData theme) {
     Widget child() => enableSlide ? slideList(theme) : buildList(theme);
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: widget.isVideoDetail
-          ? Column(
-              children: [
-                Container(
-                  height: 45,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        width: 1,
-                        color: theme.dividerColor.withValues(alpha: 0.1),
+    return SimpleColoredBox(
+      color: theme.canvasColor,
+      child: MiniScaffold(
+        body: widget.isVideoDetail
+            ? Column(
+                children: [
+                  Container(
+                    height: 45,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          width: 1,
+                          color: theme.dividerColor.withValues(alpha: 0.1),
+                        ),
                       ),
                     ),
+                    padding: const EdgeInsets.only(left: 12, right: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(isDialogue ? '对话列表' : '评论详情'),
+                        IconButton(
+                          tooltip: '关闭',
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: Get.back,
+                        ),
+                      ],
+                    ),
                   ),
-                  padding: const EdgeInsets.only(left: 12, right: 2),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Text(isDialogue ? '对话列表' : '评论详情'),
-                      IconButton(
-                        tooltip: '关闭',
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: Get.back,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(child: child()),
-              ],
-            )
-          : child(),
+                  Expanded(child: child()),
+                ],
+              )
+            : child(),
+      ),
     );
   }
 
@@ -183,7 +198,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
 
   @override
   Widget buildList(ThemeData theme) {
-    final child = refreshIndicator(
+    return refreshIndicator(
       onRefresh: _controller.onRefresh,
       isClampingScrollPhysics: widget.isNested,
       child: CustomScrollView(
@@ -211,10 +226,6 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
         ],
       ),
     );
-    if (widget.isNested) {
-      return ExtendedVisibilityDetector(uniqueKey: Key(_tag), child: child);
-    }
-    return child;
   }
 
   Widget _header(ThemeData theme, ReplyInfo firstFloor) {
@@ -339,8 +350,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
       onReply: (replyItem) => _controller.onReply(replyItem, index: index),
       onDelete: (item, subIndex) => _controller.onRemove(index, item, null),
       upMid: _controller.upMid,
-      showDialogue: () => Scaffold.of(context).showBottomSheet(
-        backgroundColor: Colors.transparent,
+      showDialogue: () => MiniScaffold.of(context).showBottomSheet(
         constraints: const BoxConstraints(),
         (context) => VideoReplyReplyPanel(
           oid: replyItem.oid.toInt(),

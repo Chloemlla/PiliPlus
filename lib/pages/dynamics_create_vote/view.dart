@@ -1,5 +1,6 @@
 import 'dart:io' show File;
 
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/time_picker.dart';
@@ -9,6 +10,18 @@ import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/extension/file_ext.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
+=======
+import 'package:PiliPlus/common/widgets/button/icon_button.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/time_picker.dart';
+import 'package:PiliPlus/models/dynamics/vote_model.dart';
+import 'package:PiliPlus/pages/dynamics_create_vote/controller.dart';
+import 'package:PiliPlus/utils/date_utils.dart';
+import 'package:PiliPlus/utils/extension/file_ext.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:PiliPlus/utils/utils.dart';
+>>>>>>> upstream/main
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart' hide showTimePicker;
 import 'package:flutter/services.dart';
@@ -53,7 +66,7 @@ class _CreateVotePageState extends State<CreateVotePage> {
       thickness: 1,
       color: theme.colorScheme.outline.withValues(alpha: 0.1),
     );
-    return Scaffold(
+    return SimpleScaffold(
       appBar: AppBar(
         title: Text('${_controller.voteId != null ? '' : '发起'}投票'),
       ),

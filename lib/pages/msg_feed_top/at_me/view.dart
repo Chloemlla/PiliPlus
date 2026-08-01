@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/msg_feed_top.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
@@ -5,6 +6,16 @@ import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/grpc/bilibili/app/im/v1.pbenum.dart'
+=======
+import 'package:PiliPlus/common/skeleton/msg_feed_top.dart';
+import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
+import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/grpc/bilibili/app/im/v1.pbenum.dart'
+>>>>>>> upstream/main
     show IMSettingType;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_type.dart';
@@ -30,8 +41,7 @@ class _AtMePageState extends State<AtMePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         title: const Text('@我的'),
         actions: [

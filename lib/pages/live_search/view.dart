@@ -1,9 +1,18 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/models/common/live/live_search_type.dart';
 import 'package:pili_plus/pages/live_search/child/view.dart';
 import 'package:pili_plus/pages/live_search/controller.dart';
 import 'package:pili_plus/utils/utils.dart';
+=======
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
+import 'package:PiliPlus/common/widgets/view_safe_area.dart';
+import 'package:PiliPlus/pages/live_search/child/view.dart';
+import 'package:PiliPlus/pages/live_search/controller.dart';
+import 'package:PiliPlus/utils/utils.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -22,8 +31,7 @@ class _LiveSearchPageState extends State<LiveSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         actions: [
           IconButton(
@@ -95,11 +103,11 @@ class _LiveSearchPageState extends State<LiveSearchPage> {
                     children: [
                       LiveSearchChildPage(
                         controller: _controller.roomCtr,
-                        searchType: LiveSearchType.room,
+                        searchType: .room,
                       ),
                       LiveSearchChildPage(
                         controller: _controller.userCtr,
-                        searchType: LiveSearchType.user,
+                        searchType: .user,
                       ),
                     ],
                   ),

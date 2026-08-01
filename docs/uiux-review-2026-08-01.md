@@ -1,0 +1,454 @@
+# PiliPlus UI/UX 不合理问题扫描报告
+
+> 扫描日期：2026-08-01
+> 扫描范围：lib/ 全模块（视频播放器、首页、我的、搜索、设置、直播、评论、动态、个人主页、关注、收藏、历史、下载、订阅、通用组件）
+> 扫描方式：6 路并行 Agent 逐文件审查
+
+---
+
+## 总体统计
+
+| 严重度 | 数量 |
+|--------|------|
+| 🔴 高 | 25+ |
+| 🟡 中 | 30+ |
+| 🟢 低 | 15+ |
+| 系统性 | 4 类（贯穿全项目） |
+
+---
+
+## 目录
+
+1. [视频播放器模块](#1-视频播放器模块)
+2. [首页/我的/导航模块](#2-首页我的导航模块)
+3. [搜索/设置/弹窗模块](#3-搜索设置弹窗模块)
+4. [直播/评论/动态模块](#4-直播评论动态模块)
+5. [个人主页/关注/收藏/历史/下载/订阅模块](#5-个人主页关注收藏历史下载订阅模块)
+6. [通用组件模块](#6-通用组件模块)
+7. [系统性问题（贯穿全项目）](#7-系统性问题贯穿全项目)
+8. [设计良好的模块](#8-设计良好的模块)
+
+---
+
+## 1. 视频播放器模块
+
+### 🔴 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.1 | `lib/pages/video/view.dart` | 653-655, 658-665, 676-696 | 返回/主页/更多设置按钮使用 `SizedBox(width: 42, height: 34)` | 高度至少改为 44 |
+| 1.2 | `lib/pages/video/widgets/header_control.dart` | 1996-1998 | `btnWidth = 40, btnHeight = 34` 所有头部控制按钮小于 44 | 将 `btnHeight` 改为 44 |
+| 1.3 | `lib/common/widgets/in_app_mini_player.dart` | 195, 373-383 | `_buttonSize = 32.0` 迷你播放器按钮仅 32×32 | 改为 44 |
+| 1.4 | `lib/pages/video/introduction/ugc/widgets/action_item.dart` | 64-65 | 点赞/投币/收藏图标容器 `dimension: 28` | 改为 44 |
+| 1.5 | `lib/common/widgets/button/icon_button.dart` | 20-23 | 通用 `iconButton` 默认 `size: 36` | 默认改为 44 |
+
+### 🟡 缺少触摸反馈（GestureDetector 无 InkWell）
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.6 | `lib/pages/video/send_danmaku/view.dart` | 288-313 | 弹幕样式（滚动/顶部/底部）和字号选项用 GestureDetector 无涟漪 | 改用 InkWell |
+| 1.7 | `lib/pages/video/send_danmaku/view.dart` | 237-285 | 弹幕颜色选择色块用 GestureDetector 无反馈 | 改用 InkWell |
+| 1.8 | `lib/pages/video/pay_coins/view.dart` | 349, 367 | 投币页左右箭头用 GestureDetector | 改用 InkWell 或 IconButton |
+
+### 🟡 对比度不足
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.9 | `lib/pages/video/introduction/ugc/widgets/action_item.dart` | 43-48 | 未选中状态使用 `colorScheme.outline`，浅色背景对比度弱 | 改用 `onSurfaceVariant` |
+| 1.10 | `lib/pages/video/introduction/ugc/widgets/menu_row.dart` | 48-67 | `ActionRowLineItem` 未选中文字/图标使用 `outline` | 同上 |
+| 1.11 | `lib/common/widgets/svg/play_icon.dart` | 193 | 播放按钮阴影透明度极低，深色背景不可见 | 改用 `Colors.black54` 或加白色阴影变体 |
+
+### 🟡 布局混乱
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.12 | `lib/pages/video/pay_coins/view.dart` | 421-469 | Stack 中"同时点赞"复选框（左对齐）和关闭按钮（居中）可能重叠 | 改用 Row + spaceBetween |
+| 1.13 | `lib/pages/video/view.dart` | 1149-1160 | 手动播放按钮 `right: 12, bottom: 10` 太靠边，可能被圆角裁剪 | 改为 `right: 16, bottom: 24` |
+| 1.14 | `lib/pages/video/view.dart` | 1462-1614 | 视频播放器 Stack 使用 `clipBehavior: Clip.none`，手动播放按钮可能溢出视频区域 | 添加关键边界裁剪或调整定位 |
+
+### 🔴 缺少加载/错误状态
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.15 | `lib/pages/video/view.dart` | 1467 | 视频初始化期间纯黑屏，无加载指示器 | 居中添加 CircularProgressIndicator 或模糊封面图 |
+| 1.16 | `lib/pages/video/controller.dart` | 1086-1092 | `queryVideoUrl` 失败仅 toast，用户可能错过 | 在视频区域显示内联错误信息和重试按钮 |
+| 1.17 | `lib/pages/video/view.dart` | 716-744 | 视频正在查询时用户点击播放，无任何视觉反馈 | 查询期间添加加载动画覆盖层 |
+
+### 🟡 元素重叠
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.18 | `lib/pages/video/view.dart` | 1498-1517 | 跳过片段列表 `bottom: 75`，全屏时可能和底部控制栏重叠 | 动态计算底部偏移 |
+| 1.19 | `lib/pages/video/view.dart` | 1088-1165 | `manualPlayerWidget` 使用 `Positioned.fill` 且无 `clipBehavior` | 添加更好的定位约束 |
+
+### 🟢 间距不一致
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.20 | `lib/pages/video/view.dart` | 1311-1382 | 发弹幕按钮（32px 高）和弹幕开关（38px 高）在 45px 容器中垂直对齐不一致 | 统一垂直居中策略 |
+| 1.21 | `lib/pages/video/bookmark/video_bookmark_sheet.dart` | 140-156 | 头部 IconButton 和 TextButton.icon 高度不同 | 统一 Row 中 CrossAxisAlignment |
+
+### 🟡 缺少无障碍标签
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.22 | `lib/pages/video/send_danmaku/view.dart` | 288-313 | 弹幕模式/字号选项无 `semanticsLabel` | 添加语义标签 |
+| 1.23 | `lib/pages/video/pay_coins/view.dart` | 349-385 | 投币箭头无 `tooltip` 或 `semanticsLabel` | 添加 `tooltip` |
+| 1.24 | `lib/pages/video/send_danmaku/view.dart` | 106-133 | 颜色选择器色块无语义标签 | 添加色值或名称标签 |
+
+### 🟢 手势区域与视觉目标不匹配
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 1.25 | `lib/pages/video/introduction/ugc/widgets/action_item.dart` | 67-88 | InkWell 通过 Expanded 撑满宽度，但视觉上仅 18px 图标，点击区域无视觉提示 | 添加 `splashFactory` 让涟漪覆盖全区域 |
+| 1.26 | `lib/pages/video/widgets/header_control.dart` | 2014-2253 | 按钮 40×34 但图标仅 15-20px，视觉目标和点击区域差距大 | 确保涟漪效果清晰可见 |
+| 1.27 | `lib/pages/video/view.dart` | 1088-1165 | 60px 播放图标阴影超出 IconButton 范围不可点击 | 用更大 SizedBox 包裹匹配阴影范围 |
+
+---
+
+## 2. 首页/我的/导航模块
+
+### 🔴 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 2.1 | `lib/pages/home/view.dart` | 204-225 | 用户头像触摸目标仅 34×34 | 用 SizedBox 44×44 包裹并居中头像 |
+| 2.2 | `lib/pages/mine/view.dart` | 140 | 头部 action 按钮使用 `shrinkWrap`，有效触摸目标 38×38 | 移除 shrinkWrap 或增加 padding |
+
+### 🔴 图片未裁剪圆角
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 2.3 | `lib/pages/mine/widgets/item.dart` | 37-58 | `DecoratedBox` 指定 `borderRadius: 12` 但未裁剪子元素，图片显示尖角 | 用 `ClipRRect(borderRadius: 12)` 包裹 |
+
+### 🟡 缺少加载/错误状态
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 2.4 | `lib/pages/mine/view.dart` | 88-92 | 收藏夹加载时整个隐藏，数据到达时突然出现，产生跳跃 | 保持头部可见，内容区显示 shimmer 骨架屏 |
+| 2.5 | `lib/pages/mine/view.dart` | 556-564 | 收藏夹加载失败只显示错误文字，无重试按钮 | 添加"重试"按钮 |
+| 2.6 | `lib/pages/home/view.dart` | 179 | 搜索框默认提示文字从空字符串开始，API 完成才显示 | 显示静态占位符如"搜索" |
+
+### 🟢 布局问题
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 2.7 | `lib/pages/mine/widgets/item.dart` | 61, 66 | 文字前导空格做间距：`' ${item.title}'` | 改用 Padding 或 EdgeInsets |
+| 2.8 | `lib/pages/mine/widgets/item.dart` | 43-47 | 阴影方向朝上 `offset: Offset(6, -8)`，违反 Material Design 惯例 | 改为 `Offset(0, 4)` 标准朝下阴影 |
+
+### 🟢 缺少无障碍标签
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 2.9 | `lib/pages/home/view.dart` | 294 | 通知图标 `Icon(Icons.notifications_none)` 无语义标签 | 添加 `semanticLabel: '消息'` |
+
+---
+
+## 3. 搜索/设置/弹窗模块
+
+### 🔴 空状态误用 HttpError
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.1 | `lib/pages/search_trending/view.dart` | 200-202 | 热搜榜为空时显示错误界面，而非"暂无热搜" | 用中性空状态替代 |
+| 3.2 | `lib/pages/settings_search/view.dart` | 126 | 设置搜索无结果时显示错误界面 | 显示"无结果"提示而非错误 |
+
+### 🔴 颜色选择器滑块过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.3 | `lib/pages/setting/slide_color_picker.dart` | 58-59 | 滑块 thumb 仅 4dp 宽 × 25dp 高，几乎无法拖动 | 改为 `Size(20, 28)` |
+
+### 🟡 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.4 | `lib/pages/search/view.dart` | 375-401 | 搜索历史记录/导出按钮使用 `shrinkWrap` + 零填充 | 添加 `minWidth: 44, minHeight: 44` 约束 |
+| 3.5 | `lib/pages/setting/widgets/switch_item.dart` | 112-114 | Switch 缩放到 80%，thumb 约 19dp | 移除 `Transform.scale` |
+| 3.6 | `lib/pages/setting/widgets/slider_dialog.dart` | 43 | Slider 约束在 40dp 高度 | 至少 50dp 或使用自然高度 |
+
+### 🟡 缺少加载状态
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.7 | `lib/pages/search/view.dart` | 136-175 | 搜索建议仅在结果非空时渲染，API 请求中无任何反馈 | 添加小型 CircularProgressIndicator 或 shimmer |
+| 3.8 | `lib/pages/search/view.dart` | 275-283 | 热门/推荐区域 Loading 状态返回 `SliverToBoxAdapter()` 空白 | 显示占位骨架 |
+
+### 🟡 缺少触摸反馈
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.9 | `lib/pages/search_result/view.dart` | 104-105 | Tab 栏覆盖 `overlayColor: Colors.transparent` + `splashFactory: NoSplash` | 使用柔和高亮色而非完全禁用 |
+
+### 🟡 其他问题
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 3.10 | `lib/common/widgets/custom_tooltip.dart` | 82 | `HitTestBehavior.opaque` 可能阻挡子元素交互 | 改用 `translucent` |
+| 3.11 | `lib/pages/search/widgets/hot_keyword.dart` | 48-49 | 整个关键字项被冗余 Tooltip 包裹，文字已可见 | 仅包裹图标部分或移除 |
+| 3.12 | `lib/pages/search/widgets/search_text.dart` | 38 | InkWell 无语义标签 | 添加 `Semantics(button: true, label: ...)` |
+| 3.13 | `lib/pages/settings_search/view.dart` | 95, 107 | 清除和返回按钮无 tooltip | 添加 `tooltip: '清除'` 和 `tooltip: '返回'` |
+| 3.14 | `lib/pages/setting/pages/color_select.dart` | 130-133 | 动态颜色复选框 `visualDensity: -4` 过度压缩 | 使用更温和的密度值 |
+| 3.15 | `lib/common/widgets/dialog/report.dart` | 69-72 | 举报表单 label 22 个中文字符过长 | 改用更短的 label 或 hintText |
+
+---
+
+## 4. 直播/评论/动态模块
+
+### 🔴 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.1 | `lib/pages/live/view.dart` | 132-169 | 首帧/赛事/标签按钮 `size: 26` | 改为 38+ 或包裹 44×44 |
+| 4.2 | `lib/pages/live/widgets/live_item_app.dart` | 71-78 | 直播卡片反馈按钮 29×29 | 改为 44×44 |
+| 4.3 | `lib/pages/live_room/view.dart` | 862-870 | 直播间点赞按钮 `SizedBox.square(dimension: 34)` | 改为 44 |
+| 4.4 | `lib/pages/live_room/view.dart` | 811-839, 906-918 | 弹幕开关/表情按钮 `SizedBox(34×34)` | 改为 44 |
+| 4.5 | `lib/pages/video/reply/widgets/reply_item_grpc.dart` | 483-487 | 评论操作按钮 `shrinkWrap` + 零填充 | 设置最小高度 40 |
+| 4.6 | `lib/pages/video/reply/widgets/zan_grpc.dart` | 119-177 | 赞/踩按钮 `SizedBox(height: 32)` | 改为 `minimumSize: Size(44, 44)` |
+| 4.7 | `lib/pages/dynamics/widgets/author_panel.dart` | 144-155 | 动态更多按钮 32×32 | 改为 44×44 |
+| 4.8 | `lib/pages/dynamics/view.dart` | 33-53 | 动态创建按钮 34×34 | 改为 44×44 |
+
+### 🟡 缺少加载状态
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.9 | `lib/pages/live_room/widgets/chat_panel.dart` | 52-60 | 聊天列表无连接中指示 | 显示"连接中..." |
+| 4.10 | `lib/pages/video/reply/view.dart` | 192-196 | "加载中..." 纯文字无 spinner | 改用 CircularProgressIndicator + 文字 |
+| 4.11 | `lib/pages/video/reply_reply/view.dart` | 297-308 | 同上 | 同上 |
+| 4.12 | `lib/pages/main_reply/view.dart` | 129-135 | 同上 | 同上 |
+
+### 🟡 对比度不足
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.13 | `lib/pages/live_room/view.dart` | 843-846 | 占位文字 "发送弹幕" 使用 `baseWhite(#EEEEEE)` 在半透明背景上 | 改用 `Colors.white54` |
+| 4.14 | `lib/pages/live_room/widgets/chat_panel.dart` | 41-43 | 用户名 `0.6` 透明度在半透明背景上对比度低 | 透明度至少 0.85 |
+
+### 🟡 元素重叠/布局混乱
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.15 | `lib/pages/live/widgets/live_item_app.dart` | 71-76 | 反馈按钮 `right: -5, bottom: -2` 超出卡片边界 | 移到 `right: 4, bottom: 4` |
+| 4.16 | `lib/pages/video/reply/widgets/reply_item_grpc.dart` | 509-559 | 操作按钮间距仅 2px | 至少 8px |
+
+### 🟡 缺少触摸反馈
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.17 | `lib/pages/live/view.dart` | 107-125 | 直播分区标签无 InkWell 涟漪 | 包裹 SearchText 在 InkWell 中 |
+
+### 🟢 其他问题
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.18 | `lib/pages/dynamics/widgets/action_panel.dart` | 30-31 | 动态操作按钮 `spaceAround` 导致间距随文字长度变化 | 改用 `spaceEvenly` |
+| 4.19 | `lib/pages/live_room/view.dart` | 797-846 | 输入区域看起来像可编辑输入框，实际是点击弹窗 | 明确提示"点击发送消息" |
+| 4.20 | `lib/pages/live_room/view.dart` | 807-840 | 弹幕开关无状态颜色指示 | 激活时添加背景高亮 |
+| 4.21 | `lib/pages/dynamics_detail/view.dart` | 303-353 | 评论数 -1（未加载）时 Tab 仅显示"评论"无加载指示 | 显示小加载指示器 |
+
+### 🟡 缺少图片占位符
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.22 | `lib/pages/live/widgets/live_item_app.dart` | 50-54 | 直播封面图无加载占位 | 添加背景色 + 居中进度指示器 |
+| 4.23 | `lib/pages/live_follow/widgets/live_item_follow.dart` | 42-46 | 同上 | 同上 |
+| 4.24 | `lib/pages/live_search/widgets/live_search_room.dart` | 42-46 | 同上 | 同上 |
+| 4.25 | `lib/pages/dynamics/widgets/video_panel.dart` | 53-58 | 动态视频缩略图无加载占位 | 同上 |
+
+### 🟡 缺少无障碍标签
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 4.26 | `lib/pages/live_room/widgets/chat_panel.dart` | 36-398 | 聊天消息用 Text.rich + TextSpan，屏幕阅读器无法区分用户名/勋章/内容 | 每条消息用 Semantics 包裹 |
+| 4.27 | `lib/pages/live_room/widgets/header_control.dart` | 117-312 | ComBtn 有 tooltip 但无 Semantics 标签 | 添加与 tooltip 一致的 Semantics |
+
+---
+
+## 5. 个人主页/关注/收藏/历史/下载/订阅模块
+
+### 🟡 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 5.1 | `lib/pages/member/view.dart` | 260 | 预约弹窗中的动态按钮 `iconButton(size: 32)` | 至少 36+ |
+| 5.2 | `lib/pages/member_video/widgets/video_card_h_member_video.dart` | 196-204 | 视频弹出菜单按钮 29×29 | 改为 36+ |
+| 5.3 | `lib/pages/history/widgets/item.dart` | 199-206 | 历史记录弹出菜单按钮 29×29 | 改为 36+ |
+| 5.4 | `lib/pages/subscription/widgets/item.dart` | 140-153 | 订阅删除按钮 `Positioned(35×35)` | 至少 40 |
+| 5.5 | `lib/pages/fav_detail/view.dart` | 399 | 收藏切换按钮 `iconButton(size: 28)` | 至少 36 |
+
+### 🟡 缺少触摸反馈（GestureDetector 无 InkWell）
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 5.6 | `lib/pages/member/widget/user_info_card.dart` | 118 | 统计数字（粉丝/关注/获赞）GestureDetector 无涟漪 | 改用 InkWell |
+| 5.7 | `lib/pages/member/widget/user_info_card.dart` | 202 | 用户名复制 GestureDetector 无反馈 | 改用 InkWell 或加 toast |
+| 5.8 | `lib/pages/member/widget/user_info_card.dart` | 330 | UID 复制同上 | 同上 |
+| 5.9 | `lib/pages/member/widget/user_info_card.dart` | 829 | 充电/舰队行 GestureDetector | 改用 InkWell |
+| 5.10 | `lib/pages/member/widget/user_info_card.dart` | 955-957 | "也关注了" 行 GestureDetector | 改用 InkWell |
+| 5.11 | `lib/pages/fav_panel/view.dart` | 53-88 | 收藏夹 ListTile 用 Builder 绕过 InkWell | 改用 StatefulBuilder |
+| 5.12 | `lib/pages/history/view.dart` | 270-283 | 历史记录暂停提示 GestureDetector | 改用 InkWell 或 TextButton |
+
+### 🟡 元素重叠
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 5.13 | `lib/pages/fav_detail/widget/fav_video_card.dart` | 210-214 | 取消收藏按钮 `bottom: -8` 越界，可能重叠下一个卡片 | 改为 `bottom: 0` |
+
+### 🟢 布局混乱
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 5.14 | `lib/pages/download_manager/view.dart` | 214 | 统计标签 `Text('$value$label')` 显示 "5总计" 无空格 | 改为 `Text('$value $label')` |
+
+### 🟡 缺少加载状态
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 5.15 | `lib/pages/member/view.dart` | 221-228 | 预约弹窗切换按钮异步 API 无 loading 指示 | 显示加载 spinner |
+
+---
+
+## 6. 通用组件模块
+
+### 🔴 触摸目标过小
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 6.1 | `lib/common/widgets/button/icon_button.dart` | 20-23 | 默认 `size: 36` | 默认改为 44 |
+| 6.2 | `lib/common/widgets/button/toolbar_icon_button.dart` | 20-22 | 同上 36×36 | 同上 |
+| 6.3 | `lib/common/widgets/video_card/video_card_v.dart` | 137-147 | 视频弹出菜单 29×29 | 改为 40+ |
+| 6.4 | `lib/common/widgets/video_card/video_card_h.dart` | 167-176 | 同上 29×29 | 同上 |
+
+### 🟡 缺少触摸反馈
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 6.5 | `lib/common/widgets/button/more_btn.dart` | 29-33 | `moreTextButton` 用 GestureDetector + `HitTestBehavior.opaque` 无涟漪 | 改用 InkWell 或 TextButton |
+
+### 🟡 主题/颜色问题
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 6.6 | `lib/common/widgets/simple_app_bar.dart` | 11 | `backgroundColor` 默认 `Colors.black`，亮色主题下不可用 | 改用 `Colors.transparent` 或主题色 |
+| 6.7 | `lib/common/widgets/floating_navigation_bar.dart` | 84 | 固定宽度 86px/项，5+ 项时可能溢出屏幕 | 用 LayoutBuilder 自适应 |
+
+### 🟢 无障碍问题
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 6.8 | `lib/common/widgets/avatars.dart` | 全局 | 头像无语义标签 | 传入用户名称作为标签 |
+| 6.9 | `lib/common/widgets/radio_widget.dart` | 77 | Radio 选项文字仅视觉可见 | 用 MergeSemantics 统一标签 |
+| 6.10 | `lib/common/widgets/video_card/video_card_v.dart` | 161 | 视频标题无语义标签 | 添加 Semantics |
+
+### 🟡 移动端 radio 触摸目标
+
+| # | 文件 | 行号 | 问题描述 | 建议修复 |
+|---|------|------|----------|----------|
+| 6.11 | `lib/common/widgets/radio_widget.dart` | 71-74 | 逻辑颠倒：移动端用 `shrinkWrap`，桌面用 `padded` | 交换：移动端用 padded，桌面用 shrinkWrap |
+
+---
+
+## 7. 系统性问题（贯穿全项目）
+
+### 7.1 🔴 无国际化支持（l10n）
+
+**所有用户可见字符串均为硬编码中文，无 `intl` 或 `flutter_localizations` 设置。**
+
+涉及的所有模块和代表性文件：
+
+| 模块 | 代表文件 | 示例字符串 |
+|------|----------|-----------|
+| 视频播放器 | `view.dart`, `header_control.dart`, `send_danmaku/view.dart` | '返回', '发弹幕', '评论', '简介', '播放列表', '弹幕设置', '画质', '举报' |
+| 首页 | `home/view.dart`, `mine/view.dart` | '首页', '动态', '我的', '消息', '搜索' |
+| 直播 | `live_room/view.dart`, `live_room/widgets/header_control.dart` | '发送弹幕', '刷新', '屏蔽', '全屏', '分享', '举报' |
+| 评论 | `reply/widgets/reply_item_grpc.dart` | '没有更多了', '加载中...', '还没有评论', '回复', '取消', '确定', '举报' |
+| 动态 | `dynamics/widgets/action_panel.dart`, `author_panel.dart` | '发布动态', '转发', '评论', '点赞', '更多', '稍后再看' |
+| 设置 | 所有 setting/pages/ | 所有开关标签、选项文字 |
+| 弹窗 | `dialog/dialog.dart`, `report.dart`, `export_import.dart` | '取消', '确认', '删除', '举报类型', '导入导出' |
+| 通用 | 全部 context_menu/, video_popup_menu.dart 等 | '文本', '表情', '加入过滤', '取消选择' |
+
+**建议修复：** 引入 `flutter_localizations` 和 `intl` 包，将所有字符串提取到 `.arb` 文件，全局引用 `AppLocalizations.of(context).xxx`。
+
+### 7.2 🟡 缺少无障碍语义标签
+
+大量交互元素缺少 `Semantics` / `semanticLabel` / `tooltip`，包括：
+
+- 所有 `GestureDetector` 包裹的交互元素（无声明的语义角色）
+- 部分 `IconButton` 缺失 `tooltip`
+- 头像图片（`NetworkImgLayer`）无语义标签
+- 颜色选择器色块无语义描述
+- 聊天消息中用户名/勋章/内容无法区分
+- 视频卡片标题无语义标签
+
+### 7.3 🟡 移动端与桌面端适配不统一
+
+- `radio_widget.dart` 中移动端用了 `shrinkWrap`（小触摸目标），桌面端反而用 `padded`
+- 部分按钮硬编码 `tapTargetSize: .shrinkWrap` 未区分平台
+
+### 7.4 🟡 缺少统一加载/空/错误状态处理
+
+- 多处 Loading 状态返回空 widget（`SizedBox.shrink()` 或 `SliverToBoxAdapter()`）
+- 空状态与错误状态混用（如搜索趋势为空时显示 HttpError）
+- 加载中缺少 skeleton/shimmer 占位
+
+---
+
+## 8. 设计良好的模块
+
+以下模块经扫描认为设计合理，无明显 UI/UX 问题：
+
+| 模块 | 文件 | 优点 |
+|------|------|------|
+| 浮动导航栏 | `floating_navigation_bar.dart` | 动画流畅，触摸目标合理，颜色适配套 |
+| 主布局 | `main_layout.dart` | 自定义 RenderObject，结构正确，hit test 准确 |
+| 缩放适配 | `scale_app.dart` | 绑定层定制，无 UI 渲染问题 |
+| 下载任务卡片 | `download_manager/widgets/download_task_card.dart` | 触摸目标合理，InkWell 使用正确 |
+| 直播提醒 | `live_alert/` 系列 | 加载/空/错误状态处理完善 |
+| 勋章组件 | `medal_widget.dart`, `medal_wall.dart` | 标准 Material 实现 |
+| 订阅视频卡片 | `subscription_detail/widget/sub_video_card.dart` | 标准实现 |
+| 下载详情 | `download/detail/widgets/item.dart` | InkWell 使用正确，功能完善 |
+| 横竖视频卡片 | `video_card_v.dart`, `video_card_h.dart` | 布局合理（除弹出菜单按钮过小外） |
+| 徽章组件 | `badge.dart` | 颜色主题自适应，弹性布局 |
+| 跑马灯 | `marquee.dart` | 自定义 RenderObject 实现良好 |
+| 展开组件 | `expandable.dart` | 动画正确 |
+| 调色板 | `color_palette.dart` | 尺寸合理 |
+| 自定义图标 | `custom_icon.dart`, `disabled_icon.dart` | 纯数据定义或 RenderObject 实现正确 |
+
+---
+
+## 优先级修复建议
+
+### P0（严重用户体验问题，影响核心功能）
+
+| 优先级 | 问题 | 影响范围 |
+|--------|------|----------|
+| P0 | 触摸目标 < 44px（18+ 处） | 所有模块，严重影响移动端操作 |
+| P0 | 视频初始化纯黑屏无加载指示 | 视频播放核心体验 |
+| P0 | 空状态误用 HttpError | 搜索趋势页、设置搜索页 |
+| P0 | 颜色选择器滑块仅 4dp 宽 | 设置页面几乎无法使用 |
+
+### P1（中等用户体验问题，影响日常使用）
+
+| 优先级 | 问题 | 影响范围 |
+|--------|------|----------|
+| P1 | GestureDetector 大量替代 InkWell（15+ 处） | 用户点按无反馈，不确定是否触发 |
+| P1 | 缺少加载状态（搜索建议、热门推荐、视频查询等） | 用户等待时困惑 |
+| P1 | 图片未裁剪圆角 | 收藏夹卡片视觉不精致 |
+| P1 | 统计标签无空格 | 下载管理器显示异常 |
+| P1 | 元素重叠（投币页、收藏按钮越界等） | 视觉缺陷 |
+
+### P2（长期改进，提升品质）
+
+| 优先级 | 问题 | 影响范围 |
+|--------|------|----------|
+| P2 | 无国际化支持 | 阻碍非中文用户使用 |
+| P2 | 缺少无障碍语义标签 | 屏幕阅读器无法使用 |
+| P2 | 对比度不足（多处） | 可读性问题 |
+| P2 | 动画/过渡缺失（搜索 Tab 无 splash） | 交互反馈缺失 |
+| P2 | 自定义组件问题（tooltip 阻挡交互、导航栏溢出） | 边缘情况问题 |
+| P2 | 图片加载无占位符（4 处直播/动态） | 空白区域视觉空洞 |
+
+---
+
+*报告生成日期：2026-08-01*
+*扫描工具：6 路并行 Agent（video / home / search / live / member / widgets）*

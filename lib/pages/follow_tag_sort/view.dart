@@ -1,9 +1,19 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/reorder_mixin.dart';
 import 'package:pili_plus/http/follow.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/member/tags.dart';
 import 'package:pili_plus/pages/follow/controller.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
+=======
+import 'package:PiliPlus/common/widgets/reorder_mixin.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/http/follow.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/member/tags.dart';
+import 'package:PiliPlus/pages/follow/controller.dart';
+import 'package:PiliPlus/utils/bili_utils.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -36,8 +46,7 @@ class _FollowTagSortPageState extends State<FollowTagSortPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         title: const Text('关注分组排序'),
         actions: _customTags.isNotEmpty

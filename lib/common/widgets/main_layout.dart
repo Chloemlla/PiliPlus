@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show BoxParentData, BoxHitTestResult, ChildLayoutHelper;
 
-enum MainType { sideBar, body, bottomNav }
+enum MainType { sideBar, bottomNav, body }
 
 class MainLayout
     extends SlottedMultiChildRenderObjectWidget<MainType, RenderBox> {
@@ -37,6 +37,10 @@ class MainLayout
 
 class _RenderMainLayout extends RenderBox
     with SlottedContainerRenderObjectMixin<MainType, RenderBox> {
+  RenderBox? get sideBar => childForSlot(.sideBar);
+  RenderBox? get bottomNav => childForSlot(.bottomNav);
+  RenderBox get body => childForSlot(.body)!;
+
   Offset _getOffset(RenderBox child) {
     return (child.parentData as BoxParentData).offset;
   }
@@ -53,7 +57,7 @@ class _RenderMainLayout extends RenderBox
     final Offset bodyOffset;
     final BoxConstraints bodyConstraints;
 
-    final sideBar = childForSlot(.sideBar);
+    final sideBar = this.sideBar;
     if (sideBar != null) {
       final sideBarWidth = ChildLayoutHelper.layoutChild(
         sideBar,
@@ -67,7 +71,7 @@ class _RenderMainLayout extends RenderBox
         height: constraints.maxHeight,
       );
     } else {
-      final bottomNav = childForSlot(.bottomNav);
+      final bottomNav = this.bottomNav;
       if (bottomNav != null) {
         final bottomNavSize = ChildLayoutHelper.layoutChild(
           bottomNav,
@@ -89,20 +93,26 @@ class _RenderMainLayout extends RenderBox
       );
     }
 
-    final body = childForSlot(.body)!..layout(bodyConstraints);
+    final body = this.body..layout(bodyConstraints);
     _setOffset(body, bodyOffset);
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    for (final child in children) {
-      context.paintChild(child, _getOffset(child) + offset);
+    void doPaint(RenderBox? child) {
+      if (child != null) {
+        context.paintChild(child, _getOffset(child) + offset);
+      }
     }
+
+    doPaint(sideBar);
+    doPaint(body);
+    doPaint(bottomNav);
   }
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    for (final type in MainType.values.reversed) {
+    for (final type in MainType.values) {
       final child = childForSlot(type);
       if (child == null) continue;
       final bool isHit = result.addWithPaintOffset(

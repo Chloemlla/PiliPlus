@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/skeleton/video_reply.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
@@ -5,6 +6,17 @@ import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_pinned_header.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
+=======
+import 'package:PiliPlus/common/skeleton/video_reply.dart';
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/custom_icon.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_pinned_header.dart';
+import 'package:PiliPlus/common/widgets/view_safe_area.dart';
+import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
+>>>>>>> upstream/main
     show ReplyInfo;
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/enum_with_label.dart';
@@ -235,8 +247,7 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
           ),
         );
         if (showBackBtn) {
-          return Scaffold(
-            resizeToAvoidBottomInset: false,
+          return SimpleScaffold(
             appBar: AppBar(
               title: const Text('评论详情'),
               shape: Border(
@@ -258,11 +269,10 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
           arguments: arguments,
         );
       } else {
-        final scaffoldState = Scaffold.maybeOf(context);
+        final scaffoldState = MiniScaffold.maybeOf(context);
         if (scaffoldState != null) {
           hideFab();
           scaffoldState.showBottomSheet(
-            backgroundColor: Colors.transparent,
             (context) => replyReplyPage(showBackBtn: false),
           );
         } else {
@@ -320,7 +330,10 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
       : const NoBottomPaddingFabLocation();
 
   Widget get fabButton => Padding(
-    padding: .only(bottom: padding.bottom + kFloatingActionButtonMargin),
+    padding: .only(
+      right: kFloatingActionButtonMargin + padding.right,
+      bottom: kFloatingActionButtonMargin + padding.bottom,
+    ),
     child: replyButton,
   );
 

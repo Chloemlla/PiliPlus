@@ -1,5 +1,6 @@
 import 'dart:math' show min;
 
+<<<<<<< HEAD
 import 'package:pili_plus/common/assets.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
@@ -10,6 +11,19 @@ import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
 import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart'
+=======
+import 'package:PiliPlus/common/assets.dart';
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/button/icon_button.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/image_viewer/hero.dart';
+import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
+import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+>>>>>>> upstream/main
     show platformClampingPhysics;
 import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pb.dart';
@@ -96,8 +110,7 @@ class _AudioPageState extends State<AudioPage> {
     final colorScheme = ColorScheme.of(context);
     final isPortrait = MediaQuery.sizeOf(context).isPortrait;
     final padding = MediaQuery.viewPaddingOf(context);
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         actions: [
           if (_controller.isUgc && _controller.enableSponsorBlock)
@@ -962,9 +975,10 @@ class _AudioPageState extends State<AudioPage> {
             Expanded(
               child: Center(
                 child: ListView(
-                  key: const PageStorageKey(_AudioPageState),
+                  padding: .zero,
                   shrinkWrap: true,
                   physics: platformClampingPhysics,
+                  key: const PageStorageKey(_AudioPageState),
                   children: [
                     Center(
                       child: GestureDetector(

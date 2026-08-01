@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -7,6 +8,17 @@ import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
+=======
+import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/button/icon_button.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
+import 'package:PiliPlus/pages/video/controller.dart';
+import 'package:PiliPlus/plugin/pl_player/controller.dart';
+import 'package:PiliPlus/utils/duration_utils.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -35,8 +47,7 @@ class _ViewPointsPageState extends State<ViewPointsPage>
 
   @override
   Widget buildPage(ThemeData theme) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         primary: false,
         automaticallyImplyLeading: false,
@@ -78,19 +89,17 @@ class _ViewPointsPageState extends State<ViewPointsPage>
   }
 
   late Key _key;
-  late bool _isNested;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final controller = PrimaryScrollController.of(context);
-    _isNested = controller is ExtendedNestedScrollController;
     _key = ValueKey(controller.hashCode);
   }
 
   @override
   Widget buildList(ThemeData theme) {
-    final child = ListView.builder(
+    return ListView.builder(
       key: _key,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
@@ -112,13 +121,6 @@ class _ViewPointsPageState extends State<ViewPointsPage>
         return _buildItem(theme.colorScheme, segment, isCurr);
       },
     );
-    if (_isNested) {
-      return ExtendedVisibilityDetector(
-        uniqueKey: const ValueKey(ViewPointsPage),
-        child: child,
-      );
-    }
-    return child;
   }
 
   Widget _buildItem(

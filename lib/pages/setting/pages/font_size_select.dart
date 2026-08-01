@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
+=======
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
+import 'package:PiliPlus/utils/storage.dart';
+import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:PiliPlus/utils/storage_pref.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -28,8 +36,7 @@ class _FontSizeSelectPageState extends State<FontSizeSelectPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         actions: [
           TextButton(

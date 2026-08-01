@@ -1,5 +1,6 @@
 import 'dart:math';
 
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/flutter/page/page_view.dart';
@@ -26,8 +27,38 @@ import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
+=======
+import 'package:PiliPlus/common/widgets/badge.dart';
+import 'package:PiliPlus/common/widgets/custom_icon.dart';
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
+import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+    show tabBarScrollPhysics;
+import 'package:PiliPlus/common/widgets/sliver/sliver_to_box_adapter.dart';
+import 'package:PiliPlus/models/common/image_preview_type.dart';
+import 'package:PiliPlus/models/dynamics/article_content_model.dart' show Pic;
+import 'package:PiliPlus/models/dynamics/result.dart' show DynamicStat;
+import 'package:PiliPlus/pages/article/controller.dart';
+import 'package:PiliPlus/pages/article/widgets/article_ops.dart';
+import 'package:PiliPlus/pages/article/widgets/html_render.dart';
+import 'package:PiliPlus/pages/article/widgets/opus_content.dart';
+import 'package:PiliPlus/pages/common/dyn/common_dyn_page.dart';
+import 'package:PiliPlus/pages/dynamics_repost/view.dart';
+import 'package:PiliPlus/utils/date_utils.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
+import 'package:PiliPlus/utils/grid.dart';
+import 'package:PiliPlus/utils/image_utils.dart';
+import 'package:PiliPlus/utils/num_utils.dart';
+import 'package:PiliPlus/utils/page_utils.dart';
+import 'package:PiliPlus/utils/share_utils.dart';
+import 'package:PiliPlus/utils/utils.dart';
+>>>>>>> upstream/main
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:flutter/material.dart' hide PageView;
+import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
@@ -54,20 +85,19 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
 
   @override
   Widget build(BuildContext context) {
-    final child = Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: _buildAppBar(),
-      body: Padding(
-        padding: EdgeInsets.only(left: padding.left, right: padding.right),
-        child: _buildPage(),
-      ),
-      floatingActionButtonLocation: floatingActionButtonLocation,
-      floatingActionButton: SlideTransition(
-        position: fabAnimation,
-        child: _buildBottom(),
+    return fabAnimWrapper(
+      child: SimpleScaffold(
+        appBar: _buildAppBar(),
+        body: Padding(
+          padding: .only(left: padding.left, right: padding.right),
+          child: _buildPage(),
+        ),
+        fab: SlideTransition(
+          position: fabAnimation,
+          child: _buildBottom(),
+        ),
       ),
     );
-    return fabAnimWrapper(child: child);
   }
 
   Widget _buildPage() {
@@ -137,9 +167,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
           flex: flex1,
           child: Padding(
             padding: .only(right: padding),
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              resizeToAvoidBottomInset: false,
+            child: MiniScaffold(
               body: refreshIndicator(
                 onRefresh: controller.onRefresh,
                 child: CustomScrollView(
@@ -501,8 +529,8 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
           height: height,
           width: contentWidth,
           margin: const .only(bottom: 10),
-          child: PageView<CustomHorizontalDragGestureRecognizer>.builder(
-            physics: clampingScrollPhysics,
+          child: PageView.builder(
+            physics: tabBarScrollPhysics,
             horizontalDragGestureRecognizer:
                 CustomHorizontalDragGestureRecognizer.new,
             onPageChanged: controller.topIndex.call,

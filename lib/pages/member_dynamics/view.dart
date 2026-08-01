@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -7,6 +8,18 @@ import 'package:pili_plus/pages/member_dynamics/controller.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/waterfall.dart';
+=======
+import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/dynamics/result.dart';
+import 'package:PiliPlus/pages/dynamics/widgets/dynamic_panel.dart';
+import 'package:PiliPlus/pages/member_dynamics/controller.dart';
+import 'package:PiliPlus/utils/global_data.dart';
+import 'package:PiliPlus/utils/utils.dart';
+import 'package:PiliPlus/utils/waterfall.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:waterfall_flow/waterfall_flow.dart'
@@ -45,8 +58,7 @@ class _MemberDynamicsPageState extends State<MemberDynamicsPage>
     super.build(context);
     final padding = MediaQuery.viewPaddingOf(context);
     return widget.mid == null
-        ? Scaffold(
-            resizeToAvoidBottomInset: false,
+        ? SimpleScaffold(
             appBar: AppBar(title: const Text('我的动态')),
             body: Padding(
               padding: EdgeInsets.only(

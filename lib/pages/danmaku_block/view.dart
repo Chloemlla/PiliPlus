@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
@@ -10,6 +11,21 @@ import 'package:pili_plus/pages/danmaku_block/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
+=======
+import 'package:PiliPlus/common/widgets/button/icon_button.dart';
+import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
+import 'package:PiliPlus/common/widgets/keep_alive_wrapper.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
+import 'package:PiliPlus/models/common/dm_block_type.dart';
+import 'package:PiliPlus/models/user/danmaku_block.dart';
+import 'package:PiliPlus/models/user/danmaku_rule.dart';
+import 'package:PiliPlus/pages/danmaku_block/controller.dart';
+import 'package:PiliPlus/plugin/pl_player/controller.dart';
+import 'package:PiliPlus/utils/storage.dart';
+import 'package:PiliPlus/utils/storage_key.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -25,11 +41,18 @@ class DanmakuBlockPage extends StatefulWidget {
 class _DanmakuBlockPageState extends State<DanmakuBlockPage> {
   final DanmakuBlockController _controller = Get.put(DanmakuBlockController());
   late PlPlayerController plPlayerController;
+  late EdgeInsets padding;
 
   @override
   void initState() {
     super.initState();
     plPlayerController = Get.arguments as PlPlayerController;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    padding = MediaQuery.viewPaddingOf(context);
   }
 
   @override
@@ -42,8 +65,7 @@ class _DanmakuBlockPageState extends State<DanmakuBlockPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
+    return SimpleScaffold(
       appBar: AppBar(
         title: const Text('弹幕屏蔽'),
         bottom: TabBar(
@@ -71,11 +93,18 @@ class _DanmakuBlockPageState extends State<DanmakuBlockPage> {
             )
             .toList(),
       ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: '添加',
-        onPressed: () =>
-            _showAddDialog(DmBlockType.values[_controller.tabController.index]),
-        child: const Icon(Icons.add),
+      fab: Padding(
+        padding: .only(
+          right: kFloatingActionButtonMargin + padding.right,
+          bottom: kFloatingActionButtonMargin + padding.bottom,
+        ),
+        child: FloatingActionButton(
+          tooltip: '添加',
+          onPressed: () => _showAddDialog(
+            DmBlockType.values[_controller.tabController.index],
+          ),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -86,9 +115,7 @@ class _DanmakuBlockPageState extends State<DanmakuBlockPage> {
     }
     return ListView.builder(
       itemCount: list.length,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewPaddingOf(context).bottom + 100,
-      ),
+      padding: .only(bottom: padding.bottom + 100),
       itemBuilder: (context, itemIndex) {
         final SimpleRule item = list[itemIndex];
         final child = iconButton(

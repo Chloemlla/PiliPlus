@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/models_new/video/video_ai_conclusion/model_result.dart';
 import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
+=======
+import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:PiliPlus/models_new/video/video_ai_conclusion/model_result.dart';
+import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
+import 'package:PiliPlus/pages/video/controller.dart';
+import 'package:PiliPlus/utils/duration_utils.dart';
+>>>>>>> upstream/main
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -166,30 +174,21 @@ class _AiDetailState extends State<AiConclusionPanel>
   }
 
   late Key _key;
-  late bool _isNested;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final controller = PrimaryScrollController.of(context);
-    _isNested = controller is ExtendedNestedScrollController;
     _key = ValueKey(controller.hashCode);
   }
 
   @override
   Widget buildList(ThemeData theme) {
-    final child = AiConclusionPanel.buildContent(
+    return AiConclusionPanel.buildContent(
       context,
       theme,
       widget.item,
       key: _key,
     );
-    if (_isNested) {
-      return ExtendedVisibilityDetector(
-        uniqueKey: const Key('ai-conclusion'),
-        child: child,
-      );
-    }
-    return child;
   }
 }

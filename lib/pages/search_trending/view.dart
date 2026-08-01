@@ -41,6 +41,7 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
     final maxWidth = size.width - padding.horizontal;
     final width = size.isPortrait ? maxWidth : min(640.0, maxWidth * 0.6);
     final height = width * 528 / 1125;
+<<<<<<< HEAD
     _offset = height - kToolbarHeight - padding.top;
     return Scaffold(
       extendBody: true,
@@ -76,46 +77,88 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
                   ? Border(
                       bottom: BorderSide(
                         color: theme.colorScheme.outline.withValues(alpha: 0.1),
+=======
+    _offset = height - 56 - padding.top;
+    return Material(
+      child: Stack(
+        children: [
+          Padding(
+            padding: .only(left: padding.left, right: padding.right),
+            child: Center(
+              child: SizedBox(
+                width: width,
+                child: refreshIndicator(
+                  onRefresh: _controller.onRefresh,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      TrendingHeader(
+                        offset: _offset,
+                        onScrollRatioChanged: _scrollRatio.call,
+                        child: Image.asset(
+                          width: width,
+                          height: height,
+                          cacheWidth: width.cacheSize(context),
+                          Assets.trendingBanner,
+                          filterQuality: .low,
+                        ),
+>>>>>>> upstream/main
                       ),
-                    )
-                  : null,
-            );
-          },
-        ),
-      ),
-      body: Padding(
-        padding: .only(left: padding.left, right: padding.right),
-        child: Center(
-          child: SizedBox(
-            width: width,
-            child: refreshIndicator(
-              onRefresh: _controller.onRefresh,
-              child: CustomScrollView(
-                controller: _controller.scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  TrendingHeader(
-                    offset: _offset,
-                    onScrollRatioChanged: _scrollRatio.call,
-                    child: Image.asset(
-                      width: width,
-                      height: height,
-                      cacheWidth: width.cacheSize(context),
-                      Assets.trendingBanner,
-                      filterQuality: FilterQuality.low,
-                    ),
+                      SliverPadding(
+                        padding: .only(bottom: padding.bottom + 100),
+                        sliver: Obx(
+                          () =>
+                              _buildBody(theme, _controller.loadingState.value),
+                        ),
+                      ),
+                    ],
                   ),
-                  SliverPadding(
-                    padding: EdgeInsets.only(bottom: padding.bottom + 100),
-                    sliver: Obx(
-                      () => _buildBody(theme, _controller.loadingState.value),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            left: 0,
+            top: 0,
+            right: 0,
+            child: Obx(
+              () {
+                final scrollRatio = _scrollRatio.value;
+                final flag = maxWidth > width || scrollRatio >= 0.5;
+                return AppBar(
+                  title: Opacity(
+                    opacity: scrollRatio,
+                    child: Text(
+                      'bilibili热搜',
+                      style: TextStyle(
+                        color: flag ? null : Colors.white,
+                      ),
+                    ),
+                  ),
+                  backgroundColor: theme.colorScheme.surface.withValues(
+                    alpha: scrollRatio,
+                  ),
+                  foregroundColor: flag ? null : Colors.white,
+                  systemOverlayStyle: flag
+                      ? null
+                      : const SystemUiOverlayStyle(
+                          statusBarBrightness: Brightness.dark,
+                          statusBarIconBrightness: Brightness.light,
+                        ),
+                  shape: scrollRatio == 1
+                      ? Border(
+                          bottom: BorderSide(
+                            color: theme.colorScheme.outline.withValues(
+                              alpha: 0.1,
+                            ),
+                          ),
+                        )
+                      : null,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -154,7 +197,7 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
                         : Text(
                             '${index + 1 - _controller.topCount}',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: .bold,
                               color: ColourUtils.index2Color(
                                 index - _controller.topCount,
                                 theme.colorScheme.outline,
@@ -169,7 +212,7 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
                           child: Text(
                             item.keyword!,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: .ellipsis,
                             strutStyle: const StrutStyle(height: 1, leading: 0),
                             style: const TextStyle(height: 1, fontSize: 15),
                           ),
