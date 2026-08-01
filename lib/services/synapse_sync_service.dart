@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
 import 'package:dio/dio.dart';
-import 'package:pili_plus/main.dart' as app;
 import 'package:pili_plus/models/search/search_history_entry.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -434,41 +434,40 @@ class _SynapseAuthorizationDialog extends StatefulWidget {
 }
 
 class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog> {
-  Timer? _poller;
-  bool _checking = false;
+  StreamSubscription<String>? _tokenSub;
   bool _completed = false;
-
-  Future<void> _readSession() async {
-    if (_checking || _completed) return;
-    _checking = true;
-    try {
-      final cookies = await web.CookieManager.instance(
-        webViewEnvironment: app.webViewEnvironment,
-      ).getCookies(
-        url: web.WebUri(widget.loginUrl),
-      );
-      final token = cookies
-          .where((cookie) => cookie.name == 'synapse_token')
-          .map((cookie) => cookie.value.trim())
-          .firstWhere((value) => value.isNotEmpty, orElse: () => '');
-      if (token.isNotEmpty && mounted) {
-        _completed = true;
-        Navigator.pop(context, token);
-      }
-    } finally {
-      _checking = false;
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _poller = Timer.periodic(const Duration(seconds: 1), (_) => _readSession());
+    // Listen for the deep link callback with the auth token
+    _tokenSub = PiliScheme.pendingAuthToken.listen((token) {
+      if (!_completed && token.isNotEmpty && mounted) {
+        _completed = true;
+        Navigator.pop(context, token);
+      }
+    });
+    // Open system browser for Synapse login
+    _openBrowser();
+  }
+
+  Future<void> _openBrowser() async {
+    // Build the login URL with a redirect_uri that points back to piliplus://
+    final uri = Uri.tryParse(widget.loginUrl);
+    final loginUri = uri?.replace(
+      queryParameters: {
+        ...?uri.queryParameters,
+        'redirect_uri': 'piliplus://synapse-auth',
+      },
+    );
+    if (loginUri != null && mounted) {
+      await PageUtils.launchURL(loginUri.toString());
+    }
   }
 
   @override
   void dispose() {
-    _poller?.cancel();
+    _tokenSub?.cancel();
     super.dispose();
   }
 
@@ -476,22 +475,42 @@ class _SynapseAuthorizationDialogState extends State<_SynapseAuthorizationDialog
   Widget build(BuildContext context) => AlertDialog(
         title: const Text('登录 Synapse'),
         content: SizedBox(
-          width: 520,
-          height: 640,
-          child: web.InAppWebView(
-            webViewEnvironment: app.webViewEnvironment,
-            initialSettings: web.InAppWebViewSettings(
-              javaScriptEnabled: true,
-              useShouldOverrideUrlLoading: true,
-              thirdPartyCookiesEnabled: true,
-            ),
-            initialUrlRequest: web.URLRequest(url: web.WebUri(widget.loginUrl)),
-            onLoadStop: (_, __) => _readSession(),
-            onUpdateVisitedHistory: (_, __, ___) => _readSession(),
+          width: 400,
+          height: 200,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.open_in_browser, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                '请在系统浏览器中完成登录',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '登录完成后，浏览器将自动跳转回 PiliPlus',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: () => PageUtils.launchURL(widget.loginUrl),
+                icon: const Icon(Icons.refresh),
+                label: const Text('重新打开浏览器'),
+              ),
+            ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
         ],
       );
 }

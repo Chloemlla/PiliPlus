@@ -29,6 +29,10 @@ class BottomControl extends StatelessWidget {
   final ValueGetter<Widget> buildBottomControl;
   final VideoDetailController videoDetailController;
 
+  static double _widgetWidth(bool isFullScreen) =>
+      PlatformUtils.isMobile ? (isFullScreen ? 48 : 40) : (isFullScreen ? 42 : 35);
+  static const double _widgetHeight = 36.0;
+
   void onDragStart(ThumbDragDetails duration) {
     feedBack();
     controller
@@ -172,15 +176,15 @@ class BottomControl extends StatelessWidget {
               Expanded(child: buildBottomControl()),
               if (!controller.isFileSource && !controller.isDesktopPip)
                 SizedBox(
-                  width: isFullScreen ? 42 : 35,
-                  height: 30,
+                  width: _widgetWidth(isFullScreen),
+                  height: _widgetHeight,
                   child: IconButton(
                     tooltip: '视频标记',
                     padding: EdgeInsets.zero,
                     onPressed: () => _showBookmarkSheet(context),
                     icon: const Icon(
                       Icons.bookmark_add_outlined,
-                      size: 21,
+                      size: 24,
                       color: Colors.white,
                     ),
                   ),

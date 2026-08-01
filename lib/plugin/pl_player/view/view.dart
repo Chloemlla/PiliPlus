@@ -14,7 +14,6 @@ import 'package:pili_plus/common/widgets/gesture/mouse_interactive_viewer.dart';
 import 'package:pili_plus/common/widgets/gesture/player_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/loading_widget.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
-import 'package:pili_plus/common/widgets/player_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
@@ -412,7 +411,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     final isPlayAll = videoDetailController.isPlayAll;
     final anySeason = isSeason || isPart || isPgc || isPlayAll;
     final isFullScreen = this.isFullScreen;
-    final double widgetWidth = isLandscape && isFullScreen ? 42 : 35;
+    final double widgetWidth = PlatformUtils.isMobile
+        ? (isLandscape && isFullScreen ? 48 : 40)
+        : (isLandscape && isFullScreen ? 42 : 35);
+    final double widgetHeight = PlatformUtils.isMobile ? 36.0 : 30.0;
+    final double iconSize = PlatformUtils.isMobile ? 24.0 : 22.0;
 
     Widget progressWidget(
       BottomControlType bottomControl,
@@ -425,7 +428,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       /// 上一集
       BottomControlType.pre => ComBtn(
         width: widgetWidth,
-        height: 30,
+        height: widgetHeight,
         tooltip: '上一集',
         icon: const Icon(
           Icons.skip_previous,
@@ -442,7 +445,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       /// 下一集
       BottomControlType.next => ComBtn(
         width: widgetWidth,
-        height: 30,
+        height: widgetHeight,
         tooltip: '下一集',
         icon: const Icon(
           Icons.skip_next,
@@ -476,13 +479,13 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             final show = videoDetailController.showDmTrendChart.value;
             return ComBtn(
               width: widgetWidth,
-              height: 30,
+              height: widgetHeight,
               tooltip: '高能进度条',
               icon: DisabledIcon(
                 disable: !show,
-                child: const Icon(
+                child: Icon(
                   Icons.show_chart,
-                  size: 22,
+                  size: iconSize,
                   color: Colors.white,
                 ),
               ),
@@ -538,10 +541,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           if (videoDetailController.viewPointList.isNotEmpty) {
             return ComBtn(
               width: widgetWidth,
-              height: 30,
+              height: widgetHeight,
               tooltip: '分段信息',
               icon: DisabledIcon(
-                iconSize: 22,
+                iconSize: iconSize,
                 color: Colors.white,
                 disable: !videoDetailController.showVP.value,
                 child: const Icon(
@@ -567,11 +570,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       /// 选集
       BottomControlType.episode => ComBtn(
         width: widgetWidth,
-        height: 30,
+        height: widgetHeight,
         tooltip: '选集',
-        icon: const Icon(
+        icon: Icon(
           Icons.list,
-          size: 22,
+          size: iconSize,
           color: Colors.white,
         ),
         onTap: () {
@@ -699,10 +702,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               },
               child: SizedBox(
                 width: widgetWidth,
-                height: 30,
-                child: const Icon(
+                height: widgetHeight,
+                child: Icon(
                   Icons.translate,
-                  size: 18,
+                  size: iconSize,
                   color: Colors.white,
                 ),
               ),
@@ -753,16 +756,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               },
               child: SizedBox(
                 width: widgetWidth,
-                height: 30,
+                height: widgetHeight,
                 child: val == 0
-                    ? const Icon(
+                    ? Icon(
                         Icons.closed_caption_off_outlined,
-                        size: 22,
+                        size: iconSize,
                         color: Colors.white,
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.closed_caption_off_rounded,
-                        size: 22,
+                        size: iconSize,
                         color: Colors.white,
                       ),
               ),
@@ -902,11 +905,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       /// 全屏
       BottomControlType.fullscreen => ComBtn(
         width: widgetWidth,
-        height: 30,
+        height: widgetHeight,
         tooltip: isFullScreen ? '退出全屏' : '全屏',
         icon: isFullScreen
-            ? const Icon(Icons.fullscreen_exit, size: 24, color: Colors.white)
-            : const Icon(Icons.fullscreen, size: 24, color: Colors.white),
+            ? Icon(Icons.fullscreen_exit, size: iconSize, color: Colors.white)
+            : Icon(Icons.fullscreen, size: iconSize, color: Colors.white),
         onTap: () =>
             plPlayerController.triggerFullScreen(status: !isFullScreen),
         onSecondaryTap: () => plPlayerController.triggerFullScreen(
@@ -938,15 +941,20 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       if (isNotFileSource && flag) .qa,
       if (!plPlayerController.isDesktopPip) .fullscreen,
     ];
-    return PlayerBar(
+    return Row(
       children: [
         Row(
           mainAxisSize: .min,
           children: userSpecifyItemLeft.map(progressWidget).toList(),
         ),
-        Row(
-          mainAxisSize: .min,
-          children: userSpecifyItemRight.map(progressWidget).toList(),
+        const Spacer(),
+        SingleChildScrollView(
+          scrollDirection: .horizontal,
+          reverse: true,
+          child: Row(
+            mainAxisSize: .min,
+            children: userSpecifyItemRight.map(progressWidget).toList(),
+          ),
         ),
       ],
     );
