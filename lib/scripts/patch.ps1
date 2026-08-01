@@ -141,8 +141,12 @@ function Apply-CanvasDanmakuPatch {
         throw "Pinned canvas_danmaku checkout not found at $expectedPackagePath. Run flutter pub get first."
     }
 
-    $resolvedPackagePath = (Resolve-Path -LiteralPath $packageUri.LocalPath).Path
-    $resolvedExpectedPath = (Resolve-Path -LiteralPath $expectedPackagePath).Path
+    $directorySeparators = [char[]]@(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar
+    )
+    $resolvedPackagePath = (Resolve-Path -LiteralPath $packageUri.LocalPath).Path.TrimEnd($directorySeparators)
+    $resolvedExpectedPath = (Resolve-Path -LiteralPath $expectedPackagePath).Path.TrimEnd($directorySeparators)
     if ($resolvedPackagePath -ne $resolvedExpectedPath) {
         throw "canvas_danmaku resolved to unexpected checkout $resolvedPackagePath; expected $resolvedExpectedPath."
     }
