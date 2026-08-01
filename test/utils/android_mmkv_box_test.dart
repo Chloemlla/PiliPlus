@@ -359,8 +359,8 @@ void main() {
   });
 
   test('lazy access surfaces corrupt migrated values', () async {
-    final store = _MemoryAndroidMmkvStore();
-    store.putRaw('lazy_corrupt', jsonEncode('broken'), 'not-json');
+    final store = _MemoryAndroidMmkvStore()
+      ..putRaw('lazy_corrupt', jsonEncode('broken'), 'not-json');
     final box = AndroidMmkvBackedBox<dynamic>(
       'lazy_corrupt',
       store: store,

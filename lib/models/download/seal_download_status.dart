@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 /// Typed representation of one Seal download status callback.
 final class SealDownloadStatus {
   const SealDownloadStatus({

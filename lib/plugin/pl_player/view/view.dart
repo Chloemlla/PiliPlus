@@ -930,10 +930,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             itemBuilder: (context) {
               return [
                 if (!plPlayerController.isFileSource && !plPlayerController.isDesktopPip)
-                  PopupMenuItem<String>(
+                  const PopupMenuItem<String>(
                     value: 'bookmark',
                     height: 35,
-                    child: const Row(
+                    child: Row(
                       children: [
                         Icon(Icons.bookmark_add_outlined, size: 20, color: Colors.white),
                         SizedBox(width: 8),

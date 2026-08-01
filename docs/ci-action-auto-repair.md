@@ -23,6 +23,7 @@
 
 ```bash
 # Inventory
+gh repo view --json nameWithOwner
 gh pr list --state open --json number,title,headRefName,url,statusCheckRollup
 gh run list --branch <branch> --limit 20 --json databaseId,workflowName,status,conclusion,url,headSha,displayTitle,event
 gh run list --status failure --limit 30 --json databaseId,workflowName,status,conclusion,url,headBranch,headSha,event
@@ -63,6 +64,9 @@ dart pub get
   - reading failed job logs
   - reading PR check rollups
   - re-running failed jobs after fixes
+- When the checkout has multiple GitHub remotes, confirm `gh repo view` matches
+  the actual push target. If it resolves to an upstream repository, pass
+  `--repo <push-owner>/<repo>` to every PR/run command explicitly.
 - Do not ask the user to paste CI logs when `gh` can fetch them.
 
 #### Parallel subagent dispatch (mandatory when multi-failure)

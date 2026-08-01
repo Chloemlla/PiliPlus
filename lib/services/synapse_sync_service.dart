@@ -220,7 +220,7 @@ abstract final class SynapseSyncService {
     final settingsData = _responseData(settingsResponse);
     final records = (data['records'] as List? ?? const [])
         .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList(growable: false);
     return SynapseRemoteSnapshot(
       records: records,

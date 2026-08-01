@@ -136,8 +136,7 @@ DanmakuHighlightService _createService(_MemoryRuleStore store) {
   final service = DanmakuHighlightService(
     readRules: () => store.value,
     writeRules: store.write,
-  );
-  service.onInit();
+  )..onInit();
   return service;
 }
 
@@ -166,7 +165,7 @@ final class _MemoryRuleStore {
   int writeCount = 0;
 
   Future<void> write(List<Map<String, dynamic>> data) async {
-    value = data.map((item) => Map<String, dynamic>.of(item)).toList();
+    value = data.map(Map<String, dynamic>.of).toList();
     writeCount++;
   }
 }

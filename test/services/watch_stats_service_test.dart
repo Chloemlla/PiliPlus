@@ -36,44 +36,44 @@ void main() {
         persistenceChunk: const Duration(hours: 1),
       );
       final start = DateTime(2026, 7, 31, 12);
-      tracker.begin(metadata: metadata, position: Duration.zero, at: start);
-
-      tracker.onPosition(
-        position: const Duration(seconds: 1),
-        at: start.add(const Duration(seconds: 1)),
-        isPlaying: true,
-        isBuffering: false,
-        isSeeking: false,
-        playbackSpeed: 1,
-      );
-      tracker.onPosition(
-        position: const Duration(seconds: 1),
-        at: start.add(const Duration(seconds: 8)),
-        isPlaying: false,
-        isBuffering: false,
-        isSeeking: false,
-        playbackSpeed: 1,
-      );
-      tracker.onPosition(
-        position: const Duration(seconds: 2),
-        at: start.add(const Duration(seconds: 9)),
-        isPlaying: true,
-        isBuffering: true,
-        isSeeking: false,
-        playbackSpeed: 1,
-      );
-      tracker.markSeek(
-        position: const Duration(seconds: 100),
-        at: start.add(const Duration(seconds: 10)),
-      );
-      tracker.onPosition(
-        position: const Duration(seconds: 101),
-        at: start.add(const Duration(seconds: 11)),
-        isPlaying: true,
-        isBuffering: false,
-        isSeeking: false,
-        playbackSpeed: 1,
-      );
+      tracker
+        ..begin(metadata: metadata, position: Duration.zero, at: start)
+        ..onPosition(
+          position: const Duration(seconds: 1),
+          at: start.add(const Duration(seconds: 1)),
+          isPlaying: true,
+          isBuffering: false,
+          isSeeking: false,
+          playbackSpeed: 1,
+        )
+        ..onPosition(
+          position: const Duration(seconds: 1),
+          at: start.add(const Duration(seconds: 8)),
+          isPlaying: false,
+          isBuffering: false,
+          isSeeking: false,
+          playbackSpeed: 1,
+        )
+        ..onPosition(
+          position: const Duration(seconds: 2),
+          at: start.add(const Duration(seconds: 9)),
+          isPlaying: true,
+          isBuffering: true,
+          isSeeking: false,
+          playbackSpeed: 1,
+        )
+        ..markSeek(
+          position: const Duration(seconds: 100),
+          at: start.add(const Duration(seconds: 10)),
+        )
+        ..onPosition(
+          position: const Duration(seconds: 101),
+          at: start.add(const Duration(seconds: 11)),
+          isPlaying: true,
+          isBuffering: false,
+          isSeeking: false,
+          playbackSpeed: 1,
+        );
 
       final completed = tracker.finish(start.add(const Duration(seconds: 12)));
       expect(completed, hasLength(1));
@@ -85,15 +85,16 @@ void main() {
         persistenceChunk: const Duration(hours: 1),
       );
       final start = DateTime(2026, 7, 31, 12);
-      tracker.begin(metadata: metadata, position: Duration.zero, at: start);
-      tracker.onPosition(
-        position: const Duration(seconds: 10),
-        at: start.add(const Duration(seconds: 10)),
-        isPlaying: true,
-        isBuffering: false,
-        isSeeking: false,
-        playbackSpeed: 1,
-      );
+      tracker
+        ..begin(metadata: metadata, position: Duration.zero, at: start)
+        ..onPosition(
+          position: const Duration(seconds: 10),
+          at: start.add(const Duration(seconds: 10)),
+          isPlaying: true,
+          isBuffering: false,
+          isSeeking: false,
+          playbackSpeed: 1,
+        );
 
       final ended = tracker.onPosition(
         position: const Duration(seconds: 20),
