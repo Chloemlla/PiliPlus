@@ -769,3 +769,781 @@ Automated scan of 630 UI files for responsive layout issues. Found 63 issues tot
 - **Why**: SearchUserItem can render up to three stacked text lines (uname + '粉丝/视频' + officialVerify.desc). At default font that is ~54dp and fits in 66dp, but when the third line is present or the user enables text scaling (>=1.3x), the content exceeds the fixed 66dp cell. The Column uses mainAxisAlignment.center, so overflow is clipped symmetrically at both the top and bottom of the cell.
 - **Fix**: Derive the extent from the text scaler, e.g. mainAxisExtent: 66 * MediaQuery.textScalerOf(context).scale(1), or enforce single-line ellipsis on all three Texts so the fixed height is safe.
 
+
+### lib/pages/setting/widgets/select_dialog.dart:38
+- **Element**: `SelectDialog`
+- **Issue**: Hardcoded fixed width on a dialog that should size adaptively (anti-patterns #1 and #3).
+- **Why**: BoxConstraints.tightFor(width: 320) is passed to AlertDialog.constraints, and Flutter's Dialog applies this constraint OUTSIDE its default insetPadding (40dp per side). The 320dp box therefore includes the side padding: on a 320dp phone (the audit's minimum target) the dialog spans the full 320dp width with zero horizontal margin and content is squeezed to 240dp against the screen edges (layout wrong); on any screen narrower than 320dp the Align/ConstrainedBox overflows the screen. The width also never grows on larger phones, so it is non-adaptive.
+- **Fix**: Remove the tightFor(width: 320) constraint entirely and let AlertDialog size naturally (default minWidth 280 adapts to insetPadding), or use a BoxConstraints with maxWidth based on MediaQuery.sizeOf(context).width - (2 * Dialog.insetPadding.horizontal) so the dialog always keeps margins.
+
+
+### lib/pages/setting/widgets/popup_item.dart:103
+- **Element**: `_PopupListTileState (DescPosType.title branch)`
+- **Issue**: Row with unbounded text children and no flexible/scroll/ellipsis inside a bounded ListTile title (anti-patterns #2 and #8).
+- **Why**: When descPosType == DescPosType.title, the code builds Row(mainAxisSize: MainAxisSize.min, spacing: 12, children: [title, desc]) and assigns it to ListTile.title. The title area has a bounded width, and the Row with min size will try to lay out both Texts at intrinsic width. For a long setting title plus a long desc string, the combined intrinsic width exceeds the tile's available width on 320-375dp screens, causing a RenderFlex overflow (yellow/black stripes) since neither child is Flexible and no text ellipsis is applied.
+- **Fix**: Wrap the trailing desc in Flexible(child: Text(..., overflow: TextOverflow.ellipsis)) so it shrinks within the bounded title area, or use a Wrap instead of Row; keep title Text flexible with ellipsis too.
+
+
+### lib/pages/video/member/view.dart:268
+- **Element**: `Row in _buildInfo (user stats)`
+- **Issue**: Row of three stat items (粉丝/关注/获赞) plus two 20px VerticalDividers, generated via map().expand() with no Flexible/Wrap/scroll and no ellipsis
+- **Why**: The info column is inside Expanded beside a fixed 70px avatar with 10px spacing and 16px page padding, so on a 320dp screen it gets only ~208dp (320-32-70-10; ~263dp on 375). Three stat Texts like '1234.5万粉丝' / '1.2亿获赞' are ~85-100dp each plus 2x20dp dividers, summing to ~300dp+ — far more than the available width. The Row is bounded (no Wrap, no scroll, non-flexible children) so it throws a RenderFlex overflow on essentially all phone widths.
+- **Fix**: Replace the Row with a Wrap(spacing:, runSpacing:), or wrap each _buildChildInfo in Flexible with maxLines:1 + TextOverflow.ellipsis, or give the three items Expanded flex so they share the row width.
+
+
+### lib/pages/video/reply/widgets/reply_item_grpc.dart:509
+- **Element**: `Row in buttonAction`
+- **Issue**: Fixed-width action Row: SizedBox(width:36) + 回复 button + translate button (SizedBox height 32 TextButton) or cardLabels Text + 查看对话/跳转回复 dialogBtn + Spacer + ZanButtonGrpc (~90-100dp), none of the leading items are Flexible/ellipsized
+- **Why**: For sub-replies (replyLevel 2/3, used in reply_reply/view.dart with replyLevel 2/3 and default needDivider:true) the item has 12+8 item padding plus 45+6 content indent, leaving only ~249dp on a 320dp screen. When a reply has both the translation button (~43dp) and the dialog button ('跳转回复' ~48dp) together with the 36dp indent, 45dp reply button and ~88-100dp ZanButtonGrpc, the fixed widths sum to ~270-280dp and overflow. The cardLabels Text (line 546) is also an unconstrained Row child in the same Row.
+- **Fix**: Wrap the leading button group (indent + 回复 + translate + dialog) in Flexible, make the cardLabels Text Flexible with maxLines:1 + ellipsis, and replace Spacer with Expanded so the row can compress; or allow the action row to wrap.
+
+
+### lib/pages/video/member/view.dart:241
+- **Element**: `Row in _buildInfo (username + level picture)`
+- **Issue**: Row with a non-flex username Text (no Flexible, no maxLines/ellipsis) followed by a fixed level picture
+- **Why**: The name Row sits in the same ~208dp info column (320dp screen). A username longer than ~11 CJK chars at fontSize 16 (names can be up to ~20 chars on Bilibili) exceeds the available width, and because the Text is a plain Row child it cannot wrap or ellipsize, causing a RenderFlex overflow. Other usernames in the app (e.g. reply_item_grpc.dart line 178) are correctly wrapped in Flexible with ellipsis; this one is not.
+- **Fix**: Wrap the username Text in Flexible and add maxLines:1 + TextOverflow.ellipsis.
+
+
+### lib/pages/video/note/view.dart:244
+- **Element**: `Row in _itemWidget (author name + level picture)`
+- **Issue**: Row with a non-flex author-name Text (no Flexible, no ellipsis) plus a fixed 6px gap and level picture
+- **Why**: The item Row reserves 34px avatar + 12px spacing + 24px padding, leaving ~250dp for the Expanded column on a 320dp screen. Long author names (Text is a plain Row child, bounded by the Expanded column but with no way to shrink) overflow the row; there is no maxLines/ellipsis fallback, unlike the same pattern handled with Flexible in reply_item_grpc.dart.
+- **Fix**: Wrap the author-name Text in Flexible and add maxLines:1 + TextOverflow.ellipsis.
+
+
+### lib/pages/video/reply/widgets/zan_grpc.dart:0
+- **Element**: `N/A`
+- **Issue**: Audit could not run: target files do not exist in this repository
+- **Why**: The working directory F:\Repositories\GitHub\Happy-TTS is a Node.js/TypeScript web project (Synapse TTS platform), not a Flutter app. It contains no lib/ directory, no pubspec.yaml, and zero .dart files (verified with find across the repo excluding node_modules). None of the 15 listed Flutter paths (lib/pages/video/... including zan_grpc.dart, reply_new/view.dart, send_danmaku/view.dart, header_control.dart, header_mixin.dart, etc.) exist, so no responsive-layout analysis could be performed.
+- **Fix**: Point the Flutter responsive-layout audit at the correct repository that contains lib/pages/video/**/*.dart (a Bilibili-style video client). No findings can be reported for Happy-TTS.
+
+
+### lib/pages/webdav/view.dart:117
+- **Element**: `Positioned (wrapping a FloatingActionButton)`
+- **Issue**: Positioned widget used as a direct child of ListView — Positioned is a ParentDataWidget that is only legal inside a Stack.
+- **Why**: ListView lays its children out as sliver boxes; a Positioned child has no RenderStack ancestor to accept its StackParentData, so Flutter throws 'Positioned widgets must be placed inside Stack widgets' (a ParentDataWidget/render-object type error that also surfaces as a runtime cast failure in release builds). This breaks the whole WebDAV settings page on every device, 320dp phones included. The block is also dead/duplicated: a save FAB is already supplied via the `fab:` parameter of the Scaffold, so this Positioned FAB is redundant even if it compiled.
+- **Fix**: Delete the Positioned + FloatingActionButton block entirely (lines 117-150) — the Scaffold already gets its save FAB through `fab:`. If a floating overlay is genuinely required, wrap the ListView in a Stack and move the Positioned inside it.
+
+
+### lib/pages/whisper/view.dart:155
+- **Element**: `Row in _buildTopItems (GestureDetector > Padding > Column per item)`
+- **Issue**: Row with 4 non-flexible fixed-min-width items (CircleAvatar radius 22 + 10px padding + 13px text labels) using mainAxisAlignment.spaceEvenly, with no Wrap/scroll and no Flexible/Expanded children.
+- **Why**: The four items each have an intrinsic width of ~64-72dp (avatar 44dp + 20dp padding + label width), summing to ~280dp — only ~40dp of slack on a 320dp screen. Any increase in system text scale (1.2x+, common on small phones and with accessibility settings) grows labels like '收到的赞'/'系统通知' past the slack, and the Row overflows horizontally because the children cannot shrink (RenderFlex overflow / clipped items).
+- **Fix**: Wrap each generated item in Expanded or Flexible so the four columns share the available width, or replace the Row with a Wrap / horizontally scrollable ListView; do not use a fixed CircleAvatar radius inside a non-flex Row on narrow screens.
+
+
+### lib/pages/whisper/view.dart:47
+- **Element**: `Row in AppBar actions (Obx returning outsideItem.map((e) => IconButton))`
+- **Issue**: Dynamic-length Row of IconButtons built from server-driven outsideItem list placed in AppBar actions, with no scroll or Wrap.
+- **Why**: The number of outsideItem entries comes from the Bilibili session-main response and is unbounded at build time. Each IconButton costs ~48dp; combined with the static 'new fans' IconButton, the PopupMenuButton and SizedBox(width:5), three or more outside items push the actions beyond the ~224dp left over for actions on a 320dp AppBar (after leading + title), overflowing the AppBar actions row.
+- **Fix**: Constrain the actions Row: limit to the first N items, cap its width (e.g. wrap in a ConstrainedBox with a scrollable), or fold overflow entries into the existing PopupMenuButton so the actions never exceed the AppBar width.
+
+
+### lib/pages/whisper_detail/widget/chat_item.dart:262
+- **Element**: `msgTypeArticleCard_12`
+- **Issue**: Row of hardcoded-width cover images (each 130dp) with no Wrap or horizontal scroll for dynamic article card image lists (anti-pattern #2/#5)
+- **Why**: Bilibili article cards commonly carry 2-3 cover images. 3 images at 130dp = 390dp, which exceeds both the chat bubble's maxWidth 300 and the ~292dp content width on a 320dp screen (kChatListPadding=14 each side), so the Row renders as a RenderFlex overflow (striped bars) on small phones.
+- **Fix**: Compute per-image width from available space via LayoutBuilder (e.g. constraints.maxWidth / imageCount) so images shrink, or wrap the image Row in a horizontal SingleChildScrollView, or use a Wrap so images flow to the next line.
+
+
+### lib/pages/whisper_detail/widget/chat_item.dart:796
+- **Element**: `msgTypePictureCard_13`
+- **Issue**: math.max(400.0, constraints.maxWidth) forces the picture card to 400dp instead of capping at the available width (anti-pattern #1 hardcoded width)
+- **Why**: On any phone whose content width is below 400dp (320/360/375dp screens all qualify), maxWidth resolves to 400 rather than the ~292dp available, so the CachedNetworkImage and SizedBox become 400dp wide inside a smaller Align and are clipped/overflow off both edges of the chat viewport.
+- **Fix**: Use math.min(400.0, constraints.maxWidth) (or just constraints.maxWidth) so the picture card never exceeds the available horizontal space.
+
+
+### lib/pages/whisper_settings/widgets/item.dart:93
+- **Element**: `ImSettingsItem (trailing Row)`
+- **Issue**: ListTile trailing Row contains an unconstrained Text (no Flexible/maxLines/ellipsis) plus an icon (anti-pattern #1/#2 in a constrained slot)
+- **Why**: ListTile caps the trailing widget's width (roughly 0.42 of tile width, ~128dp on a 320dp screen). Long server-provided selectedSummary/subtitle strings laid out at intrinsic width in a Row with mainAxisSize.min exceed that cap and cause a RenderFlex overflow on 320-375dp screens.
+- **Fix**: Wrap the summary Text in Flexible with maxLines: 1 and overflow: TextOverflow.ellipsis inside the trailing Row (and keep the Row's mainAxisSize.min) so long summaries truncate instead of overflowing.
+
+
+### lib/common/widgets/appbar/appbar.dart:33
+- **Element**: `MultiSelectAppBarWidget (AppBar actions list)`
+- **Issue**: AppBar toolbar with leading close IconButton plus 4-5 action TextButtons ('全选', caller actions, '移除') + SizedBox in a non-scrolling NavigationToolbar (anti-pattern #2)
+- **Why**: On 320dp screens the leading button (~48dp) plus each compact CJK TextButton (~48-56dp, wider under text scaling) totals ~250-300dp, leaving the flexible title ('已选: N') with ~0 width; NavigationToolbar does not scroll or wrap actions, so with 2-3 extra actions passed by later/view.dart / download/detail/view.dart the toolbar overflows past the screen edge and throws a RenderFlex-style overflow, worse at larger system text scales.
+- **Fix**: Shrink the action set: replace the text actions with icon buttons or move them into an overflow PopupMenuButton, or keep only the most essential action in the toolbar.
+
+
+### lib/common/widgets/avatars.dart:27
+- **Element**: `avatars() (SizedBox > Stack of Positioned avatars)`
+- **Issue**: Fixed-width SizedBox computed as offset * users.length + gap with no cap and no Wrap, growing unbounded with the number of users (anti-pattern #5/#1)
+- **Why**: Each user adds 16dp (size 22, gap 6), so the widget's intrinsic width grows linearly and cannot shrink. dynamic_panel.dart passes the full moduleFold.users list (no take(3)), so a fold with 8+ users produces a ~134dp+ fixed block; inside the centered Row next to the '等N人' text on a 320dp screen the sum exceeds the available width and overflows, and Stack(clipBehavior: .none) paints the extra circles beyond the parent bounds.
+- **Fix**: Cap the displayed avatars inside the widget (e.g. users.take(3).take(5)) like other callers do, or size the Stack from LayoutBuilder/available constraints instead of a hardcoded linear formula.
+
+
+### lib/common/widgets/dialog/export_import.dart:155
+- **Element**: `AlertDialog (importFromInput)`
+- **Issue**: Anti-pattern #1: hardcoded width forcing a dialog wider than small phone screens. `importFromInput` passes `constraints: Style.dialogFixedConstraints`, which is defined in lib/common/style.dart:13 as `BoxConstraints.tightFor(width: 420)`. A `tightFor` constraint sets BOTH minWidth and maxWidth to 420, so `AlertDialog` is forced to exactly 420dp wide regardless of screen size (the default AlertDialog cap is 280dp).
+- **Why**: On a 320-375dp phone the dialog is forced to be 420dp wide - up to 100dp wider than the screen - so it extends past the screen edges and is clipped/overflows horizontally, with the TextFormField and actions cut off. Flutter's AlertDialog applies the passed `constraints` directly, overriding its responsive default.
+- **Fix**: Make the constraint an upper bound instead of a fixed size, e.g. `constraints: const BoxConstraints(maxWidth: 420)`, or clamp to the viewport with `BoxConstraints(maxWidth: min(420.0, MediaQuery.sizeOf(context).width - 40))` / `double.infinity` so the dialog shrinks to fit on 320-375dp screens. Root cause lives in Style.dialogFixedConstraints in lib/common/style.dart:13.
+
+
+### lib/common/widgets/floating_navigation_bar.dart:86
+- **Element**: `FloatingNavigationBar.build -> SizedBox(width: destinations.length * _kIndicatorWidth)`
+- **Issue**: Hardcoded total bar width: SizedBox(width: destinations.length * _kIndicatorWidth) where _kIndicatorWidth = 86.0. The bar is sized as a fixed multiple of 86dp regardless of the actual screen width.
+- **Why**: On a 320dp-wide phone the bar is forced to 344dp (4 tabs) or 430dp (5 tabs), overflowing the viewport with no scroll/wrap — the Row children are Expanded only within the oversized fixed width, so the whole bar sticks out and the outermost tabs get clipped/tap-unreachable. The app's main page uses this bar with a 4-6 tab config (lib/pages/main/view.dart:311), so the common configuration overflows any device under ~344-430dp.
+- **Fix**: Replace the fixed width with a responsive one: drop the width on SizedBox (or use double.infinity) and let the inner Row + Expanded divide the available width evenly, e.g. wrap in LayoutBuilder and compute each destination width as availableWidth / destinations.length, or simply remove the width constraint and keep the Row/Expanded layout. Also clamp NavigationIndicator width to its available slot rather than the hardcoded 86dp.
+
+
+### lib/common/widgets/image/image_save.dart:18
+- **Element**: `imageSaveDialog (Container / dialog body)`
+- **Issue**: Hardcoded dialog width does not account for the Container's horizontal margin: `final double imgWidth = MediaQuery.sizeOf(Get.context!).shortestSide - 16;` then `Container(width: imgWidth, margin: EdgeInsets.symmetric(horizontal: Style.safeSpace /* 12.0 */), ...)`. Total requested width = shortestSide - 16 + 2*12 = shortestSide + 8, which exceeds the screen. The width is also read from `Get.context!` (a global context outside the dialog) instead of the dialog's own context.
+- **Why**: On a 320dp screen the dialog requests 304 + 24 = 328dp, and on 375dp it requests 359 + 24 = 383dp — always 8dp wider than the screen. The right side of the dialog (the Positioned close button at right:8, the share/download iconButton row) gets clipped by the SmartDialog bounds, so controls become unreachable on small phones.
+- **Fix**: Subtract both margins from the width, e.g. `final double imgWidth = MediaQuery.sizeOf(builderContext).shortestSide - 2 * Style.safeSpace;`, and read MediaQuery from the SmartDialog builder's own context (or wrap the body in LayoutBuilder/ConstrainedBox) rather than `Get.context!`. Alternatively drop the Container margin and use a `Padding` around a `width: double.infinity` constrained box so the dialog always fits the available width.
+
+
+### lib/common/widgets/image/network_img_layer.dart (and the other 14 listed lib/common/widgets/... files):0
+- **Element**: `N/A (no matching Dart files)`
+- **Issue**: Target files not found — responsive audit could not be executed. The repository F:\Repositories\GitHub\Happy-TTS contains no Flutter code: git ls-files shows 0 .dart files, no lib/common/widgets/ directory exists in the working tree or in any git worktree, and git history contains no Flutter paths. The repo is a Node.js/TypeScript + React TTS platform (see CLAUDE.md).
+- **Why**: Returning an empty findings array would falsely signal that all 15 listed files passed the responsive-layout audit, when in fact none of them could be read. The task specified a Flutter app that is not in this repository.
+- **Fix**: Point the audit at the correct Flutter repository (or supply the file contents), then re-run the scan. No responsive-layout defects (hardcoded widths, non-scrolling Rows, fixed-height containers, etc.) can be confirmed for these paths in the current repo.
+
+
+### lib/plugin/pl_player/ (all 15 listed files):1
+- **Element**: `pl_player plugin package`
+- **Issue**: Files do not exist in this repository; the responsive-layout audit could not be performed. The repo contains zero Dart/Flutter source files (0 .dart matches) and no lib/plugin/pl_player directory or any root-level lib/ directory.
+- **Why**: The current working directory F:/Repositories/GitHub/Happy-TTS is the Happy-TTS Node.js project (Express + React/Vite TypeScript). No Flutter app exists anywhere in the tree: find returned 0 *.dart files, and the only lib/ directories are frontend/src/lib (utils.ts) and scripts/lib (Node scripts). There is no nested git repo or submodule containing the Flutter plugin.
+- **Fix**: Run this audit against the actual Flutter project that contains lib/plugin/pl_player (e.g. pl-player plugin source or its embedding app), or provide the correct repository path. No responsive layout bugs can be reported for files that are not present in this repo.
+
+
+## Files Scanned
+- lib/pages/about/view.dart
+- lib/pages/article/controller.dart
+- lib/pages/article/view.dart
+- lib/pages/article/widgets/article_ops.dart
+- lib/pages/article/widgets/html_render.dart
+- lib/pages/article/widgets/opus_content.dart
+- lib/pages/article_list/controller.dart
+- lib/pages/article_list/view.dart
+- lib/pages/article_list/widgets/item.dart
+- lib/pages/audio/audio_heartbeat_throttle.dart
+- lib/pages/audio/controller.dart
+- lib/pages/audio/view.dart
+- lib/pages/audio/volume_button.dart
+- lib/pages/blacklist/controller.dart
+- lib/pages/blacklist/view.dart
+- lib/pages/bubble/controller.dart
+- lib/pages/bubble/view.dart
+- lib/pages/coin_log/controller.dart
+- lib/pages/common/common_controller.dart
+- lib/pages/common/common_data_controller.dart
+- lib/pages/common/common_intro_controller.dart
+- lib/pages/common/common_list_controller.dart
+- lib/pages/common/common_page.dart
+- lib/pages/common/common_whisper_controller.dart
+- lib/pages/common/dyn/common_dyn_controller.dart
+- lib/pages/common/dyn/common_dyn_page.dart
+- lib/pages/common/dyn/reaction/controller.dart
+- lib/pages/common/dyn/reaction/view.dart
+- lib/pages/common/fab_mixin.dart
+- lib/pages/common/multi_select/base.dart
+- lib/pages/common/multi_select/multi_select_controller.dart
+- lib/pages/common/publish/common_publish_page.dart
+- lib/pages/common/publish/common_rich_text_pub_page.dart
+- lib/pages/common/publish/common_text_pub_page.dart
+- lib/pages/common/publish/publish_route.dart
+- lib/pages/common/reply_controller.dart
+- lib/pages/common/search/common_search_controller.dart
+- lib/pages/common/search/common_search_page.dart
+- lib/pages/common/slide/common_slide_page.dart
+- lib/pages/contact/view.dart
+- lib/pages/danmaku/controller.dart
+- lib/pages/danmaku/danmaku_model.dart
+- lib/pages/danmaku/view.dart
+- lib/pages/danmaku_block/controller.dart
+- lib/pages/danmaku_block/view.dart
+- lib/pages/danmaku_highlight/view.dart
+- lib/pages/dlna/view.dart
+- lib/pages/download/controller.dart
+- lib/pages/download/detail/view.dart
+- lib/pages/download/detail/widgets/item.dart
+- lib/pages/download/downloading/view.dart
+- lib/pages/download/search/controller.dart
+- lib/pages/download/search/view.dart
+- lib/pages/download/view.dart
+- lib/pages/download_manager/controller.dart
+- lib/pages/download_manager/view.dart
+- lib/pages/download_manager/widgets/download_task_card.dart
+- lib/pages/dynamics/controller.dart
+- lib/pages/dynamics/view.dart
+- lib/pages/dynamics/widgets/action_panel.dart
+- lib/pages/dynamics/widgets/additional_panel.dart
+- lib/pages/dynamics/widgets/author_panel.dart
+- lib/pages/dynamics/widgets/blocked_item.dart
+- lib/pages/dynamics/widgets/content_panel.dart
+- lib/pages/dynamics/widgets/dyn_content.dart
+- lib/pages/dynamics/widgets/dynamic_panel.dart
+- lib/pages/dynamics/widgets/forward_panel.dart
+- lib/pages/dynamics/widgets/interaction.dart
+- lib/pages/dynamics/widgets/live_panel.dart
+- lib/pages/dynamics/widgets/live_panel_sub.dart
+- lib/pages/dynamics/widgets/live_rcmd_panel.dart
+- lib/pages/dynamics/widgets/module_panel.dart
+- lib/pages/dynamics/widgets/rich_node_panel.dart
+- lib/pages/dynamics/widgets/up_panel.dart
+- lib/pages/dynamics/widgets/video_panel.dart
+- lib/pages/dynamics/widgets/vote.dart
+- lib/pages/dynamics/widgets/vote_decoration.dart
+- lib/pages/dynamics_create/view.dart
+- lib/pages/dynamics_create_reserve/controller.dart
+- lib/pages/dynamics_create_reserve/view.dart
+- lib/pages/dynamics_create_vote/controller.dart
+- lib/pages/dynamics_create_vote/view.dart
+- lib/pages/dynamics_detail/controller.dart
+- lib/pages/dynamics_detail/view.dart
+- lib/pages/dynamics_mention/controller.dart
+- lib/pages/dynamics_mention/view.dart
+- lib/pages/dynamics_mention/widgets/item.dart
+- lib/pages/dynamics_repost/view.dart
+- lib/pages/dynamics_select_topic/controller.dart
+- lib/pages/dynamics_select_topic/view.dart
+- lib/pages/dynamics_select_topic/widgets/item.dart
+- lib/pages/dynamics_tab/controller.dart
+- lib/pages/dynamics_tab/view.dart
+- lib/pages/dynamics_topic/controller.dart
+- lib/pages/dynamics_topic/view.dart
+- lib/pages/dynamics_topic_rcmd/controller.dart
+- lib/pages/dynamics_topic_rcmd/view.dart
+- lib/pages/emote/controller.dart
+- lib/pages/emote/view.dart
+- lib/pages/episode_panel/view.dart
+- lib/pages/exp_log/controller.dart
+- lib/pages/fan/controller.dart
+- lib/pages/fan/view.dart
+
+- lib/pages/fav/article/controller.dart
+- lib/pages/fav/article/view.dart
+- lib/pages/fav/article/widget/item.dart
+- lib/pages/fav/cheese/controller.dart
+- lib/pages/fav/cheese/view.dart
+- lib/pages/fav/note/child_view.dart
+- lib/pages/fav/note/controller.dart
+- lib/pages/fav/note/view.dart
+- lib/pages/fav/note/widget/item.dart
+- lib/pages/fav/pgc/child_view.dart
+- lib/pages/fav/pgc/controller.dart
+- lib/pages/fav/pgc/view.dart
+- lib/pages/fav/pgc/widget/item.dart
+- lib/pages/fav/topic/controller.dart
+- lib/pages/fav/topic/view.dart
+- lib/pages/fav/video/controller.dart
+- lib/pages/fav/video/view.dart
+- lib/pages/fav/video/widgets/item.dart
+- lib/pages/fav/view.dart
+- lib/pages/fav_create/view.dart
+- lib/pages/fav_detail/controller.dart
+- lib/pages/fav_detail/view.dart
+- lib/pages/fav_detail/widget/fav_video_card.dart
+- lib/pages/fav_folder_sort/view.dart
+- lib/pages/fav_panel/view.dart
+- lib/pages/fav_search/controller.dart
+- lib/pages/fav_search/view.dart
+- lib/pages/fav_sort/view.dart
+- lib/pages/follow/child/child_controller.dart
+- lib/pages/follow/child/child_view.dart
+- lib/pages/follow/controller.dart
+- lib/pages/follow/view.dart
+- lib/pages/follow/widgets/follow_item.dart
+- lib/pages/follow_search/controller.dart
+- lib/pages/follow_search/view.dart
+- lib/pages/follow_tag_sort/view.dart
+- lib/pages/follow_type/controller.dart
+- lib/pages/follow_type/follow_same/controller.dart
+- lib/pages/follow_type/follow_same/view.dart
+- lib/pages/follow_type/followed/controller.dart
+- lib/pages/follow_type/followed/view.dart
+- lib/pages/follow_type/view.dart
+- lib/pages/follow_type/widgets/item.dart
+- lib/pages/group_panel/view.dart
+- lib/pages/history/base_controller.dart
+- lib/pages/history/controller.dart
+- lib/pages/history/view.dart
+- lib/pages/history/widgets/item.dart
+- lib/pages/history_search/controller.dart
+- lib/pages/history_search/view.dart
+- lib/pages/home/controller.dart
+- lib/pages/home/home_tab_factory.dart
+- lib/pages/home/view.dart
+- lib/pages/hot/controller.dart
+- lib/pages/hot/view.dart
+- lib/pages/later/base_controller.dart
+- lib/pages/later/child_view.dart
+- lib/pages/later/controller.dart
+- lib/pages/later/view.dart
+- lib/pages/later/widgets/video_card_h_later.dart
+- lib/pages/later_search/controller.dart
+- lib/pages/later_search/view.dart
+- lib/pages/live/controller.dart
+- lib/pages/live/view.dart
+- lib/pages/live/widgets/live_item_app.dart
+- lib/pages/live_alert/live_alert_settings_page.dart
+- lib/pages/live_alert/widgets/live_alert_following_picker.dart
+- lib/pages/live_alert/widgets/live_alert_rule_editor_sheet.dart
+- lib/pages/live_alert/widgets/live_alert_rule_tile.dart
+- lib/pages/live_area/controller.dart
+- lib/pages/live_area/view.dart
+- lib/pages/live_area_detail/child/controller.dart
+- lib/pages/live_area_detail/child/view.dart
+- lib/pages/live_area_detail/controller.dart
+- lib/pages/live_area_detail/view.dart
+- lib/pages/live_dm_block/controller.dart
+- lib/pages/live_dm_block/view.dart
+- lib/pages/live_emote/controller.dart
+- lib/pages/live_emote/view.dart
+- lib/pages/live_follow/controller.dart
+- lib/pages/live_follow/view.dart
+- lib/pages/live_follow/widgets/live_item_follow.dart
+- lib/pages/live_room/contribution_rank/controller.dart
+- lib/pages/live_room/contribution_rank/view.dart
+- lib/pages/live_room/controller.dart
+- lib/pages/live_room/send_danmaku/view.dart
+- lib/pages/live_room/superchat/superchat_card.dart
+- lib/pages/live_room/superchat/superchat_panel.dart
+- lib/pages/live_room/view.dart
+- lib/pages/live_room/widgets/bottom_control.dart
+- lib/pages/live_room/widgets/chat_panel.dart
+- lib/pages/live_room/widgets/header_control.dart
+- lib/pages/live_search/child/controller.dart
+- lib/pages/live_search/child/view.dart
+- lib/pages/live_search/controller.dart
+- lib/pages/live_search/view.dart
+- lib/pages/live_search/widgets/live_search_room.dart
+- lib/pages/live_search/widgets/live_search_user.dart
+- lib/pages/log_table/controller.dart
+- lib/pages/log_table/view.dart
+- lib/pages/login/controller.dart
+- lib/pages/login/geetest/geetest_webview_dialog.dart
+- lib/pages/login/view.dart
+- lib/pages/login_devices/controller.dart
+- lib/pages/login_devices/view.dart
+- lib/pages/login_log/controller.dart
+- lib/pages/main/controller.dart
+- lib/pages/main/view.dart
+- lib/pages/main_reply/controller.dart
+- lib/pages/main_reply/view.dart
+- lib/pages/match_info/controller.dart
+- lib/pages/match_info/view.dart
+
+- lib/pages/member/controller.dart
+- lib/pages/member/view.dart
+- lib/pages/member/widget/header_layout_widget.dart
+- lib/pages/member/widget/medal_wall.dart
+- lib/pages/member/widget/medal_widget.dart
+- lib/pages/member/widget/reserve_button.dart
+- lib/pages/member/widget/user_info_card.dart
+- lib/pages/member_article/controller.dart
+- lib/pages/member_article/view.dart
+- lib/pages/member_article/widget/item.dart
+- lib/pages/member_audio/controller.dart
+- lib/pages/member_audio/view.dart
+- lib/pages/member_audio/widgets/item.dart
+- lib/pages/member_cheese/controller.dart
+- lib/pages/member_cheese/view.dart
+- lib/pages/member_cheese/widgets/item.dart
+- lib/pages/member_coin_arc/controller.dart
+- lib/pages/member_coin_arc/view.dart
+- lib/pages/member_coin_arc/widgets/item.dart
+- lib/pages/member_comic/controller.dart
+- lib/pages/member_comic/view.dart
+- lib/pages/member_comic/widgets/item.dart
+- lib/pages/member_contribute/controller.dart
+- lib/pages/member_contribute/view.dart
+- lib/pages/member_dynamics/controller.dart
+- lib/pages/member_dynamics/view.dart
+- lib/pages/member_favorite/controller.dart
+- lib/pages/member_favorite/view.dart
+- lib/pages/member_favorite/widget/item.dart
+- lib/pages/member_guard/controller.dart
+- lib/pages/member_guard/view.dart
+- lib/pages/member_home/view.dart
+- lib/pages/member_home/widgets/fav_item.dart
+- lib/pages/member_home/widgets/video_card_v_member_home.dart
+- lib/pages/member_like_arc/controller.dart
+- lib/pages/member_like_arc/view.dart
+- lib/pages/member_opus/controller.dart
+- lib/pages/member_opus/view.dart
+- lib/pages/member_opus/widgets/space_opus_item.dart
+- lib/pages/member_pgc/controller.dart
+- lib/pages/member_pgc/view.dart
+- lib/pages/member_pgc/widgets/pgc_card_v_member_pgc.dart
+- lib/pages/member_profile/view.dart
+- lib/pages/member_search/child/controller.dart
+- lib/pages/member_search/child/view.dart
+- lib/pages/member_search/child/widgets/search_archive_grpc.dart
+- lib/pages/member_search/controller.dart
+- lib/pages/member_search/view.dart
+- lib/pages/member_season_series/controller.dart
+- lib/pages/member_season_series/view.dart
+- lib/pages/member_season_series/widget/season_series_card.dart
+- lib/pages/member_shop/controller.dart
+- lib/pages/member_shop/view.dart
+- lib/pages/member_shop/widgets/item.dart
+- lib/pages/member_upower_rank/controller.dart
+- lib/pages/member_upower_rank/view.dart
+- lib/pages/member_video/controller.dart
+- lib/pages/member_video/view.dart
+- lib/pages/member_video/widgets/video_card_h_member_video.dart
+- lib/pages/member_video_web/archive/controller.dart
+- lib/pages/member_video_web/archive/view.dart
+- lib/pages/member_video_web/base/controller.dart
+- lib/pages/member_video_web/base/view.dart
+- lib/pages/member_video_web/season_series/controller.dart
+- lib/pages/member_video_web/season_series/view.dart
+- lib/pages/mine/controller.dart
+- lib/pages/mine/view.dart
+- lib/pages/mine/widgets/item.dart
+- lib/pages/msg_feed_top/at_me/controller.dart
+- lib/pages/msg_feed_top/at_me/view.dart
+- lib/pages/msg_feed_top/like_detail/controller.dart
+- lib/pages/msg_feed_top/like_detail/view.dart
+- lib/pages/msg_feed_top/like_me/controller.dart
+- lib/pages/msg_feed_top/like_me/view.dart
+- lib/pages/msg_feed_top/reply_me/controller.dart
+- lib/pages/msg_feed_top/reply_me/view.dart
+- lib/pages/msg_feed_top/sys_msg/controller.dart
+- lib/pages/msg_feed_top/sys_msg/view.dart
+- lib/pages/music/controller.dart
+- lib/pages/music/video/controller.dart
+- lib/pages/music/video/view.dart
+- lib/pages/music/view.dart
+- lib/pages/music/widget/music_video_card_h.dart
+- lib/pages/my_reply/controller.dart
+- lib/pages/my_reply/view.dart
+- lib/pages/onboarding/improvements_guide_data.dart
+- lib/pages/onboarding/improvements_guide_page.dart
+- lib/pages/onboarding/oss_notice_data.dart
+- lib/pages/onboarding/oss_notice_page.dart
+- lib/pages/onboarding/whats_new_data.dart
+- lib/pages/pgc/controller.dart
+- lib/pages/pgc/view.dart
+- lib/pages/pgc/widgets/pgc_card_v.dart
+- lib/pages/pgc/widgets/pgc_card_v_timeline.dart
+- lib/pages/pgc_index/controller.dart
+- lib/pages/pgc_index/view.dart
+- lib/pages/pgc_index/widgets/pgc_card_v_pgc_index.dart
+- lib/pages/pgc_review/child/controller.dart
+- lib/pages/pgc_review/child/view.dart
+- lib/pages/pgc_review/post/view.dart
+- lib/pages/pgc_review/view.dart
+- lib/pages/playlist/playlist_export_page.dart
+- lib/pages/playlist/playlist_import_page.dart
+- lib/pages/playlist/widgets/favorite_folder_selector.dart
+- lib/pages/popular_precious/controller.dart
+- lib/pages/popular_precious/view.dart
+- lib/pages/popular_series/controller.dart
+- lib/pages/popular_series/view.dart
+
+- lib/pages/rank/controller.dart
+- lib/pages/rank/view.dart
+- lib/pages/rank/zone/controller.dart
+- lib/pages/rank/zone/view.dart
+- lib/pages/rank/zone/widget/pgc_rank_item.dart
+- lib/pages/rcmd/controller.dart
+- lib/pages/rcmd/view.dart
+- lib/pages/save_panel/view.dart
+- lib/pages/search/controller.dart
+- lib/pages/search/view.dart
+- lib/pages/search/widgets/hot_keyword.dart
+- lib/pages/search/widgets/search_text.dart
+- lib/pages/search_panel/all/controller.dart
+- lib/pages/search_panel/all/view.dart
+- lib/pages/search_panel/all/widgets/pgc_card_v_search.dart
+- lib/pages/search_panel/article/controller.dart
+- lib/pages/search_panel/article/view.dart
+- lib/pages/search_panel/article/widgets/item.dart
+- lib/pages/search_panel/controller.dart
+- lib/pages/search_panel/live/view.dart
+- lib/pages/search_panel/live/widgets/item.dart
+- lib/pages/search_panel/pgc/view.dart
+- lib/pages/search_panel/pgc/widgets/item.dart
+- lib/pages/search_panel/user/controller.dart
+- lib/pages/search_panel/user/view.dart
+- lib/pages/search_panel/user/widgets/item.dart
+- lib/pages/search_panel/video/controller.dart
+- lib/pages/search_panel/video/view.dart
+- lib/pages/search_panel/view.dart
+- lib/pages/search_result/controller.dart
+- lib/pages/search_result/view.dart
+- lib/pages/search_trending/controller.dart
+- lib/pages/search_trending/view.dart
+- lib/pages/setting/common_setting.dart
+- lib/pages/setting/models/extra_settings.dart
+- lib/pages/setting/models/model.dart
+- lib/pages/setting/models/play_settings.dart
+- lib/pages/setting/models/privacy_settings.dart
+- lib/pages/setting/models/recommend_settings.dart
+- lib/pages/setting/models/style_settings.dart
+- lib/pages/setting/models/video_settings.dart
+- lib/pages/setting/pages/bar_set.dart
+- lib/pages/setting/pages/color_select.dart
+- lib/pages/setting/pages/crash_report.dart
+- lib/pages/setting/pages/crash_report_history.dart
+- lib/pages/setting/pages/display_mode.dart
+- lib/pages/setting/pages/font_size_select.dart
+- lib/pages/setting/pages/fullscreen_sc_size.dart
+- lib/pages/setting/pages/logs.dart
+- lib/pages/setting/pages/play_speed_set.dart
+- lib/pages/setting/slide_color_picker.dart
+- lib/pages/setting/view.dart
+- lib/pages/setting/widgets/checkbox_num.dart
+- lib/pages/setting/widgets/checkbox_num_list_tile.dart
+- lib/pages/setting/widgets/dual_slider_dialog.dart
+- lib/pages/setting/widgets/multi_select_dialog.dart
+- lib/pages/setting/widgets/normal_item.dart
+- lib/pages/setting/widgets/ordered_multi_select_dialog.dart
+- lib/pages/setting/widgets/popup_item.dart
+- lib/pages/setting/widgets/select_dialog.dart
+- lib/pages/setting/widgets/settings_highlight_flash.dart
+- lib/pages/setting/widgets/slider_dialog.dart
+- lib/pages/setting/widgets/switch_item.dart
+- lib/pages/settings_search/view.dart
+- lib/pages/share/view.dart
+- lib/pages/space_setting/controller.dart
+- lib/pages/space_setting/view.dart
+- lib/pages/sponsor_block/block_mixin.dart
+- lib/pages/sponsor_block/view.dart
+- lib/pages/subscription/controller.dart
+- lib/pages/subscription/view.dart
+- lib/pages/subscription/widgets/item.dart
+- lib/pages/subscription_detail/controller.dart
+- lib/pages/subscription_detail/view.dart
+- lib/pages/subscription_detail/widget/sub_video_card.dart
+- lib/pages/video/ai_conclusion/view.dart
+- lib/pages/video/bookmark/video_bookmark_editor_dialog.dart
+- lib/pages/video/bookmark/video_bookmark_list_controls.dart
+- lib/pages/video/bookmark/video_bookmark_list_page.dart
+- lib/pages/video/bookmark/video_bookmark_sheet.dart
+- lib/pages/video/bookmark/video_bookmark_tile.dart
+- lib/pages/video/controller.dart
+- lib/pages/video/download_panel/view.dart
+- lib/pages/video/introduction/local/controller.dart
+- lib/pages/video/introduction/local/view.dart
+- lib/pages/video/introduction/pgc/controller.dart
+- lib/pages/video/introduction/pgc/view.dart
+- lib/pages/video/introduction/pgc/widgets/intro_detail.dart
+- lib/pages/video/introduction/pgc/widgets/pgc_panel.dart
+- lib/pages/video/introduction/ugc/controller.dart
+- lib/pages/video/introduction/ugc/view.dart
+- lib/pages/video/introduction/ugc/widgets/action_item.dart
+- lib/pages/video/introduction/ugc/widgets/menu_row.dart
+- lib/pages/video/introduction/ugc/widgets/page.dart
+- lib/pages/video/introduction/ugc/widgets/season.dart
+- lib/pages/video/introduction/ugc/widgets/triple_mixin.dart
+- lib/pages/video/medialist/view.dart
+- lib/pages/video/member/controller.dart
+- lib/pages/video/member/view.dart
+- lib/pages/video/note/controller.dart
+- lib/pages/video/note/view.dart
+- lib/pages/video/pay_coins/view.dart
+- lib/pages/video/post_panel/popup_menu_text.dart
+- lib/pages/video/post_panel/view.dart
+- lib/pages/video/quality/quality_widgets.dart
+- lib/pages/video/related/controller.dart
+- lib/pages/video/related/view.dart
+- lib/pages/video/reply/controller.dart
+- lib/pages/video/reply/view.dart
+- lib/pages/video/reply/vote/reply_vote_item.dart
+- lib/pages/video/reply/vote/reply_vote_mixin.dart
+- lib/pages/video/reply/widgets/reply_item_grpc.dart
+- lib/pages/video/reply/widgets/zan_grpc.dart
+- lib/pages/video/reply_new/view.dart
+- lib/pages/video/reply_reply/controller.dart
+- lib/pages/video/reply_reply/view.dart
+- lib/pages/video/reply_search_item/child/controller.dart
+- lib/pages/video/reply_search_item/child/view.dart
+- lib/pages/video/reply_search_item/child/widgets/item.dart
+- lib/pages/video/reply_search_item/controller.dart
+- lib/pages/video/reply_search_item/view.dart
+- lib/pages/video/seal_download_utils.dart
+- lib/pages/video/send_danmaku/view.dart
+- lib/pages/video/view.dart
+- lib/pages/video/view_point/view.dart
+- lib/pages/video/widgets/header_control.dart
+- lib/pages/video/widgets/header_mixin.dart
+- lib/pages/video/widgets/player_focus.dart
+
+- lib/pages/watch_stats/watch_stats_dashboard_page.dart
+- lib/pages/watch_stats/widgets/watch_stats_bar_chart.dart
+- lib/pages/watch_stats/widgets/watch_stats_rankings.dart
+- lib/pages/watch_stats/widgets/watch_stats_summary.dart
+- lib/pages/web_qr_auth/controller.dart
+- lib/pages/web_qr_auth/view.dart
+- lib/pages/web_qr_auth/widgets/auth_scene_panel.dart
+- lib/pages/web_qr_auth/widgets/scan_source_panel.dart
+- lib/pages/webdav/view.dart
+- lib/pages/webdav/webdav.dart
+- lib/pages/webdav/webdav_backup_transaction.dart
+- lib/pages/webview/view.dart
+- lib/pages/whisper/controller.dart
+- lib/pages/whisper/view.dart
+- lib/pages/whisper/widgets/item.dart
+- lib/pages/whisper_block/controller.dart
+- lib/pages/whisper_block/view.dart
+- lib/pages/whisper_detail/controller.dart
+- lib/pages/whisper_detail/view.dart
+- lib/pages/whisper_detail/widget/chat_item.dart
+- lib/pages/whisper_link_setting/controller.dart
+- lib/pages/whisper_link_setting/view.dart
+- lib/pages/whisper_secondary/controller.dart
+- lib/pages/whisper_secondary/view.dart
+- lib/pages/whisper_settings/controller.dart
+- lib/pages/whisper_settings/view.dart
+- lib/pages/whisper_settings/widgets/item.dart
+- lib/common/widgets/animated_height.dart
+- lib/common/widgets/animated_multi_height.dart
+- lib/common/widgets/appbar/appbar.dart
+- lib/common/widgets/avatars.dart
+- lib/common/widgets/back_detector.dart
+- lib/common/widgets/badge.dart
+- lib/common/widgets/button/icon_button.dart
+- lib/common/widgets/button/more_btn.dart
+- lib/common/widgets/button/toolbar_icon_button.dart
+- lib/common/widgets/color_palette.dart
+- lib/common/widgets/colored_box_transition.dart
+- lib/common/widgets/context_menu/dyn_menu_helper.dart
+- lib/common/widgets/context_menu/live_menu_helper.dart
+- lib/common/widgets/context_menu/reply_menu_helper.dart
+- lib/common/widgets/cropped_image.dart
+- lib/common/widgets/custom_arc.dart
+- lib/common/widgets/custom_height_widget.dart
+- lib/common/widgets/custom_icon.dart
+- lib/common/widgets/custom_toast.dart
+- lib/common/widgets/custom_tooltip.dart
+- lib/common/widgets/dialog/dialog.dart
+- lib/common/widgets/dialog/export_import.dart
+- lib/common/widgets/dialog/report.dart
+- lib/common/widgets/dialog/report_member.dart
+- lib/common/widgets/dialog/simple_dialog_option.dart
+- lib/common/widgets/disabled_icon.dart
+- lib/common/widgets/draggable_sheet/dyn.dart
+- lib/common/widgets/dynamic_sliver_app_bar/dynamic_sliver_app_bar.dart
+- lib/common/widgets/dynamic_sliver_app_bar/rendering/sliver_persistent_header.dart
+- lib/common/widgets/dynamic_sliver_app_bar/sliver_persistent_header.dart
+- lib/common/widgets/emote_span.dart
+- lib/common/widgets/expandable.dart
+- lib/common/widgets/extra_hittest_stack.dart
+- lib/common/widgets/floating_navigation_bar.dart
+- lib/common/widgets/flutter/chat_list_view.dart
+- lib/common/widgets/flutter/list_tile.dart
+- lib/common/widgets/flutter/pop_scope.dart
+- lib/common/widgets/flutter/popup_menu.dart
+- lib/common/widgets/flutter/refresh_indicator.dart
+- lib/common/widgets/flutter/text/text.dart
+- lib/common/widgets/flutter/text_field/controller.dart
+- lib/common/widgets/flutter/text_field/cupertino/spell_check_suggestions_toolbar.dart
+- lib/common/widgets/flutter/text_field/cupertino/text_field.dart
+- lib/common/widgets/flutter/text_field/editable.dart
+- lib/common/widgets/flutter/text_field/editable_text.dart
+- lib/common/widgets/flutter/text_field/spell_check.dart
+- lib/common/widgets/flutter/text_field/spell_check_suggestions_toolbar.dart
+- lib/common/widgets/flutter/text_field/system_context_menu.dart
+- lib/common/widgets/flutter/text_field/text_field.dart
+- lib/common/widgets/flutter/text_field/text_selection.dart
+- lib/common/widgets/flutter/vertical_slider.dart
+- lib/common/widgets/flutter/vertical_tabs.dart
+- lib/common/widgets/fractionally_sized_box.dart
+- lib/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart
+- lib/common/widgets/gesture/image_horizontal_drag_gesture_recognizer.dart
+- lib/common/widgets/gesture/immediate_tap_gesture_recognizer.dart
+- lib/common/widgets/gesture/mouse_interactive_viewer.dart
+- lib/common/widgets/gesture/player_gesture_recognizer.dart
+- lib/common/widgets/gesture/tap_gesture_recognizer.dart
+- lib/common/widgets/illustration/dynamic_color_illustration.dart
+- lib/common/widgets/image/cached_network_svg_image.dart
+- lib/common/widgets/image/image_save.dart
+- lib/common/widgets/image/network_img_layer.dart
+- lib/common/widgets/image_grid/image_grid_builder.dart
+- lib/common/widgets/image_grid/image_grid_view.dart
+- lib/common/widgets/image_viewer/gallery_viewer.dart
+- lib/common/widgets/image_viewer/hero.dart
+- lib/common/widgets/image_viewer/hero_dialog_route.dart
+- lib/common/widgets/image_viewer/image.dart
+- lib/common/widgets/image_viewer/loading_indicator.dart
+- lib/common/widgets/image_viewer/viewer.dart
+- lib/common/widgets/in_app_mini_player.dart
+- lib/common/widgets/keep_alive_wrapper.dart
+- lib/common/widgets/loading_widget.dart
+- lib/common/widgets/loading_widget/http_error.dart
+- lib/common/widgets/loading_widget/loading_widget.dart
+- lib/common/widgets/loading_widget/m3e_loading_indicator.dart
+- lib/common/widgets/loading_widget/morphs.dart
+- lib/common/widgets/main_layout.dart
+- lib/common/widgets/marquee.dart
+
+- lib/common/widgets/more_text/paragraph_more.dart
+- lib/common/widgets/more_text/rich_text_more.dart
+- lib/common/widgets/only_layout_widget.dart
+- lib/common/widgets/pair.dart
+- lib/common/widgets/pendant_avatar.dart
+- lib/common/widgets/player_bar.dart
+- lib/common/widgets/progress_bar/audio_video_progress_bar.dart
+- lib/common/widgets/progress_bar/segment_progress_bar.dart
+- lib/common/widgets/progress_bar/video_progress_indicator.dart
+- lib/common/widgets/radio_widget.dart
+- lib/common/widgets/reorder_mixin.dart
+- lib/common/widgets/route_aware_mixin.dart
+- lib/common/widgets/scaffold/bottom_sheet.dart
+- lib/common/widgets/scaffold/mini_scaffold.dart
+- lib/common/widgets/scaffold/simple_scaffold.dart
+- lib/common/widgets/scale_app.dart
+- lib/common/widgets/scroll_behavior.dart
+- lib/common/widgets/scroll_physics.dart
+- lib/common/widgets/select_mask.dart
+- lib/common/widgets/selection_text.dart
+- lib/common/widgets/self_sized_horizontal_list.dart
+- lib/common/widgets/simple_app_bar.dart
+- lib/common/widgets/simple_colored_box.dart
+- lib/common/widgets/sliver/sliver_floating_header.dart
+- lib/common/widgets/sliver/sliver_pinned_dynamic_header.dart
+- lib/common/widgets/sliver/sliver_pinned_header.dart
+- lib/common/widgets/sliver/sliver_to_box_adapter.dart
+- lib/common/widgets/sliver/trending_header.dart
+- lib/common/widgets/sliver/video_header.dart
+- lib/common/widgets/sliver_wrap.dart
+- lib/common/widgets/stat/stat.dart
+- lib/common/widgets/stateful_builder.dart
+- lib/common/widgets/svg/level_icon.dart
+- lib/common/widgets/svg/play_icon.dart
+- lib/common/widgets/tap_region_surface.dart
+- lib/common/widgets/time_picker.dart
+- lib/common/widgets/translucent_column.dart
+- lib/common/widgets/translucent_row.dart
+- lib/common/widgets/video_card/video_card_h.dart
+- lib/common/widgets/video_card/video_card_v.dart
+- lib/common/widgets/video_popup_menu.dart
+- lib/common/widgets/view_safe_area.dart
+- lib/common/widgets/view_sliver_safe_area.dart
+- lib/plugin/pl_player/controller.dart
+- lib/plugin/pl_player/models/audio_output_type.dart
+- lib/plugin/pl_player/models/bottom_control_type.dart
+- lib/plugin/pl_player/models/bottom_progress_behavior.dart
+- lib/plugin/pl_player/models/data_source.dart
+- lib/plugin/pl_player/models/data_status.dart
+- lib/plugin/pl_player/models/double_tap_type.dart
+- lib/plugin/pl_player/models/duration.dart
+- lib/plugin/pl_player/models/fullscreen_mode.dart
+- lib/plugin/pl_player/models/gesture_type.dart
+- lib/plugin/pl_player/models/heart_beat_type.dart
+- lib/plugin/pl_player/models/hwdec_type.dart
+- lib/plugin/pl_player/models/long_press_speed_formula.dart
+- lib/plugin/pl_player/models/play_repeat.dart
+- lib/plugin/pl_player/models/play_speed.dart
+- lib/plugin/pl_player/models/play_status.dart
+- lib/plugin/pl_player/models/video_fit_type.dart
+- lib/plugin/pl_player/utils/danmaku_options.dart
+- lib/plugin/pl_player/utils/fullscreen.dart
+- lib/plugin/pl_player/utils/stream_error.dart
+- lib/plugin/pl_player/view/view.dart
+- lib/plugin/pl_player/view/widgets.dart
+- lib/plugin/pl_player/widgets/app_bar_ani.dart
+- lib/plugin/pl_player/widgets/backward_seek.dart
+- lib/plugin/pl_player/widgets/bottom_control.dart
+- lib/plugin/pl_player/widgets/common_btn.dart
+- lib/plugin/pl_player/widgets/forward_seek.dart
+- lib/plugin/pl_player/widgets/mpv_convert_webp.dart
+- lib/plugin/pl_player/widgets/play_pause_btn.dart
+

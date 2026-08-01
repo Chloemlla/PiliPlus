@@ -1,6 +1,5 @@
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
-import 'package:pili_plus/models/common/live/live_search_type.dart';
 import 'package:pili_plus/pages/live_search/child/view.dart';
 import 'package:pili_plus/pages/live_search/controller.dart';
 import 'package:pili_plus/utils/utils.dart';

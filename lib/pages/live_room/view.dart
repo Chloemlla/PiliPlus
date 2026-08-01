@@ -15,7 +15,6 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
 import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
-import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/common/live/live_contribution_rank_type.dart';
 import 'package:pili_plus/models_new/live/live_room_info_h5/data.dart';
 import 'package:pili_plus/models_new/live/live_superchat/item.dart';
