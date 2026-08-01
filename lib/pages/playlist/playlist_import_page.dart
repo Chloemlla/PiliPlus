@@ -234,14 +234,15 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.pickFile(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['json'],
       );
-      if (result == null) {
+      final file = result == null || result.files.isEmpty ? null : result.files.first;
+      if (file == null) {
         return;
       }
-      final fileLength = await result.xFile.length();
+      final fileLength = await file.xFile.length();
       if (fileLength > PlaylistImportService.maxImportFileBytes) {
         if (!mounted) {
           return;
@@ -256,7 +257,7 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
         });
         return;
       }
-      final content = await result.xFile.readAsString();
+      final content = await file.xFile.readAsString();
       if (!mounted) {
         return;
       }

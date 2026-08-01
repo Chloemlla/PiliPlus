@@ -959,12 +959,15 @@ class HeaderControlState extends State<HeaderControl>
                 onTap: () async {
                   Get.back();
                   try {
-                    final result = await FilePicker.pickFile(
+                    final result = await FilePicker.pickFiles(
                       type: .custom,
                       allowedExtensions: const ['json', 'vtt', 'srt', 'ass'],
                     );
-                    if (result != null) {
-                      final file = result.xFile;
+                    final pickedFile = result == null || result.files.isEmpty
+                        ? null
+                        : result.files.first;
+                    if (pickedFile != null) {
+                      final file = pickedFile.xFile;
                       final path = file.path;
                       final name = file.name;
                       final length = videoDetailCtr.subtitles.length;
@@ -2359,5 +2362,3 @@ child: Obx(() {
     );
   }
 }
-
-

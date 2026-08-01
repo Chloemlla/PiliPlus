@@ -117,12 +117,13 @@ Future<void> importFromClipBoard<T>(
 Future<void> importFromLocalFile<T>({
   required FutureOr<void> Function(T json) onImport,
 }) async {
-  final result = await FilePicker.pickFile(
+  final result = await FilePicker.pickFiles(
     type: .custom,
     allowedExtensions: const ['json', 'txt'],
   );
-  if (result != null) {
-    final data = await result.xFile.readAsString();
+  final file = result == null || result.files.isEmpty ? null : result.files.first;
+  if (file != null) {
+    final data = await file.xFile.readAsString();
     final T json;
     try {
       json = jsonDecode(data);
