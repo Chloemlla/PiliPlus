@@ -1404,11 +1404,12 @@ abstract final class SealDownloadUtils {
         if (status.isUnconfirmedCompletedStrip(
           stripRequested: session.stripReport != null,
         )) {
-          session.contentUri = null;
-          session.displayName = null;
-          session.mimeType = null;
-          session.stripApplied = false;
-          session.stripUnconfirmed = true;
+          session
+            ..contentUri = null
+            ..displayName = null
+            ..mimeType = null
+            ..stripApplied = false
+            ..stripUnconfirmed = true;
           _finishSession(
             session,
             SealPanelPhase.failed,

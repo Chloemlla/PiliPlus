@@ -73,11 +73,10 @@ final class PipPlaybackState {
 /// snapshot is cleared when PiP exits, playback completes, or the player closes.
 class PipPersistentService {
   PipPersistentService({
-    required PipStateStore store,
+    required this._store,
     DateTime Function()? clock,
     this.maxRestoreAge = const Duration(hours: 12),
-  }) : _store = store,
-       _clock = clock ?? DateTime.now;
+  }) : _clock = clock ?? DateTime.now;
 
   static final PipPersistentService instance = PipPersistentService(
     store: _LocalCachePipStateStore(),

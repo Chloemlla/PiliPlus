@@ -115,7 +115,7 @@ final class SealDownloadStatus {
 
   /// Expand a batch `task_ids` callback into one event per stable task.
   List<SealDownloadStatus> expandTaskIds() {
-    final ids = LinkedHashSet<String>();
+    final ids = <String>{};
     final primary = _nonEmpty(taskId);
     if (primary != null) ids.add(primary);
     for (final id in taskIds) {
@@ -192,7 +192,7 @@ int? _readInt(Object? value) {
 
 int? _readNonNegativeInt(Object? value) {
   final parsed = _readInt(value);
-  return parsed == null ? null : parsed.clamp(0, 1 << 62).toInt();
+  return parsed?.clamp(0, 1 << 62).toInt();
 }
 
 double? _readProgress(Object? value) {
@@ -216,7 +216,7 @@ bool? _readBool(Object? value) {
 
 List<String> _readStringList(Object? value) {
   if (value is! Iterable) return const <String>[];
-  final ids = LinkedHashSet<String>();
+  final ids = <String>{};
   for (final item in value) {
     final id = _readString(item);
     if (id != null) ids.add(id);

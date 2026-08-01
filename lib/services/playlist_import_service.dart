@@ -158,7 +158,7 @@ abstract final class PlaylistImportService {
             _ImportTarget(
               existingBvids: {
                 for (final video in response)
-                  if (video.bvid case final bvid?) bvid,
+                  ?video.bvid,
               },
             ),
           );
@@ -190,7 +190,7 @@ abstract final class PlaylistImportService {
               favoriteMediaId: folderId,
               existingBvids: {
                 for (final video in response)
-                  if (video.bvid case final bvid?) bvid,
+                  ?video.bvid,
               },
             ),
           );

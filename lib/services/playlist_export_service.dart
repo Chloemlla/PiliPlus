@@ -67,8 +67,7 @@ abstract final class PlaylistExportService {
     }
 
     return Success([
-      for (final item in items)
-        if (_favoriteItemToPlaylist(item) case final video?) video,
+      for (final item in items) ?_favoriteItemToPlaylist(item),
     ]);
   }
 
@@ -110,8 +109,7 @@ abstract final class PlaylistExportService {
     }
 
     return Success([
-      for (final item in items)
-        if (_watchLaterItemToPlaylist(item) case final video?) video,
+      for (final item in items) ?_watchLaterItemToPlaylist(item),
     ]);
   }
 

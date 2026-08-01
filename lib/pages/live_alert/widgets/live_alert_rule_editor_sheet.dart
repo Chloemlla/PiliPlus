@@ -77,7 +77,7 @@ class LiveAlertRuleEditorSheet extends StatelessWidget {
                       () => FilledButton.tonal(
                         onPressed: controller.isResolvingMid.value
                             ? null
-                            : () => _resolveMid(),
+                            : _resolveMid,
                         child: controller.isResolvingMid.value
                             ? const SizedBox.square(
                                 dimension: 18,

@@ -187,7 +187,7 @@ abstract final class SynapseSyncService {
       final navigator = await StartupOverlayCoordinator.waitForNavigator(
         debugLabel: 'Synapse-sync',
       );
-      if (navigator == null) return;
+      if (navigator == null || !navigator.mounted) return;
       final choice = await showDialog<SynapseSyncChoice>(
         context: navigator.context,
         builder: (context) => AlertDialog(

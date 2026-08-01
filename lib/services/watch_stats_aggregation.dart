@@ -156,7 +156,7 @@ final class WatchStatsData {
     final hours = safeSeconds ~/ secondsPerHour;
     final minutes = (safeSeconds % secondsPerHour) ~/ Duration.secondsPerMinute;
     if (hours > 0) {
-      return '${hours}小时${minutes}分钟';
+      return '$hours小时$minutes分钟';
     }
     if (minutes > 0) {
       return '$minutes分钟';

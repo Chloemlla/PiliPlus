@@ -64,9 +64,8 @@ class LiveAlertLifecycleObserver extends WidgetsBindingObserver {
     _isForeground = false;
     _accountGeneration++;
     WidgetsBinding.instance.removeObserver(this);
-    final accountSubscription = _accountSubscription;
+    unawaited(_accountSubscription?.cancel());
     _accountSubscription = null;
-    if (accountSubscription != null) unawaited(accountSubscription.cancel());
     LiveAlertService.instance.stopPolling();
     _isInitialized = false;
   }

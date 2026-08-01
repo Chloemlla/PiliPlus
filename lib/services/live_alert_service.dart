@@ -217,9 +217,8 @@ class LiveAlertService {
 
   List<LiveKeywordRule> getAllRules() {
     if (!_isInitialized || currentAccountMid <= 0) return const [];
-    final rules = _rulesForAccount(currentAccountMid);
-    rules.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return rules;
+    return _rulesForAccount(currentAccountMid)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   List<LiveKeywordRule> _rulesForAccount(int accountMid) =>

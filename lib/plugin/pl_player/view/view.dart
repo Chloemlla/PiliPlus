@@ -29,8 +29,10 @@ import 'package:pili_plus/pages/common/common_intro_controller.dart';
 import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
 import 'package:pili_plus/pages/live_room/widgets/bottom_control.dart'
     as live_bottom;
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_sheet.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
 import 'package:pili_plus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:pili_plus/pages/video/post_panel/view.dart';
 import 'package:pili_plus/pages/video/quality/quality_widgets.dart';
@@ -59,6 +61,7 @@ import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/persistence.dart';
@@ -917,6 +920,45 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           inAppFullScreen: true,
         ),
       ),
+    /// 更多
+      BottomControlType.more => Obx(
+        () {
+          return PopupMenuButton<String>(
+            tooltip: '更多',
+            requestFocus: false,
+            color: Colors.black.withValues(alpha: 0.8),
+            itemBuilder: (context) {
+              return [
+                if (!plPlayerController.isFileSource && !plPlayerController.isDesktopPip)
+                  PopupMenuItem<String>(
+                    value: 'bookmark',
+                    height: 35,
+                    child: const Row(
+                      children: [
+                        Icon(Icons.bookmark_add_outlined, size: 20, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('视频标记', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+              ];
+            },
+            onSelected: (value) {
+              if (value == 'bookmark') {
+                _showBookmarkSheet();
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                Icons.more_horiz,
+                size: iconSize,
+                color: Colors.white,
+              ),
+            ),
+          );
+        },
+      ),
     };
 
     final isNotFileSource = !plPlayerController.isFileSource;
@@ -940,6 +982,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       .speed,
       if (isNotFileSource && flag) .qa,
       if (!plPlayerController.isDesktopPip) .fullscreen,
+      .more,
     ];
     return Row(
       children: [
@@ -963,6 +1006,53 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   PlPlayerController get plPlayerController => widget.plPlayerController;
 
   bool get isFullScreen => plPlayerController.isFullScreen.value;
+
+  void _showBookmarkSheet() {
+    final videoDetailController = widget.videoDetailController;
+    if (videoDetailController == null) return;
+    final metadata = _bookmarkMetadata(videoDetailController);
+    PageUtils.showVideoBottomSheet(
+      context,
+      child: VideoBookmarkSheet(
+        bvid: videoDetailController.bvid,
+        videoTitle: metadata.title,
+        authorMid: metadata.authorMid,
+        currentTimestamp: plPlayerController.position.value,
+        onBookmarkTap: (bookmark) => plPlayerController.seekTo(
+          Duration(seconds: bookmark.timestampSeconds),
+          isSeek: false,
+        ),
+      ),
+    );
+  }
+
+  ({String title, int? authorMid}) _bookmarkMetadata(VideoDetailController videoDetailController) {
+    String? title = videoDetailController.args['title'] as String?;
+    int? authorMid;
+    try {
+      if (videoDetailController.isUgc) {
+        final detail = Get.find<UgcIntroController>(
+          tag: videoDetailController.heroTag,
+        ).videoDetail.value;
+        title = detail.title ?? title;
+        authorMid = detail.owner?.mid;
+      } else {
+        final intro = Get.find<PgcIntroController>(
+          tag: videoDetailController.heroTag,
+        );
+        title = intro.videoDetail.value.title ?? intro.pgcItem.title ?? title;
+        authorMid = intro.pgcItem.upInfo?.mid;
+      }
+    } catch (_) {}
+
+    final normalizedTitle = title?.trim();
+    return (
+      title: normalizedTitle == null || normalizedTitle.isEmpty
+          ? videoDetailController.bvid
+          : normalizedTitle,
+      authorMid: authorMid,
+    );
+  }
 
   late final TransformationController _transformationController;
 

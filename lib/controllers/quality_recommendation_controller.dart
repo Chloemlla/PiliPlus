@@ -16,13 +16,11 @@ class QualityRecommendationController {
     QualityRecommendationService? service,
     QualityModeReader? modeReader,
     QualityModeWriter? modeWriter,
-    RecommendedQualityApplier? onApplyQuality,
-    Duration chipDisplayDuration = const Duration(seconds: 3),
+    this._onApplyQuality,
+    this._chipDisplayDuration = const Duration(seconds: 3),
   }) : _service = service ?? QualityRecommendationService.instance,
        _modeReader = modeReader ?? _readStoredMode,
-       _modeWriter = modeWriter ?? _writeStoredMode,
-       _onApplyQuality = onApplyQuality,
-       _chipDisplayDuration = chipDisplayDuration {
+       _modeWriter = modeWriter ?? _writeStoredMode {
     _loadSavedMode();
   }
 

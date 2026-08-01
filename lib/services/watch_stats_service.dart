@@ -94,9 +94,8 @@ class WatchStatsService {
 
   List<WatchStatsSession> get allSessions {
     if (!isInitialized) return const [];
-    final sessions = box.values.toList();
-    sessions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return sessions;
+    return box.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 
   List<WatchStatsSession> getSessionsInRange(

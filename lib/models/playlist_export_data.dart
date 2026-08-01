@@ -257,7 +257,7 @@ class PlaylistExportData {
           '#EXTV-AUTHOR:${_escapeM3U8Text(author)}',
         if (video.cover case final cover?)
           '#EXTV-COVER:${_escapeM3U8Text(cover)}',
-        if (video.referenceUrl case final url?) url,
+        ?video.referenceUrl,
       ]);
     }
 
