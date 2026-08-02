@@ -986,14 +986,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       .more,
     ];
     return PlayerBar(
-      leading: Row(
-        mainAxisSize: .min,
-        children: userSpecifyItemLeft.map(progressWidget).toList(),
-      ),
-      trailing: Row(
-        mainAxisSize: .min,
-        children: userSpecifyItemRight.map(progressWidget).toList(),
-      ),
+      children: [
+        Row(
+          mainAxisSize: .min,
+          children: userSpecifyItemLeft.map(progressWidget).toList(),
+        ),
+        Row(
+          mainAxisSize: .min,
+          children: userSpecifyItemRight.map(progressWidget).toList(),
+        ),
+      ],
     );
   }
 

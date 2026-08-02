@@ -118,11 +118,7 @@ class BottomControl extends StatelessWidget {
               ),
             ),
           ),
-          Row(
-            children: [
-              Expanded(child: buildBottomControl()),
-            ],
-          ),
+          buildBottomControl(),
         ],
       ),
     );
