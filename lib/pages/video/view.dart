@@ -100,6 +100,12 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   late final PgcIntroController pgcIntroController;
   late final LocalIntroController localIntroController;
 
+  bool _backgroundAudioActive = false;
+  bool _backgroundWasPlaying = false;
+  bool _backgroundOnlyPlayAudio = false;
+  Duration? _backgroundAudioPosition;
+  Future<void> _backgroundAudioTransition = Future<void>.value();
+
   bool get autoExitFullscreen =>
       videoDetailController.plPlayerController.autoExitFullscreen;
 
@@ -181,6 +187,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   void positionListener(Duration position) {
     videoDetailController.playedTime = position;
+    if (_backgroundAudioActive) {
+      _backgroundAudioPosition = position;
+    }
   }
 
   @override
@@ -195,7 +204,81 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     } else if (state == .paused) {
       introController.cancelTimer();
       ctr.showDanmaku = false;
+      _queueBackgroundAudioTransition(_enterBackgroundAudio);
     }
+    if (isResume) {
+      _queueBackgroundAudioTransition(_restoreForegroundVideo);
+    }
+  }
+
+  bool get _canUseBackgroundAudio {
+    final ctr = videoDetailController.plPlayerController;
+    return PlatformUtils.isMobile &&
+        ctr.continuePlayInBackground.value &&
+        !videoDetailController.isFileSource &&
+        !ctr.isLive &&
+        (!Platform.isAndroid || !AndroidHelper.isPipMode);
+  }
+
+  void _queueBackgroundAudioTransition(Future<void> Function() transition) {
+    _backgroundAudioTransition = _backgroundAudioTransition.then<void>(
+      (_) async {
+        if (!mounted) return;
+        try {
+          await transition();
+        } catch (error, stackTrace) {
+          if (kDebugMode) {
+            debugPrint(
+              'background audio transition failed: $error\n$stackTrace',
+            );
+          }
+        }
+      },
+    );
+  }
+
+  Future<void> _enterBackgroundAudio() async {
+    if (!_canUseBackgroundAudio || _backgroundAudioActive) return;
+
+    final ctr = videoDetailController.plPlayerController;
+    final player = ctr.videoPlayerController;
+    final audioSource = videoDetailController.highestAudioUrl;
+    if (player == null || audioSource == null || audioSource.isEmpty) return;
+
+    final position = player.state.position;
+    final wasPlaying = player.state.playing;
+    final opened = await ctr.openBackgroundAudio(
+      audioSource: audioSource,
+      position: position,
+      play: wasPlaying,
+    );
+    if (!opened || !mounted) return;
+
+    _backgroundWasPlaying = wasPlaying;
+    _backgroundAudioPosition = position;
+    _backgroundOnlyPlayAudio = ctr.onlyPlayAudio.value;
+    _backgroundAudioActive = true;
+    ctr.onlyPlayAudio.value = true;
+    videoDetailController
+      ..playedTime = position
+      ..defaultST = null;
+  }
+
+  Future<void> _restoreForegroundVideo() async {
+    if (!_backgroundAudioActive) return;
+
+    final ctr = videoDetailController.plPlayerController;
+    final position =
+        _backgroundAudioPosition ?? ctr.videoPlayerController?.state.position;
+    final wasPlaying = _backgroundWasPlaying;
+    final onlyPlayAudio = _backgroundOnlyPlayAudio;
+    _backgroundAudioActive = false;
+    ctr.onlyPlayAudio.value = onlyPlayAudio;
+    videoDetailController
+      ..playedTime = position
+      ..defaultST = null;
+
+    await videoDetailController.playerInit(autoplay: wasPlaying);
   }
 
   Future<void>? playCallBack() {
@@ -209,6 +292,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   // 播放器状态监听
   Future<void> playerListener(PlayerStatus status) async {
+    if (_backgroundAudioActive) {
+      if (status.isPlaying) {
+        _backgroundWasPlaying = true;
+      } else if (status.isPaused) {
+        _backgroundWasPlaying = false;
+      }
+    }
     final isPlaying = status.isPlaying;
     try {
       if (videoDetailController.scrollCtr.hasClients) {

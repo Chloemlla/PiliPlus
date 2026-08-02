@@ -138,6 +138,12 @@ class VideoDetailController extends GetxController
   late VideoItem firstVideo;
   String? videoUrl;
   String? audioUrl;
+  String? get highestAudioUrl {
+    if (isFileSource || videoUrl == null) return null;
+    final audioList = data.dash?.audio;
+    if (audioList == null || audioList.isEmpty) return null;
+    return VideoUtils.getCdnUrl(audioList.first.playUrls, isAudio: true);
+  }
   Duration? defaultST;
   Duration? playedTime;
   String get playedTimePos {
