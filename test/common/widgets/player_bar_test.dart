@@ -42,10 +42,10 @@ void main() {
     expect(rightBottom.dy, closeTo(40, 0.001));
   });
 
-  testWidgets('scales children together when their content is too wide', (
+  testWidgets('uses intrinsic width when the parent width is unbounded', (
     tester,
   ) async {
-    await tester.pumpWidget(_playerBar(width: 240));
+    await tester.pumpWidget(_unboundedPlayerBar());
 
     final bar = tester.renderObject<RenderBox>(find.byType(PlayerBar));
     final left = tester.renderObject<RenderBox>(
@@ -55,32 +55,37 @@ void main() {
       find.byKey(const ValueKey<String>('right')),
     );
 
-    expect(bar.size, const Size(240, 40));
-    // Layout sizes remain unscaled; only painting and global coordinates scale.
+    expect(bar.size, const Size(320, 40));
     expect(left.size, const Size(140, 40));
     expect(right.size, const Size(180, 40));
-    final leftTop = _relativePoint(left, bar, Offset.zero);
-    expect(leftTop.dx, closeTo(0, 0.001));
-    expect(leftTop.dy, closeTo(5, 0.001));
-    final leftBottom = _relativePoint(
-      left,
-      bar,
-      Offset(left.size.width, left.size.height),
+    expect(_relativePoint(left, bar, Offset.zero).dx, closeTo(0, 0.001));
+    expect(_relativePoint(right, bar, Offset.zero).dx, closeTo(140, 0.001));
+    expect(
+      _relativePoint(
+        right,
+        bar,
+        Offset(right.size.width, right.size.height),
+      ).dx,
+      closeTo(320, 0.001),
     );
-    expect(leftBottom.dx, closeTo(105, 0.001));
-    expect(leftBottom.dy, closeTo(35, 0.001));
-    final rightTop = _relativePoint(right, bar, Offset.zero);
-    expect(rightTop.dx, closeTo(105, 0.001));
-    expect(rightTop.dy, closeTo(5, 0.001));
-    final rightBottom = _relativePoint(
-      right,
-      bar,
-      Offset(right.size.width, right.size.height),
-    );
-    expect(rightBottom.dx, closeTo(240, 0.001));
-    expect(rightBottom.dy, closeTo(35, 0.001));
   });
-}
+
+  test('requires exactly two children', () {
+    expect(
+      () => PlayerBar(children: [const SizedBox()]),
+      throwsA(isA<AssertionError>()),
+    );
+    expect(
+      () => PlayerBar(
+        children: [
+          const SizedBox(),
+          const SizedBox(),
+          const SizedBox(),
+        ],
+      ),
+      throwsA(isA<AssertionError>()),
+    );
+  });
 
 Widget _playerBar({required double width}) {
   return MaterialApp(

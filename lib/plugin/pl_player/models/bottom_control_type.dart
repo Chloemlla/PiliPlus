@@ -13,5 +13,4 @@ enum BottomControlType {
   dmChart,
   qa,
   aiTranslate,
-  more,
 }

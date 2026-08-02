@@ -30,7 +30,10 @@ class PlayerBar extends MultiChildRenderObjectWidget {
   const PlayerBar({
     super.key,
     super.children,
-  });
+  }) : assert(
+         children.length == 2,
+         'PlayerBar requires exactly two children: left and right controls.',
+       );
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -55,9 +58,18 @@ class RenderBottomBar extends RenderBox
   void performLayout() {
     _transform = null;
 
-    final c = constraints.copyWith(minWidth: 0.0, maxWidth: double.infinity);
-    final RenderBox first = firstChild!..layout(c, parentUsesSize: true);
-    final RenderBox last = lastChild!..layout(c, parentUsesSize: true);
+    final childConstraints = constraints.copyWith(
+      minWidth: 0.0,
+      maxWidth: double.infinity,
+    );
+    final RenderBox first = firstChild!..layout(
+      childConstraints,
+      parentUsesSize: true,
+    );
+    final RenderBox last = lastChild!..layout(
+      childConstraints,
+      parentUsesSize: true,
+    );
 
     final firstSize = first.size;
     final lastSize = last.size;
@@ -68,25 +80,39 @@ class RenderBottomBar extends RenderBox
     final firstWidth = firstSize.width;
     final lastWidth = lastSize.width;
     final totalWidth = firstWidth + lastWidth;
-    final maxWidth = constraints.maxWidth;
-    final height = math.max(firstSize.height, lastSize.height);
-    size = constraints.constrainDimensions(maxWidth, height);
+    final desiredWidth = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : totalWidth;
+    final desiredHeight = math.max(firstSize.height, lastSize.height);
+    size = constraints.constrainDimensions(
+      desiredWidth.isFinite ? desiredWidth : 0.0,
+      desiredHeight.isFinite ? desiredHeight : 0.0,
+    );
 
-    firstParentData.offset = Offset(0.0, (height - firstSize.height) / 2);
-    if (totalWidth <= maxWidth) {
+    final barWidth = size.width;
+    final barHeight = size.height;
+    final firstDy = (barHeight - firstSize.height) / 2;
+    final lastDy = (barHeight - lastSize.height) / 2;
+    firstParentData.offset = Offset(0.0, firstDy.isFinite ? firstDy : 0.0);
+
+    if (totalWidth.isFinite && totalWidth <= barWidth) {
+      final lastDx = barWidth - lastWidth;
       lastParentData.offset = Offset(
-        maxWidth - lastWidth,
-        (height - lastSize.height) / 2,
+        lastDx.isFinite ? lastDx : 0.0,
+        lastDy.isFinite ? lastDy : 0.0,
+      );
+    } else if (barWidth > 0.0 && totalWidth.isFinite) {
+      final scale = barWidth / totalWidth;
+      _transform = Matrix4.identity()
+        ..translateByDouble(0.0, barHeight * (1 - scale) / 2, 0.0, 1.0)
+        ..scaleByDouble(scale, scale, scale, 1.0);
+      final lastDx = (barWidth - lastWidth * scale) / scale;
+      lastParentData.offset = Offset(
+        lastDx.isFinite ? lastDx : 0.0,
+        lastDy.isFinite ? lastDy : 0.0,
       );
     } else {
-      final scale = maxWidth / totalWidth;
-      _transform = Matrix4.identity()
-        ..translateByDouble(0.0, height * (1 - scale) / 2, 0.0, 1.0)
-        ..scaleByDouble(scale, scale, scale, 1.0);
-      lastParentData.offset = Offset(
-        (maxWidth - lastWidth * scale) / scale,
-        (height - lastSize.height) / 2,
-      );
+      lastParentData.offset = Offset(0.0, lastDy.isFinite ? lastDy : 0.0);
     }
   }
 

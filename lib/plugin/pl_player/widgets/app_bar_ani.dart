@@ -27,7 +27,7 @@ class AppBarAni extends StatelessWidget {
     end: Alignment.topCenter,
     colors: <Color>[
       Colors.transparent,
-      Color(0x66000000),
+      Color(0xBF000000),
     ],
     tileMode: TileMode.mirror,
   );
@@ -37,13 +37,23 @@ class AppBarAni extends StatelessWidget {
     end: Offset.zero,
   );
 
+  static const _bottomDecoration = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[
+      Colors.transparent,
+      Color(0xBF000000),
+    ],
+    tileMode: TileMode.mirror,
+  );
+
   @override
   Widget build(BuildContext context) {
     return SlideTransition(
       position: controller.drive(isTop ? _topPos : _bottomPos),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: isTop ? _topDecoration : null,
+          gradient: isTop ? _topDecoration : _bottomDecoration,
         ),
         child: removeSafeArea
             ? child

@@ -49,14 +49,14 @@ abstract final class WhatsNewData {
     ),
     const ImprovementsGuidePageData(
       icon: Icons.video_settings_outlined,
-      title: 'Android 播放控制栏已修回',
-      subtitle: '窄屏下不再让右侧按钮把整条底栏撑出播放器，弹出菜单定位也已同步修正。',
+      title: '播放器控件已恢复',
+      subtitle: '视频详情页和全屏播放恢复上游默认控件布局与交互。',
       bullets: [
-        '播放、暂停和时间等左侧核心控件保持完整显示，不会再被右侧功能挤走。',
-        '画质、倍速、全屏和更多等右侧控件只使用剩余宽度，内容较多时按比例缩放并保持可点击。',
-        '最右侧的全屏与更多按钮默认可见，同时修复按钮截断、控制栏异常上移、弹出菜单锚点偏移和右下角灰色方块。',
+        '播放、暂停、时间、画质、倍速和全屏等默认控件保持原有尺寸与顺序。',
+        '底部控制栏不再额外添加分支专属的“更多”按钮，避免改变上游播放习惯。',
+        '视频标记和画质推荐模式仍可从顶部“更多设置”访问，书签与推荐能力不会丢失。',
       ],
-      tip: '手机竖屏、窄窗口和横屏全屏均保留原有按钮尺寸与顺序。',
+      tip: '手机竖屏、窄窗口和横屏全屏均使用统一的上游控件几何与渐变。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.health_and_safety_outlined,
