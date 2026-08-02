@@ -620,9 +620,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
   /// 列表循环或者顺序播放时，自动播放下一个
   @override
-  bool nextPlay([
-    bool skipPart = false,
-  ], {bool skipCharging = false}) {
+  bool nextPlay({bool skipPart = false, bool skipCharging = false}) {
     try {
       final List<BaseEpisodeItem> episodes = <BaseEpisodeItem>[];
       bool isPart = false;
@@ -680,7 +678,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
       if (nextIndex >= episodes.length) {
         if (isPart &&
             (videoDetailCtr.isPlayAll || videoDetail.ugcSeason != null)) {
-          return nextPlay(true, skipCharging: skipCharging);
+          return nextPlay(skipPart: true, skipCharging: skipCharging);
         }
 
         if (playRepeat == PlayRepeat.listCycle) {
