@@ -620,7 +620,9 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
   /// 列表循环或者顺序播放时，自动播放下一个
   @override
-  bool nextPlay([bool skipPart = false]) {
+  bool nextPlay([
+    bool skipPart = false,
+  ], {bool skipCharging = false}) {
     try {
       final List<BaseEpisodeItem> episodes = <BaseEpisodeItem>[];
       bool isPart = false;
@@ -644,7 +646,6 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
       final PlayRepeat playRepeat =
           videoDetailCtr.plPlayerController.playRepeat;
-
       if (episodes.isEmpty) {
         if (playRepeat == PlayRepeat.listCycle) {
           videoDetailCtr.plPlayerController.play(repeat: true);
@@ -679,7 +680,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
       if (nextIndex >= episodes.length) {
         if (isPart &&
             (videoDetailCtr.isPlayAll || videoDetail.ugcSeason != null)) {
-          return nextPlay(true);
+          return nextPlay(true, skipCharging: skipCharging);
         }
 
         if (playRepeat == PlayRepeat.listCycle) {
@@ -692,21 +693,31 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
         }
       }
 
-      int? cid = episodes[nextIndex].cid;
-      while (cid == null) {
+      for (int checked = 0; checked < episodes.length; checked++) {
+        final episode = episodes[nextIndex];
+        final int? cid = episode.cid;
+        if (cid != null &&
+            cid != this.cid.value &&
+            (!skipCharging || !episode.shouldSkipForAutoPlay)) {
+          onChangeEpisode(episode);
+          return true;
+        }
+
         nextIndex++;
         if (nextIndex >= episodes.length) {
-          return false;
+          if (playRepeat == PlayRepeat.listCycle) {
+            nextIndex = 0;
+          } else {
+            break;
+          }
         }
-        cid = episodes[nextIndex].cid;
       }
 
-      if (cid != this.cid.value) {
-        onChangeEpisode(episodes[nextIndex]);
-        return true;
-      } else {
-        return false;
+      if (playRepeat == PlayRepeat.autoPlayRelated &&
+          videoDetailCtr.plPlayerController.showRelatedVideo) {
+        return playRelated();
       }
+      return false;
     } catch (_) {
       return false;
     }

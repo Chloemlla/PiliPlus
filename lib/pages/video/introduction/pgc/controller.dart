@@ -354,12 +354,11 @@ class PgcIntroController extends CommonIntroController {
 
   /// 列表循环或者顺序播放时，自动播放下一个；自动连播时，播放相关视频
   @override
-  bool nextPlay() {
+  bool nextPlay({bool skipCharging = false}) {
     try {
       final episodes = pgcItem.episodes!;
 
       PlayRepeat playRepeat = videoDetailCtr.plPlayerController.playRepeat;
-
       int currentIndex = episodes.indexWhere(
         (e) => e.cid == videoDetailCtr.cid.value,
       );
@@ -374,8 +373,23 @@ class PgcIntroController extends CommonIntroController {
           return false;
         }
       }
-      onChangeEpisode(episodes[nextIndex]);
-      return true;
+      for (int checked = 0; checked < episodes.length; checked++) {
+        final episode = episodes[nextIndex];
+        if (!skipCharging || !episode.shouldSkipForAutoPlay) {
+          onChangeEpisode(episode);
+          return true;
+        }
+
+        nextIndex++;
+        if (nextIndex >= episodes.length) {
+          if (playRepeat == PlayRepeat.listCycle) {
+            nextIndex = 0;
+          } else {
+            break;
+          }
+        }
+      }
+      return false;
     } catch (_) {
       return false;
     }

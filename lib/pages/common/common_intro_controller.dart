@@ -58,7 +58,7 @@ abstract class CommonIntroController extends GetxController
   void queryVideoIntro();
 
   bool prevPlay();
-  bool nextPlay();
+  bool nextPlay({bool skipCharging = false});
 
   void actionShareVideo(BuildContext context);
 

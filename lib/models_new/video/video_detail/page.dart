@@ -22,20 +22,27 @@ class Part extends BaseEpisodeItem {
     this.ctime,
     this.firstFrame,
     super.badge,
+    super.isCharging,
+    super.isChargingPurchased,
   });
 
-  factory Part.fromJson(Map<String, dynamic> json) => Part(
-    cid: json['cid'] as int?,
-    page: json['page'] as int?,
-    from: json['from'] as String?,
-    part: json['part'] as String?,
-    duration: json['duration'] as int?,
-    vid: json['vid'] as String?,
-    dimension: json['dimension'] == null
-        ? null
-        : Dimension.fromJson(json['dimension'] as Map<String, dynamic>),
-    ctime: json['ctime'] as int?,
-    firstFrame: json['first_frame'] as String?,
-    badge: json["badge"],
-  );
+  factory Part.fromJson(Map<String, dynamic> json) {
+    final flags = EpisodePlaybackFlags.fromJson(json);
+    return Part(
+      cid: json['cid'] as int?,
+      page: json['page'] as int?,
+      from: json['from'] as String?,
+      part: json['part'] as String?,
+      duration: json['duration'] as int?,
+      vid: json['vid'] as String?,
+      dimension: json['dimension'] == null
+          ? null
+          : Dimension.fromJson(json['dimension'] as Map<String, dynamic>),
+      ctime: json['ctime'] as int?,
+      firstFrame: json['first_frame'] as String?,
+      badge: flags.badge,
+      isCharging: flags.isCharging,
+      isChargingPurchased: flags.isChargingPurchased,
+    );
+  }
 }

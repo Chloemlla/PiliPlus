@@ -31,6 +31,7 @@ class MediaListItemModel extends BaseEpisodeItem {
   });
 
   MediaListItemModel.fromJson(Map<String, dynamic> json) {
+    final flags = EpisodePlaybackFlags.fromJson(json);
     aid = json['id'] as int?;
     intro = json['intro'] as String?;
     cntInfo = json['cnt_info'] == null
@@ -43,6 +44,8 @@ class MediaListItemModel extends BaseEpisodeItem {
     type = json['type'] as int?;
     upper = json['upper'] == null ? null : Owner.fromJson(json['upper']);
     bvid = json['bv_id'] as String?;
-    badge = json['badge']?['text'];
+    badge = flags.badge;
+    isCharging = flags.isCharging;
+    isChargingPurchased = flags.isChargingPurchased;
   }
 }

@@ -139,10 +139,14 @@ class VideoDetailController extends GetxController
   String? videoUrl;
   String? audioUrl;
   String? get highestAudioUrl {
-    if (isFileSource || videoUrl == null) return null;
+    if (isFileSource || isQuerying || videoUrl == null) return null;
     final audioList = data.dash?.audio;
     if (audioList == null || audioList.isEmpty) return null;
-    return VideoUtils.getCdnUrl(audioList.first.playUrls, isAudio: true);
+    final highestAudio = audioList.reduce(
+      (current, candidate) =>
+          (candidate.id ?? -1) > (current.id ?? -1) ? candidate : current,
+    );
+    return VideoUtils.getCdnUrl(highestAudio.playUrls, isAudio: true);
   }
   Duration? defaultST;
   Duration? playedTime;
