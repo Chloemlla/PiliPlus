@@ -113,6 +113,29 @@ Still forbidden after install:
 - `gradlew` / Android emulator runner locally
 - packaging/signing
 
+#### Allowed static pre-push guard
+
+The local build ban does not prohibit CI-identical, non-Flutter static checks.
+Before the first push, run the applicable repository scripts plus whitespace
+validation:
+
+```bash
+python tool/check_import_boundaries.py
+git diff --check
+```
+
+- For every added or moved `lib/**/*.dart` file, inspect workflow-invoked
+  boundary scripts for exact path sets or baselines. If the new dependency is
+  intentional, update the narrow allowlist in the same commit; never broaden
+  an allowlist to a directory or wildcard just to make CI pass.
+- For new tests, verify third-party symbols against production usage or the
+  installed dependency source after an allowed `pub get`. Manually review
+  analyzer-only details such as const constructors and imports before push;
+  GitHub Actions remains the analyzer/test authority.
+- For platform-impacting changes, a green quality job is only an intermediate
+  gate. Continue watching the dependent Android/platform job through patch
+  application, packaging, release, and artifact upload.
+
 #### End-to-end repair loop
 
 ```
@@ -151,6 +174,9 @@ Still forbidden after install:
 | Fix requires binary proof | push and let Actions rebuild; do not run local Flutter/Gradle |
 | Need packages for analyzer reading | declarative `pub get` only |
 | Action still fails after push | re-fetch logs with `gh`; continue loop |
+| New Dart module is imported by a boundary-owned entry point | update the exact path allowlist and run the boundary script before push |
+| New test assumes a dependency API or misses an analyzer lint | inspect production/dependency source, patch the test, then let Actions verify |
+| Quality job is green but a dependent platform job is running | keep monitoring; do not report the workflow green yet |
 | Baseline profile PR noise | follow `android-baseline-profile.md` (e.g. skip on PR if policy) |
 | Secret in log excerpt | redact before writing to chat/docs |
 
@@ -173,6 +199,10 @@ Process assertions for agents (no local app test runner required):
 - Assert no command history contains local `flutter build`, `flutter test`, or `gradlew` for verification.
 - Assert post-fix verification used `gh` run/PR checks.
 - Assert multi-root failures produced multi-agent or multi-pass handling notes.
+- Assert added/moved Dart files were checked against workflow-invoked boundary
+  classifiers and exact allowlists.
+- Assert platform-impacting fixes were monitored through the final dependent
+  platform job, not only the quality job.
 
 ### 7. Wrong vs Correct
 
