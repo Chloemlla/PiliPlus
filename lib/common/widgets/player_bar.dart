@@ -55,7 +55,7 @@ class RenderBottomBar extends RenderBox
   void performLayout() {
     _transform = null;
 
-    final c = constraints.copyWith(maxWidth: .infinity);
+    final c = constraints.copyWith(minWidth: 0.0, maxWidth: double.infinity);
     final RenderBox first = firstChild!..layout(c, parentUsesSize: true);
     final RenderBox last = lastChild!..layout(c, parentUsesSize: true);
 
@@ -93,16 +93,10 @@ class RenderBottomBar extends RenderBox
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_transform != null) {
-      // Include render-object offset in the transform so _transform
-      // does NOT scale the offset. Children are painted at their
-      // parentData.offset without the render object's own offset.
-      final Matrix4 totalTransform = Matrix4.identity()
-        ..translateByDouble(offset.dx, offset.dy, 0, 1)
-        ..multiply(_transform!);
       layer = context.pushTransform(
         needsCompositing,
-        Offset.zero,
-        totalTransform,
+        offset,
+        _transform!,
         defaultPaint,
         oldLayer: layer as TransformLayer?,
       );
@@ -129,17 +123,8 @@ class RenderBottomBar extends RenderBox
         child.parentData! as MultiChildLayoutParentData;
     final Offset childOffset = childParentData.offset;
     if (_transform != null) {
-      // Child visual offset in this render object's coordinate system is
-      // _transform * childOffset.  _transform = translate(0, ty) * scale(s).
-      final double s = _transform!.storage[0];
-      final double ty = _transform!.storage[13];
-      transform.translateByDouble(
-        childOffset.dx * s,
-        childOffset.dy * s + ty,
-        0, 1,
-      );
-    } else {
-      transform.translateByDouble(childOffset.dx, childOffset.dy, 0, 1);
+      transform.multiply(_transform!);
     }
+    transform.translateByDouble(childOffset.dx, childOffset.dy, 0, 1);
   }
 }
