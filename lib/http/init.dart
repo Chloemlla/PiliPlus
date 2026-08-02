@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:pili_plus/http/adapter_lifecycle.dart';
 import 'package:pili_plus/http/api.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/network_security_policy.dart';
@@ -196,16 +197,16 @@ class Request {
     try {
       final (h11, connectionManager) = _createPool();
       if (connectionManager != null) {
-        (dio.httpClientAdapter as Http2Adapter)
-          ..connectionManager.close(force: true)
-          ..connectionManager = connectionManager
-          ..fallbackAdapter.close(force: true)
-          ..fallbackAdapter = h11;
-        _http11Dio?.httpClientAdapter = h11;
+        replaceHttp2AdapterPool(
+          adapter: dio.httpClientAdapter as Http2Adapter,
+          connectionManager: connectionManager,
+          fallbackAdapter: h11,
+          installHttp11Adapter: (adapter) {
+            _http11Dio?.httpClientAdapter = adapter;
+          },
+        );
       } else {
-        dio
-          ..httpClientAdapter.close(force: true)
-          ..httpClientAdapter = h11;
+        replaceHttpClientAdapter(dio: dio, adapter: h11);
       }
     } catch (_) {}
   }

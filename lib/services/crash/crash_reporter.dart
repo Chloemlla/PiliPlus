@@ -108,6 +108,7 @@ abstract final class CrashReporter {
 
     late final ErrorCallback platformHandler;
     platformHandler = (error, stackTrace) {
+      if (shouldIgnore(error, stackTrace)) return true;
       var handled = false;
       try {
         handled =

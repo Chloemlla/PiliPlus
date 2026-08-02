@@ -14,6 +14,7 @@ import 'package:pili_plus/common/widgets/gesture/mouse_interactive_viewer.dart';
 import 'package:pili_plus/common/widgets/gesture/player_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/loading_widget.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/player_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
@@ -984,22 +985,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       if (!plPlayerController.isDesktopPip) .fullscreen,
       .more,
     ];
-    return Row(
-      children: [
-        Row(
-          mainAxisSize: .min,
-          children: userSpecifyItemLeft.map(progressWidget).toList(),
-        ),
-        const Spacer(),
-        SingleChildScrollView(
-          scrollDirection: .horizontal,
-          reverse: true,
-          child: Row(
-            mainAxisSize: .min,
-            children: userSpecifyItemRight.map(progressWidget).toList(),
-          ),
-        ),
-      ],
+    return PlayerBar(
+      leading: Row(
+        mainAxisSize: .min,
+        children: userSpecifyItemLeft.map(progressWidget).toList(),
+      ),
+      trailing: Row(
+        mainAxisSize: .min,
+        children: userSpecifyItemRight.map(progressWidget).toList(),
+      ),
     );
   }
 

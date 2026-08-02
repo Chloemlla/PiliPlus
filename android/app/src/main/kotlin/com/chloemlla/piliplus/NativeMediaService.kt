@@ -498,6 +498,11 @@ class NativeMediaService : Service() {
 
         private fun startOrUpdate(context: Context) {
             if (state.hidden) return
+            val currentService = service
+            if (currentService != null) {
+                currentService.refreshFromState()
+                return
+            }
             val app = context.applicationContext
             val intent = Intent(app, NativeMediaService::class.java).setAction(ACTION_REFRESH)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -505,7 +510,6 @@ class NativeMediaService : Service() {
             } else {
                 app.startService(intent)
             }
-            service?.refreshFromState()
         }
 
         private fun stop(context: Context) {

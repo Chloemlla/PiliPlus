@@ -35,7 +35,7 @@ class RetryInterceptor extends Interceptor {
             }
             _client
                 .fetch(options)
-                .then(
+                .then<void>(
                   (i) => handler.resolve(
                     i
                       ..redirects.add(
@@ -43,8 +43,12 @@ class RetryInterceptor extends Interceptor {
                       )
                       ..isRedirect = true,
                   ),
-                )
-                .onError<DioException>((error, _) => handler.next(error));
+                  onError: (Object error, StackTrace stackTrace) {
+                    handler.next(
+                      _asDioException(error, stackTrace, options),
+                    );
+                  },
+                );
             return;
           }
         }
@@ -69,8 +73,18 @@ class RetryInterceptor extends Interceptor {
               ),
               () => _client
                   .fetch(err.requestOptions)
-                  .then(handler.resolve)
-                  .onError<DioException>((error, _) => handler.reject(error)),
+                  .then<void>(
+                    handler.resolve,
+                    onError: (Object error, StackTrace stackTrace) {
+                      handler.reject(
+                        _asDioException(
+                          error,
+                          stackTrace,
+                          err.requestOptions,
+                        ),
+                      );
+                    },
+                  ),
             );
           } else {
             handler.next(err);
@@ -84,4 +98,16 @@ class RetryInterceptor extends Interceptor {
 
   RetryInterceptor copyWith({Dio? client, int? count, int? delay}) =>
       .new(client ?? _client, count ?? _count, delay ?? _delay);
+
+  static DioException _asDioException(
+    Object error,
+    StackTrace stackTrace,
+    RequestOptions requestOptions,
+  ) => error is DioException
+      ? error
+      : DioException(
+          requestOptions: requestOptions,
+          error: error,
+          stackTrace: stackTrace,
+        );
 }

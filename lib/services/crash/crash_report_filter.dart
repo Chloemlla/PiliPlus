@@ -1,5 +1,6 @@
 abstract final class CrashReportFilter {
   static bool shouldIgnore(Object error, [StackTrace? stackTrace]) {
+    if (_isHttp2GoawayAfterWriterClose(error, stackTrace)) return true;
     if (error is String && !_hasUsefulStack(stackTrace)) return true;
 
     final message = error.toString().trim().toLowerCase();
@@ -18,6 +19,24 @@ abstract final class CrashReportFilter {
 
   static bool _hasApplicationStack(StackTrace? stackTrace) =>
       stackTrace?.toString().contains('package:pili_plus/') ?? false;
+
+  static bool _isHttp2GoawayAfterWriterClose(
+    Object error,
+    StackTrace? stackTrace,
+  ) {
+    if (error is! StateError ||
+        error.toString().trim() !=
+            'Bad state: Cannot add event after closing') {
+      return false;
+    }
+    final stack = stackTrace?.toString() ?? '';
+    return stack.contains('package:http2/src/frames/frame_writer.dart') &&
+        stack.contains('FrameWriter.writeGoawayFrame') &&
+        stack.contains(
+          'package:http2/src/flowcontrol/connection_queues.dart',
+        ) &&
+        !stack.contains('package:pili_plus/');
+  }
 
   static final _sslSeekFailure = RegExp(r'\bssl\b.{0,32}\bseek failed\b');
 

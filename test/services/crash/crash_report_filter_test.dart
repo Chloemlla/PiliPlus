@@ -90,5 +90,53 @@ void main() {
         isFalse,
       );
     });
+
+    test('ignores only the exact HTTP/2 GOAWAY writer-close race', () {
+      final goawayStack = StackTrace.fromString('''
+#0 BufferedBytesWriter.add (package:http2/src/frames/frame_writer.dart:20)
+#1 FrameWriter.writeGoawayFrame (package:http2/src/frames/frame_writer.dart:252)
+#2 ConnectionMessageQueueOut._process (package:http2/src/flowcontrol/connection_queues.dart:88)
+''');
+
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError('Cannot add event after closing'),
+          goawayStack,
+        ),
+        isTrue,
+      );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError('Cannot add event after closing'),
+          StackTrace.fromString(
+            '#0 StreamController.add (dart:async/stream_controller.dart:1)',
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError('Cannot add event after closing'),
+          StackTrace.fromString(
+            '${goawayStack.toString()}'
+            '#3 Request.reset (package:pili_plus/http/init.dart:1)',
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        CrashReportFilter.shouldIgnore(
+          StateError(
+            'The `handler` has already been called, '
+            'make sure each handler gets called only once.',
+          ),
+          StackTrace.fromString(
+            '#0 RequestInterceptorHandler.reject '
+            '(package:dio/src/interceptor.dart:117)',
+          ),
+        ),
+        isFalse,
+      );
+    });
   });
 }

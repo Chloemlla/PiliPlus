@@ -95,6 +95,7 @@ Future<void> _initDownPath() async {
     downloadPath = defDownloadPath;
   }
 }
+
 Future<void> _initTmpPath() async {
   tmpDirPath = (await getTemporaryDirectory()).path;
 }
@@ -112,6 +113,7 @@ void main() {
       startupCompleted = true;
     },
     (error, stackTrace) {
+      if (CrashReporter.shouldIgnore(error, stackTrace)) return;
       final severity = startupCompleted
           ? CrashSeverity.unhandled
           : CrashSeverity.fatal;
