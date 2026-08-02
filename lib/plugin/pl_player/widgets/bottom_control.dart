@@ -55,7 +55,7 @@ class BottomControl extends StatelessWidget {
     final bufferedBarColor = primary.withValues(alpha: 0.4);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
