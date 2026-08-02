@@ -161,7 +161,7 @@ final class _RedirectThenFailAdapter implements HttpClientAdapter {
           '',
           302,
           headers: {
-            Headers.locationHeader: ['/next'],
+            'location': ['/next'],
           },
         ),
       );

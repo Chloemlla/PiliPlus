@@ -85,13 +85,13 @@ Future<void> _pumpPlayerBar(
             key: _barKey,
             width: width,
             height: 40,
-            child: PlayerBar(
-              leading: const SizedBox(
+            child: const PlayerBar(
+              leading: SizedBox(
                 key: _leadingKey,
                 width: 140,
                 height: 32,
               ),
-              trailing: const Row(
+              trailing: Row(
                 key: _trailingKey,
                 mainAxisSize: MainAxisSize.min,
                 children: [
