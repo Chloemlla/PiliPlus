@@ -93,10 +93,16 @@ class RenderBottomBar extends RenderBox
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_transform != null) {
+      // Include render-object offset in the transform so _transform
+      // does NOT scale the offset. Children are painted at their
+      // parentData.offset without the render object's own offset.
+      final Matrix4 totalTransform = Matrix4.identity()
+        ..translateByDouble(offset.dx, offset.dy, 0, 1)
+        ..multiply(_transform!);
       layer = context.pushTransform(
         needsCompositing,
-        offset,
-        _transform!,
+        Offset.zero,
+        totalTransform,
         defaultPaint,
         oldLayer: layer as TransformLayer?,
       );
@@ -119,14 +125,21 @@ class RenderBottomBar extends RenderBox
 
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
-    final childParentData = child.parentData! as MultiChildLayoutParentData;
-    final Offset offset = childParentData.offset;
+    final MultiChildLayoutParentData childParentData =
+        child.parentData! as MultiChildLayoutParentData;
+    final Offset childOffset = childParentData.offset;
     if (_transform != null) {
-      transform
-        ..translateByDouble(offset.dx * _transform!.storage[0], offset.dy, 0, 1)
-        ..multiply(_transform!);
+      // Child visual offset in this render object's coordinate system is
+      // _transform * childOffset.  _transform = translate(0, ty) * scale(s).
+      final double s = _transform!.storage[0];
+      final double ty = _transform!.storage[13];
+      transform.translateByDouble(
+        childOffset.dx * s,
+        childOffset.dy * s + ty,
+        0, 1,
+      );
     } else {
-      transform.translateByDouble(offset.dx, offset.dy, 0, 1);
+      transform.translateByDouble(childOffset.dx, childOffset.dy, 0, 1);
     }
   }
 }
