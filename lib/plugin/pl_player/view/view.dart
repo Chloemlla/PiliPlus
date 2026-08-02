@@ -32,7 +32,6 @@ import 'package:pili_plus/pages/live_room/widgets/bottom_control.dart'
     as live_bottom;
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
-import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
 import 'package:pili_plus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:pili_plus/pages/video/post_panel/view.dart';
 import 'package:pili_plus/pages/video/quality/quality_widgets.dart';
@@ -542,7 +541,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               height: 30,
               tooltip: '分段信息',
               icon: DisabledIcon(
-                22: 22,
+                iconSize: 22,
                 color: Colors.white,
                 disable: !videoDetailController.showVP.value,
                 child: const Icon(

@@ -86,6 +86,31 @@ void main() {
       throwsA(isA<AssertionError>()),
     );
   });
+}
+
+Widget _unboundedPlayerBar() {
+  return MaterialApp(
+    home: Scaffold(
+      body: UnconstrainedBox(
+        alignment: Alignment.topLeft,
+        child: PlayerBar(
+          children: [
+            const SizedBox(
+              key: ValueKey<String>('left'),
+              width: 140,
+              height: 40,
+            ),
+            const SizedBox(
+              key: ValueKey<String>('right'),
+              width: 180,
+              height: 40,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 Widget _playerBar({required double width}) {
   return MaterialApp(
