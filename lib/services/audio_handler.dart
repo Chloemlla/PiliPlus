@@ -24,6 +24,15 @@ import 'package:collection/collection.dart';
 import 'package:path/path.dart' as path;
 
 Future<VideoPlayerServiceHandler> initAudioService() {
+  // Android uses NativeMediaService for the MediaSession and notification.
+  // Starting audio_service as a second service during cold start can leave
+  // the activity without a focused window while Android is dispatching input.
+  if (Platform.isAndroid) {
+    return Future<VideoPlayerServiceHandler>.value(
+      VideoPlayerServiceHandler(),
+    );
+  }
+
   return AudioService.init(
     builder: VideoPlayerServiceHandler.new,
     config: const AudioServiceConfig(
