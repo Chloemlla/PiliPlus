@@ -138,6 +138,7 @@ void main() {
       final events = <BoxEvent>[];
       box.watch().listen(events.add);
       await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
       events.clear();
       final before = store.exportBox('atomic_batch');
       store.failPutAllAfter = 1;
@@ -185,6 +186,7 @@ void main() {
       final events = <BoxEvent>[];
       box.watch().listen(events.add);
       await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
       events.clear();
       final before = store.exportBox('atomic_delete');
       store.failRemoveAllAfter = 1;
@@ -209,6 +211,7 @@ void main() {
       final events = <BoxEvent>[];
       box.watch().listen(events.add);
       await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
       events.clear();
       final before = store.exportBox('atomic_replace');
       store.failNextReplace = true;
