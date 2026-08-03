@@ -104,6 +104,51 @@ Future<void> _initAppPath() async {
   appSupportDirPath = (await getApplicationSupportDirectory()).path;
 }
 
+/// Post-first-frame startup: media/audio service (foreground service), account
+/// session restore & history sync. Kept off the pre-`runApp` path so a slow
+/// network or Synapse server cannot delay the first frame (black screen) or
+/// trip the Android launch/foreground-service timeouts.
+Future<void> _initDeferredStartup() async {
+  if (PlatformUtils.isMobile || Platform.isMacOS) {
+    try {
+      await setupServiceLocator();
+    } catch (e, s) {
+      CrashReporter.recordErrorSync(
+        e,
+        s,
+        severity: CrashSeverity.handled,
+        module: 'startup',
+        operation: 'setupServiceLocator',
+        reason: 'deferred_audio_service_init_failed',
+      );
+    }
+  }
+  try {
+    await LoginUtils.initializeSession();
+  } catch (e, s) {
+    CrashReporter.recordErrorSync(
+      e,
+      s,
+      severity: CrashSeverity.handled,
+      module: 'startup',
+      operation: 'LoginUtils.initializeSession',
+      reason: 'deferred_session_init_failed',
+    );
+  }
+  try {
+    await RequestUtils.syncHistoryStatus();
+  } catch (e, s) {
+    CrashReporter.recordErrorSync(
+      e,
+      s,
+      severity: CrashSeverity.handled,
+      module: 'startup',
+      operation: 'RequestUtils.syncHistoryStatus',
+      reason: 'deferred_history_status_sync_failed',
+    );
+  }
+}
+
 void main() {
   var startupCompleted = false;
   runZonedGuarded(
@@ -172,7 +217,6 @@ Future<void> _main() async {
     }
     await Future.wait([
       if (Pref.horizontalScreen) ?fullMode() else ?portraitUpMode(),
-      setupServiceLocator(),
     ]);
   } else if (Platform.isWindows) {
     if (await WebViewEnvironment.getAvailableVersion() != null) {
@@ -182,13 +226,22 @@ Future<void> _main() async {
         ),
       );
     }
-  } else if (Platform.isMacOS) {
-    await setupServiceLocator();
   }
 
   Request();
-  await LoginUtils.initializeSession();
-  RequestUtils.syncHistoryStatus();
+  // The account manager must be installed before any request; it is local &
+  // cheap, unlike the rest of the session restore below.
+  Request.installAccountManager();
+
+  // Defer everything that needs the network or a foreground service until the
+  // first frame has rendered. Restoring the session performs Synapse discovery
+  // & coin sync against the network (10s+ HTTP timeouts with retry) and starting
+  // the audio service spins up a foreground service; doing either before
+  // runApp() leaves a black screen on slow/loaded devices until the system
+  // declares the app unresponsive (ANR / launch timeout).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(_initDeferredStartup());
+  });
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
       LiveAlertLifecycleObserver.instance.init().catchError((

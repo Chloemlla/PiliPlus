@@ -251,7 +251,11 @@ abstract final class SynapseSyncService {
       _startWatchers();
       if (!Accounts.main.isLogin) return;
       await _ensureClientIdentity();
-      final remote = await fetchSnapshot();
+      // Startup discovery is best-effort: bound it so an unreachable Synapse
+      // server can never hold the post-first-frame startup / login restore.
+      final remote = await fetchSnapshot().timeout(
+        const Duration(seconds: 8),
+      );
       if (remote.records.isEmpty && remote.settings == null) return;
       final navigator = await StartupOverlayCoordinator.waitForNavigator(
         debugLabel: 'Synapse-sync',

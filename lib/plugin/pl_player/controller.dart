@@ -1,4 +1,5 @@
-import 'dart:async' show StreamSubscription, Timer;
+import 'dart:async'
+    show StreamSubscription, Timer, unawaited;
 import 'dart:convert' show ascii, utf8;
 import 'dart:io' show Platform;
 import 'dart:math' show max, min;
@@ -705,9 +706,10 @@ class PlPlayerController with BlockConfigMixin {
 
       if (_playerCount == 0) {
         _removeListeners();
-        _videoPlayerController?.dispose();
+        final p = _videoPlayerController;
         _videoPlayerController = null;
         _videoController = null;
+        if (p != null) unawaited(_releasePlayer(p));
         return;
       }
 
@@ -850,7 +852,7 @@ class PlPlayerController with BlockConfigMixin {
       player = await _initPlayer();
       if (_playerCount == 0) {
         _removeListeners();
-        player.dispose();
+        unawaited(_releasePlayer(player));
         player = null;
         _videoController = null;
         return;
@@ -1740,12 +1742,28 @@ class PlPlayerController with BlockConfigMixin {
     if (kDebugMode) {
       debugPrint('dispose player');
     }
-    _videoPlayerController?.dispose();
+    final player = _videoPlayerController;
     _videoPlayerController = null;
     _videoController = null;
+    if (player != null) {
+      // Release the player off the hot path: media_kit's teardown can block on
+      // its event-loop join on desktop (native loop) — never let it freeze the
+      // UI isolate (black screen / ANR).
+      unawaited(_releasePlayer(player));
+    }
     if (!_isDetached) {
       _instance = null;
       videoPlayerServiceHandler?.clear();
+    }
+  }
+
+  /// Stops & disposes a [Player] with a bound timeout so a wedged player can
+  /// never block the UI isolate indefinitely.
+  Future<void> _releasePlayer(Player player) async {
+    try {
+      await player.dispose().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // The player is unrecoverable; drop the reference and let GC reclaim it.
     }
   }
 
