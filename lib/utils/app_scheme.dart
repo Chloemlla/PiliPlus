@@ -10,6 +10,7 @@ import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
 import 'package:pili_plus/http/search.dart';
 import 'package:pili_plus/models/common/fav_type.dart';
 import 'package:pili_plus/models/common/video/source_type.dart';
+import 'package:pili_plus/models/synapse_oauth.dart';
 import 'package:pili_plus/pages/audio/view.dart';
 import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
 import 'package:pili_plus/pages/fan/view.dart';
@@ -36,9 +37,25 @@ abstract final class PiliScheme {
   static final uriDigitRegExp = RegExp(r'/(\d+)');
   static final _prefixRegex = RegExp(r'^\S+://');
 
-  /// Stream controller for pending auth token from deep link
-  static final _pendingAuthTokenController = StreamController<String>.broadcast();
-  static Stream<String> get pendingAuthToken => _pendingAuthTokenController.stream;
+  /// Valid callbacks are buffered because a cold-start deep link can arrive
+  /// before the authorization dialog subscribes.
+  static final _pendingOAuthCallbackController =
+      StreamController<SynapseOAuthCallback>.broadcast();
+  static final List<SynapseOAuthCallback> _pendingOAuthCallbacks = [];
+  static Stream<SynapseOAuthCallback> get pendingOAuthCallback =>
+      _pendingOAuthCallbackController.stream;
+
+  static SynapseOAuthCallback? takePendingOAuthCallback(String state) {
+    final index = _pendingOAuthCallbacks.indexWhere(
+      (callback) => callback.state == state,
+    );
+    if (index < 0) return null;
+    return _pendingOAuthCallbacks.removeAt(index);
+  }
+
+  static void discardPendingOAuthCallback(SynapseOAuthCallback callback) {
+    _pendingOAuthCallbacks.remove(callback);
+  }
 
   static void init() {
     // Register piliplus:// protocol on Windows for deep link auth callback
@@ -85,7 +102,8 @@ abstract final class PiliScheme {
 
   static void dispose() {
     listener?.cancel();
-    _pendingAuthTokenController.close();
+    _pendingOAuthCallbacks.clear();
+    _pendingOAuthCallbackController.close();
   }
 
   static int? _videoProgress(Map<String, String> queryParameters) {
@@ -144,14 +162,15 @@ abstract final class PiliScheme {
 
     switch (scheme) {
       case 'piliplus':
-        // piliplus://synapse-auth?token=xxx
         if (host == 'synapse-auth') {
-          final token = uri.queryParameters['token'];
-          if (token != null && token.isNotEmpty) {
-            // Return token to the pending auth dialog via a global stream
-            _pendingAuthTokenController.add(token);
-            return true;
+          final callback = SynapseOAuthCallback.tryParse(uri);
+          if (callback == null) return false;
+          _pendingOAuthCallbacks.add(callback);
+          if (_pendingOAuthCallbacks.length > 8) {
+            _pendingOAuthCallbacks.removeAt(0);
           }
+          _pendingOAuthCallbackController.add(callback);
+          return true;
         }
         return false;
       case 'bilibili':

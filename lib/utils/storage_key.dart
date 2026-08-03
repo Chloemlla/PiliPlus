@@ -22,6 +22,7 @@ abstract final class SettingBoxKey {
       synapseSyncEnabled = 'synapseSyncEnabled',
       synapseSyncBoundMid = 'synapseSyncBoundMid',
       synapseDeviceId = 'synapseDeviceId',
+      synapseDeviceTracked = 'synapseDeviceTracked',
       synapseSyncRevision = 'synapseSyncRevision',
       synapseSettingsVersion = 'synapseSettingsVersion',
       synapseLastSyncedAt = 'synapseLastSyncedAt',

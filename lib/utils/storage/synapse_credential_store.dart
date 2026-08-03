@@ -1,25 +1,37 @@
 import 'package:pili_plus/utils/setting_secret_store.dart';
 
-/// Stores only the Synapse JWT in the encrypted setting sidecar.
+/// Stores OAuth credentials in the encrypted setting sidecar.
 ///
 /// The Bilibili cookie is deliberately not part of this store or its API.
 abstract final class SynapseCredentialStore {
-  static String _key(int mid) => 'Synapse.jwt.$mid';
+  static const accessTokenKey = 'accessToken';
+  static const refreshTokenKey = 'refreshToken';
 
-  static String? read(int mid) {
-    if (mid <= 0) return null;
-    return SettingSecretStore.read(_key(mid));
-  }
+  static String? readAccessToken() =>
+      SettingSecretStore.readSynapse(accessTokenKey);
 
-  static void write(int mid, String jwt) {
-    if (mid <= 0 || jwt.trim().isEmpty) {
-      throw ArgumentError('A valid account and JWT are required');
+  static void writeAccessToken(String token) {
+    if (token.trim().isEmpty) {
+      throw ArgumentError('A non-empty OAuth access token is required');
     }
-    SettingSecretStore.write(_key(mid), jwt.trim());
+    SettingSecretStore.writeSynapse(accessTokenKey, token.trim());
   }
 
-  static void delete(int mid) {
-    if (mid > 0) SettingSecretStore.delete(_key(mid));
+  static String? readRefreshToken() =>
+      SettingSecretStore.readSynapse(refreshTokenKey);
+
+  static void writeRefreshToken(String token) {
+    if (token.trim().isNotEmpty) {
+      SettingSecretStore.writeSynapse(refreshTokenKey, token.trim());
+    }
+  }
+
+  static void deleteRefreshToken() =>
+      SettingSecretStore.deleteSynapse(refreshTokenKey);
+
+  static void delete() {
+    SettingSecretStore.deleteSynapse(accessTokenKey);
+    SettingSecretStore.deleteSynapse(refreshTokenKey);
   }
 }
 

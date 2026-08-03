@@ -120,9 +120,11 @@ List<SettingsModel> get extraSettings => [
   if (Accounts.main.isLogin)
     NormalModel(
       title: 'Synapse 云同步',
-      subtitle: '应用内登录 Synapse 后同步搜索历史和设置；绑定时校验当前 B 站登录',
+      subtitle: '通过 Synapse-Client 授权后同步搜索历史和设置；绑定时校验当前 B 站登录',
       leading: const Icon(Icons.cloud_sync_outlined),
-      getSubtitle: () => SynapseSyncService.isEnabled ? '已启用（绑定 UID ${SynapseSyncService.boundMid}）' : '未启用',
+      getSubtitle: () => SynapseSyncService.isEnabled
+          ? '已启用（绑定 UID ${SynapseSyncService.boundMid}） · ${SynapseSyncService.deviceTrackingStatus}'
+          : SynapseSyncService.deviceTrackingStatus,
       onTap: _showSynapseSyncDialog,
     ),
   const SwitchModel(
@@ -758,7 +760,12 @@ Future<void> _showSynapseSyncDialog(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('仅已登录的 B 站账号可以启用。点击登录后将在应用内完成 Synapse 授权；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。'),
+              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。'),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(SynapseSyncService.deviceTrackingStatus),
+              ),
               TextField(
                 controller: urlController,
                 decoration: const InputDecoration(labelText: '服务地址'),

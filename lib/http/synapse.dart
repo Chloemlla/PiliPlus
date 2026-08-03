@@ -1,28 +1,51 @@
 import 'package:dio/dio.dart';
+import 'package:pili_plus/models/synapse_oauth.dart';
 import 'package:pili_plus/models/synapse_sync.dart';
 
 /// Synapse transport is intentionally separate from [Request].
 /// It must never pass through the Bilibili AccountManager cookie interceptor.
 final class SynapseHttp {
-  SynapseHttp({required String baseUrl, required String sessionToken})
+  SynapseHttp({
+    required String baseUrl,
+    required String sessionToken,
+    SynapseClientIdentity? clientIdentity,
+  })
       : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl.endsWith('/') ? baseUrl : '$baseUrl/',
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 10),
-            headers: {'Authorization': 'Bearer ${sessionToken.trim()}'},
+            headers: {
+              'Authorization': 'Bearer ${sessionToken.trim()}',
+              if (clientIdentity != null) ...clientIdentity.requestHeaders,
+            },
           ),
-        );
+        ),
+        _clientIdentity = clientIdentity;
 
   final Dio _dio;
+  final SynapseClientIdentity? _clientIdentity;
 
   Future<SynapseBindResult> bindBilibili({
     required int mid,
     required String sessionProof,
   }) async {
+    final identity = _clientIdentity;
     final response = await _dio.post<Map<String, dynamic>>(
       'uid',
-      data: {'uid': mid.toString(), 'cookie': sessionProof},
+      data: {
+        'uid': mid.toString(),
+        'cookie': sessionProof,
+        if (identity != null) ...{
+          'client_id': SynapseClientIdentity.clientId,
+          'client_name': SynapseClientIdentity.clientName,
+          'client_version': identity.clientVersion,
+          'client_build': identity.buildNumber,
+          'device_id': identity.deviceId,
+          'device_name': identity.deviceName,
+          'platform': identity.platform,
+        },
+      },
       options: Options(extra: {'synapseSensitive': true}),
     );
     final data = _responseData(response);

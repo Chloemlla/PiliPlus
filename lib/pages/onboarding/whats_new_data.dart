@@ -70,6 +70,17 @@ abstract final class WhatsNewData {
       tip: '后台播放开关关闭时仍按原设置暂停或恢复播放。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.cloud_sync_outlined,
+      title: 'Synapse 授权改用客户端 handoff',
+      subtitle: '云同步授权现在通过 Synapse-Client 的 PKCE 流程完成，PiliPlus 不再打开浏览器或接收 JWT 回调。',
+      bullets: [
+        '授权回调只接受 code、error 和 state，并校验一次性 state。',
+        '访问令牌写入加密凭据；B 站 UID bind 和后续同步流程保持不变。',
+        '客户端身份与设备标识会随授权和同步请求上报，设置中可查看设备追踪状态。',
+      ],
+      tip: '入口：设置 → Synapse 云同步。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
       title: '可以继续使用了',
       subtitle: '以上是本构建值得知道的有意变更。之后同一 Commit / Build Time 不会再自动弹出。',

@@ -28,15 +28,75 @@ the cookie value or the detailed upstream response.
 
 ## API shape
 
-All routes below require the existing Synapse account session. PiliPlus
-opens the Synapse `/login` page in `flutter_inappwebview`, reads the
-HttpOnly `synapse_token` cookie after login, and stores that credential in its
-encrypted secret sidecar. The user never pastes or sees a JWT.
+PiliPlus does not open a browser and does not accept a JWT from a callback
+query. It creates an in-memory PKCE session and hands authorization to the
+installed Synapse-Client application:
+
+```text
+client_id           = piliplus
+authorize URI       = synapse://oauth/authorize
+redirect_uri        = piliplus://synapse-auth
+response_type       = code
+code_challenge      = BASE64URL(SHA256(code_verifier))
+code_challenge_method = S256
+```
+
+Happy-TTS must register the fixed `piliplus` public OAuth client with the
+exact redirect URI `piliplus://synapse-auth`. Native redirect schemes are
+accepted only when their exact URI is registered for the OAuth client.
+
+The query also carries `provider_origin`, `client_name`, `client_version`,
+`client_build`, `device_id`, `device_name`, and `platform` so Synapse-Client
+can associate the authorization with the configured Synapse service and add
+the PiliPlus device to its device list.
+
+The authorize query includes `state`, `code_verifier` is never sent to the
+custom scheme, and `state`, `code_verifier`, and `code_challenge` exist only in
+PiliPlus memory until the handoff completes. The only accepted callback query
+keys are `code`, `error`, `error_description`, and `state`; exactly one of `code` or `error` is
+required. `token`, JWT query values, unknown keys, duplicate keys, and a
+mismatched state are rejected.
+
+PiliPlus exchanges the code against the Synapse OAuth provider origin. With
+the default origin this is `/api/oauth/token`; synchronization remains under
+`/api/bilibili-sync`:
+
+```http
+POST /api/oauth/token
+Content-Type: application/x-www-form-urlencoded
+X-Synapse-Client-Id: piliplus
+X-Synapse-Device-Id: DEVICE_ID
+X-Synapse-Client-Version: CLIENT_VERSION
+X-Synapse-Platform: PLATFORM
+```
+
+```text
+grant_type=authorization_code
+code=AUTHORIZATION_CODE
+redirect_uri=piliplus://synapse-auth
+client_id=piliplus
+code_verifier=CODE_VERIFIER
+device_id=DEVICE_ID
+device_name=PiliPlus PLATFORM
+platform=PLATFORM
+client_version=CLIENT_VERSION
+client_build=BUILD_NUMBER
+```
+
+The token response may be a standard OAuth object or the existing
+`{"success":true,"data":{...}}` envelope. It must contain
+`access_token` (and may contain `refresh_token`, `expires_in`,
+`device_tracked`). Access and refresh tokens are written only to the encrypted
+PiliPlus secret sidecar.
 
 ```http
 POST /api/bilibili-sync/uid
 Authorization: Bearer <sync-access-token>
 Content-Type: application/json
+X-Synapse-Client-Id: piliplus
+X-Synapse-Device-Id: DEVICE_ID
+X-Synapse-Device-Name: PiliPlus PLATFORM
+X-Synapse-Platform: PLATFORM
 ```
 
 The bind request is the only request that may contain a cookie, and its
@@ -45,7 +105,14 @@ cookie is transient input rather than synchronized data:
 ```json
 {
   "uid": "12345",
-  "cookie": "session-cookie-placeholder"
+  "cookie": "session-cookie-placeholder",
+  "client_id": "piliplus",
+  "client_name": "PiliPlus",
+  "client_version": "CLIENT_VERSION",
+  "client_build": "BUILD_NUMBER",
+  "device_id": "DEVICE_ID",
+  "device_name": "PiliPlus PLATFORM",
+  "platform": "PLATFORM"
 }
 ```
 
@@ -61,6 +128,12 @@ On success, the response contains only the verified identity and capability:
   }
 }
 ```
+
+The same `X-Synapse-*` client/device headers are attached to every authenticated
+settings and search request. `DEVICE_ID` is generated once and kept in local
+settings; it is not part of synchronized settings. The client displays the
+local state as pending, reported, or server-confirmed (`device_tracked`) in the
+Synapse setting row.
 
 Settings use optimistic versioning:
 
