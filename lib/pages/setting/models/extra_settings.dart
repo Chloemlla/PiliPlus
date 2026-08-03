@@ -120,7 +120,7 @@ List<SettingsModel> get extraSettings => [
   if (Accounts.main.isLogin)
     NormalModel(
       title: 'Synapse 云同步',
-      subtitle: '通过 Synapse-Client 授权后同步搜索历史和设置；绑定时校验当前 B 站登录',
+      subtitle: '通过 Synapse-Client 授权后完整同步设置和搜索历史；绑定时校验当前 B 站登录',
       leading: const Icon(Icons.cloud_sync_outlined),
       getSubtitle: () => SynapseSyncService.isEnabled
           ? '已启用（绑定 UID ${SynapseSyncService.boundMid}） · ${SynapseSyncService.deviceTrackingStatus}'
@@ -760,7 +760,7 @@ Future<void> _showSynapseSyncDialog(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。'),
+              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。设置变更会在短暂延迟后上传，并每五分钟检查远端。'),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
@@ -786,6 +786,18 @@ Future<void> _showSynapseSyncDialog(
                 if (dialogContext.mounted) Navigator.pop(dialogContext, true);
               },
               child: const Text('清除凭据'),
+            ),
+          if (SynapseSyncService.isConfigured)
+            TextButton(
+              onPressed: () async {
+                try {
+                  final applied = await SynapseSyncService.previewChanges(dialogContext);
+                  if (applied && dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (error) {
+                  SmartDialog.showToast(error.toString());
+                }
+              },
+              child: const Text('预览变更'),
             ),
           FilledButton(
             onPressed: () async {

@@ -83,6 +83,18 @@ abstract final class WhatsNewData {
       tip: '入口：设置 → Synapse 云同步。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.sync_outlined,
+      title: 'Synapse 设置全量同步与变更预览',
+      subtitle: '通用设置、播放设置和搜索记录会按固定周期同步到远端，启动或冲突时可先查看变更再选择处理方式。',
+      bullets: [
+        '同步范围覆盖通用设置和独立的播放设置，不再遗漏倍速、长按倍速和视频适配等选项。',
+        '搜索记录支持完整批量同步，定时任务每五分钟检查并合并远端变化。',
+        '应用远端数据前会显示设置键的新增、修改、移除数量，以及搜索记录变更概览。',
+        'WebDAV 密码、Cookie、Token、设备标识和 Synapse 连接状态仍保留在本地。',
+      ],
+      tip: '入口：设置 → Synapse 云同步；同步冲突时可选择保留本地、使用远端或安全合并。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
       title: '可以继续使用了',
       subtitle: '以上是本构建值得知道的有意变更。之后同一 Commit / Build Time 不会再自动弹出。',

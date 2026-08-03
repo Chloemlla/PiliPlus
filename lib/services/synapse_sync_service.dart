@@ -39,6 +39,53 @@ final class SynapseRemoteSnapshot {
   final String? settingsUpdatedAt;
 }
 
+final class _SynapseSettingsSections {
+  const _SynapseSettingsSections({
+    required this.setting,
+    required this.video,
+    required this.hasVideo,
+  });
+
+  final Map<String, dynamic> setting;
+  final Map<String, dynamic> video;
+  final bool hasVideo;
+}
+
+final class _SynapseMapDiff {
+  const _SynapseMapDiff({required this.added, required this.changed, required this.removed});
+
+  final List<String> added;
+  final List<String> changed;
+  final List<String> removed;
+
+  bool get hasChanges => added.isNotEmpty || changed.isNotEmpty || removed.isNotEmpty;
+}
+
+final class _SynapseSyncPreview {
+  const _SynapseSyncPreview({
+    required this.setting,
+    required this.video,
+    required this.searchAdded,
+    required this.searchChanged,
+    required this.searchRemoved,
+    required this.searchKeywords,
+  });
+
+  final _SynapseMapDiff setting;
+  final _SynapseMapDiff video;
+  final int searchAdded;
+  final int searchChanged;
+  final int searchRemoved;
+  final List<String> searchKeywords;
+
+  bool get hasChanges =>
+      setting.hasChanges ||
+      video.hasChanges ||
+      searchAdded > 0 ||
+      searchChanged > 0 ||
+      searchRemoved > 0;
+}
+
 /// Synapse transport and sync state are deliberately isolated from [Request].
 /// The Bilibili AccountManager interceptor must never see these requests.
 abstract final class SynapseSyncService {
@@ -47,10 +94,29 @@ abstract final class SynapseSyncService {
   static const _syncApiSuffix = '/api/bilibili-sync';
   static const redirectUri = 'piliplus://synapse-auth';
   static const _oauthTimeout = Duration(minutes: 2);
+  static const syncInterval = Duration(minutes: 5);
+  static const _settingsSchemaVersion = 2;
+  static const _searchBatchSize = 1000;
   static bool _isRunning = false;
   static bool _watchersStarted = false;
   static bool _syncWriteInProgress = false;
+  static bool _syncInProgress = false;
   static Timer? _syncTimer;
+  static Timer? _periodicSyncTimer;
+
+  static const _excludedSettingKeys = <String>{
+    SettingBoxKey.synapseBaseUrl,
+    SettingBoxKey.synapseSyncEnabled,
+    SettingBoxKey.synapseSyncBoundMid,
+    SettingBoxKey.synapseDeviceId,
+    SettingBoxKey.synapseDeviceTracked,
+    SettingBoxKey.synapseSyncRevision,
+    SettingBoxKey.synapseLastSyncedAt,
+    SettingBoxKey.synapseSettingsUpdatedAt,
+    SettingBoxKey.synapseSettingsVersion,
+    SettingBoxKey.synapseLocalSettingsChangedAt,
+    SettingBoxKey.webdavPassword,
+  };
 
   static String get baseUrl =>
       (GStorage.setting.get(SettingBoxKey.synapseBaseUrl) as String?)?.trim().isNotEmpty == true
@@ -86,6 +152,8 @@ abstract final class SynapseSyncService {
 
   static Future<void> disableForLogout() async {
     _syncTimer?.cancel();
+    _syncTimer = null;
+    _stopPeriodicSync();
   }
 
   static Future<void> configure({
@@ -194,12 +262,18 @@ abstract final class SynapseSyncService {
   static Future<void> setEnabled(bool value) async {
     if (value) {
       if (!isConfigured || !Accounts.main.isLogin || Accounts.main.mid == 0) {
-      throw StateError('请先完成 Synapse 授权并登录 B 站主账号');
+        throw StateError('请先完成 Synapse 授权并登录 B 站主账号');
       }
       await GStorage.setting.put(SettingBoxKey.synapseSyncBoundMid, Accounts.main.mid);
     }
     await GStorage.setting.put(SettingBoxKey.synapseSyncEnabled, value);
-    if (value) _startWatchers();
+    if (value) {
+      _startWatchers();
+    } else {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+      _stopPeriodicSync();
+    }
   }
 
   static void scheduleSync() {
@@ -215,7 +289,10 @@ abstract final class SynapseSyncService {
   }
 
   static void _startWatchers() {
-    if (_watchersStarted) return;
+    if (_watchersStarted) {
+      _startPeriodicSync();
+      return;
+    }
     _watchersStarted = true;
     GStorage.setting.watch().listen((event) {
       if (event.key is String && event.key.toString().startsWith('synapse')) return;
@@ -225,7 +302,30 @@ abstract final class SynapseSyncService {
       );
       scheduleSync();
     });
+    GStorage.video.watch().listen((_) => scheduleSync());
     GStorage.historyWord.watch().listen((_) => scheduleSync());
+    _startPeriodicSync();
+  }
+
+  static void _startPeriodicSync() {
+    if (!isEnabled || !isConfigured || !Accounts.main.isLogin) return;
+    _periodicSyncTimer ??= Timer.periodic(syncInterval, (_) {
+      if (_syncInProgress) return;
+      unawaited(_runPeriodicSync());
+    });
+  }
+
+  static Future<void> _runPeriodicSync() async {
+    try {
+      await syncNow();
+    } on Object {
+      // The next interval or a local edit retries after a transient failure.
+    }
+  }
+
+  static void _stopPeriodicSync() {
+    _periodicSyncTimer?.cancel();
+    _periodicSyncTimer = null;
   }
 
   static Future<void> clearCredentials() async {
@@ -238,6 +338,9 @@ abstract final class SynapseSyncService {
       }
     }
     SynapseCredentialStore.delete();
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _stopPeriodicSync();
     await GStorage.setting.put(SettingBoxKey.synapseSyncEnabled, false);
     await GStorage.setting.put(SettingBoxKey.synapseSyncBoundMid, 0);
     await GStorage.setting.put(SettingBoxKey.synapseDeviceTracked, false);
@@ -257,22 +360,15 @@ abstract final class SynapseSyncService {
       final remote = await fetchSnapshot().timeout(
         const Duration(seconds: 8),
       );
-      if (remote.records.isEmpty && remote.settings == null) return;
+      if (!_buildSyncPreview(remote).hasChanges) return;
       final navigator = await StartupOverlayCoordinator.waitForNavigator(
         debugLabel: 'Synapse-sync',
       );
       if (navigator == null || !navigator.mounted) return;
-      final choice = await showDialog<SynapseSyncChoice>(
-        context: navigator.context,
-        builder: (context) => AlertDialog(
-          title: const Text('发现 Synapse 云端数据'),
-          content: const Text('是否合并到当前 B 站主账号？设置冲突可选择远端、本地或安全字段合并。'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.local), child: const Text('保留本地')),
-            TextButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.remote), child: const Text('使用远端')),
-            FilledButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.merge), child: const Text('安全合并')),
-          ],
-        ),
+      final choice = await _showSyncChoiceDialog(
+        navigator.context,
+        remote,
+        title: '发现 Synapse 云端变更',
       );
       if (choice == null) return;
       await applyRemote(remote, choice);
@@ -304,6 +400,7 @@ abstract final class SynapseSyncService {
     await _ensureClientIdentity();
     final response = await _client().get<Object?>('search-records/changes', queryParameters: {
       'since': DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toIso8601String(),
+      'limit': 1000,
     });
     final settingsResponse = await _client().get<Object?>('settings');
     final data = _responseData(response);
@@ -323,27 +420,32 @@ abstract final class SynapseSyncService {
     );
   }
 
+  static Future<bool> previewChanges(BuildContext context) async {
+    if (!isEnabled || !isConfigured || !Accounts.main.isLogin || boundMid != Accounts.main.mid) {
+      return false;
+    }
+    final remote = await fetchSnapshot();
+    if (!context.mounted) return false;
+    final choice = await _showSyncChoiceDialog(
+      context,
+      remote,
+      title: '预览 Synapse 远端变更',
+    );
+    if (choice == null) return false;
+    await applyRemote(remote, choice);
+    return true;
+  }
+
   static Future<void> applyRemote(
     SynapseRemoteSnapshot remote,
     SynapseSyncChoice choice,
     {bool allowConflictPrompt = true,}
   ) async {
     final localSearch = SearchHistoryStore.read();
-    final remoteSearch = <SearchHistoryEntry>[];
-    final remoteSettings = remote.settings;
-    for (final record in remote.records) {
-      if (record['keyword'] != null) {
-        final updatedAt = DateTime.tryParse(record['updatedAt']?.toString() ?? '');
-        if (updatedAt != null) {
-          remoteSearch.add(SearchHistoryEntry(
-            id: record['id']?.toString() ?? '',
-            keyword: record['keyword'].toString(),
-            updatedAt: updatedAt.toUtc(),
-            deleted: record['isDeleted'] == true,
-          ));
-        }
-      }
-    }
+    final remoteSearch = _searchEntries(remote.records);
+    final remoteSettings = remote.settings == null
+        ? null
+        : _decodeSettingsSections(remote.settings!);
     _syncWriteInProgress = true;
     try {
       if (choice != SynapseSyncChoice.local) {
@@ -357,12 +459,16 @@ abstract final class SynapseSyncService {
           SearchHistoryStore.visible().map((entry) => entry.keyword).toList(growable: false),
         );
         if (remoteSettings != null) {
-          final values = _safeSettings(remoteSettings);
+          final settingValues = remoteSettings.setting;
+          final videoValues = remoteSettings.video;
           if (choice == SynapseSyncChoice.merge) {
-            final local = _safeSettings(GStorage.setting.toMap());
-            values.addAll(local);
+            settingValues.addAll(_safeSettings(GStorage.setting.toMap()));
+            videoValues.addAll(_safeSettings(GStorage.video.toMap()));
           }
-          await GStorage.setting.putAll(values);
+          await _applySettingsSection(GStorage.setting, settingValues, choice == SynapseSyncChoice.remote);
+          if (remoteSettings.hasVideo) {
+            await _applySettingsSection(GStorage.video, videoValues, choice == SynapseSyncChoice.remote);
+          }
         }
       }
       await GStorage.setting.put(SettingBoxKey.synapseSettingsVersion, remote.settingsVersion);
@@ -377,27 +483,36 @@ abstract final class SynapseSyncService {
 
   static Future<void> syncNow() async {
     if (!isEnabled || !isConfigured || boundMid != Accounts.main.mid) return;
-    final remote = await fetchSnapshot();
-    await applyRemote(remote, SynapseSyncChoice.merge);
+    if (_syncInProgress) return;
+    _syncInProgress = true;
+    try {
+      final remote = await fetchSnapshot();
+      await applyRemote(remote, SynapseSyncChoice.merge);
+    } finally {
+      _syncInProgress = false;
+    }
   }
 
   static Future<void> _upload({required int revision, bool allowConflictPrompt = true}) async {
     await _ensureClientIdentity();
     final localRecords = SearchHistoryStore.read();
-    final data = localRecords.isEmpty
-        ? const <String, dynamic>{}
-        : _responseData(await _client().post<Object?>('search-records/batch', data: {
-            'records': [
-              for (final entry in localRecords) {
-                'id': entry.id,
-                'keyword': entry.keyword,
-                'updatedAt': entry.updatedAt.toUtc().toIso8601String(),
-                'isDeleted': entry.deleted,
-                'deletedAt': entry.deleted ? entry.updatedAt.toUtc().toIso8601String() : null,
-              },
-            ],
-          }));
-    final settings = _safeSettings(GStorage.setting.toMap());
+    var data = const <String, dynamic>{};
+    for (var offset = 0; offset < localRecords.length; offset += _searchBatchSize) {
+      final batch = localRecords.skip(offset).take(_searchBatchSize);
+      data = _responseData(await _client().post<Object?>('search-records/batch', data: {
+        'records': [
+          for (final entry in batch) {
+            'id': entry.id,
+            'keyword': entry.keyword,
+            'createdAt': entry.updatedAt.toUtc().toIso8601String(),
+            'updatedAt': entry.updatedAt.toUtc().toIso8601String(),
+            'isDeleted': entry.deleted,
+            'deletedAt': entry.deleted ? entry.updatedAt.toUtc().toIso8601String() : null,
+          },
+        ],
+      }));
+    }
+    final settings = _settingsSnapshot();
     Response<Object?> settingsResponse;
     try {
       settingsResponse = await _client().put<Object?>('settings', data: {
@@ -410,17 +525,10 @@ abstract final class SynapseSyncService {
       final remote = await fetchSnapshot();
       final navigator = await StartupOverlayCoordinator.waitForNavigator(debugLabel: 'Synapse-conflict');
       if (navigator == null || !navigator.mounted) return;
-      final choice = await showDialog<SynapseSyncChoice>(
-        context: navigator.context,
-        builder: (context) => AlertDialog(
-          title: const Text('Synapse 设置发生冲突'),
-          content: const Text('检测到另一端刚刚修改了设置，请选择远端、本地或安全字段合并。'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.local), child: const Text('保留本地')),
-            TextButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.remote), child: const Text('使用远端')),
-            FilledButton(onPressed: () => Navigator.pop(context, SynapseSyncChoice.merge), child: const Text('安全合并')),
-          ],
-        ),
+      final choice = await _showSyncChoiceDialog(
+        navigator.context,
+        remote,
+        title: 'Synapse 设置发生冲突',
       );
       if (choice != null) {
         await applyRemote(remote, choice, allowConflictPrompt: false);
@@ -443,23 +551,10 @@ abstract final class SynapseSyncService {
   }
 
   static Map<String, dynamic> _safeSettings(Map<dynamic, dynamic> source) {
-    const excluded = {
-      SettingBoxKey.synapseBaseUrl,
-      SettingBoxKey.synapseSyncEnabled,
-      SettingBoxKey.synapseSyncBoundMid,
-      SettingBoxKey.synapseDeviceId,
-      SettingBoxKey.synapseDeviceTracked,
-      SettingBoxKey.synapseSyncRevision,
-      SettingBoxKey.synapseLastSyncedAt,
-      SettingBoxKey.synapseSettingsUpdatedAt,
-      SettingBoxKey.synapseSettingsVersion,
-      SettingBoxKey.synapseLocalSettingsChangedAt,
-      SettingBoxKey.webdavPassword,
-    };
     final result = <String, dynamic>{};
     for (final entry in source.entries) {
       final key = entry.key.toString();
-      if (excluded.contains(key) || _isSensitiveKey(key)) continue;
+      if (_excludedSettingKeys.contains(key) || _isSensitiveKey(key)) continue;
       result[key] = _sanitizeValue(entry.value);
     }
     return result;
@@ -472,7 +567,228 @@ abstract final class SynapseSyncService {
     if (value is List) {
       return value.map(_sanitizeValue).toList(growable: false);
     }
+    if (value is Set) {
+      return value.map(_sanitizeValue).toList(growable: false);
+    }
     return value;
+  }
+
+  static List<SearchHistoryEntry> _searchEntries(
+    Iterable<Map<String, dynamic>> records,
+  ) => [
+    for (final record in records)
+      if (record['keyword'] != null)
+        if (DateTime.tryParse(record['updatedAt']?.toString() ?? '') case final updatedAt?)
+          SearchHistoryEntry(
+            id: record['id']?.toString() ?? '',
+            keyword: record['keyword'].toString(),
+            updatedAt: updatedAt.toUtc(),
+            deleted: record['isDeleted'] == true || record['deleted'] == true,
+          ),
+  ];
+
+  static _SynapseSyncPreview _buildSyncPreview(SynapseRemoteSnapshot remote) {
+    final remoteSettings = remote.settings == null
+        ? const _SynapseSettingsSections(
+            setting: <String, dynamic>{},
+            video: <String, dynamic>{},
+            hasVideo: false,
+          )
+        : _decodeSettingsSections(remote.settings!);
+    final localSetting = _safeSettings(GStorage.setting.toMap());
+    final localVideo = _safeSettings(GStorage.video.toMap());
+    final localSearch = {for (final entry in SearchHistoryStore.read()) entry.id: entry};
+    final remoteSearch = {for (final entry in _searchEntries(remote.records)) entry.id: entry};
+    var searchAdded = 0;
+    var searchChanged = 0;
+    var searchRemoved = 0;
+    final searchKeywords = <String>[];
+    for (final entry in remoteSearch.entries) {
+      final local = localSearch[entry.key];
+      if (local == null) {
+        searchAdded++;
+        searchKeywords.add(entry.value.keyword);
+      } else if (!_sameValue(local.toJson(), entry.value.toJson())) {
+        searchChanged++;
+        searchKeywords.add(entry.value.keyword);
+      }
+    }
+    for (final entry in localSearch.entries) {
+      if (!remoteSearch.containsKey(entry.key)) searchRemoved++;
+    }
+    return _SynapseSyncPreview(
+      setting: _diffMaps(localSetting, remoteSettings.setting),
+      video: _diffMaps(
+        localVideo,
+        remoteSettings.hasVideo ? remoteSettings.video : localVideo,
+      ),
+      searchAdded: searchAdded,
+      searchChanged: searchChanged,
+      searchRemoved: searchRemoved,
+      searchKeywords: searchKeywords,
+    );
+  }
+
+  static _SynapseMapDiff _diffMaps(
+    Map<String, dynamic> local,
+    Map<String, dynamic> remote,
+  ) {
+    final added = <String>[];
+    final changed = <String>[];
+    final removed = <String>[];
+    for (final key in remote.keys) {
+      if (!local.containsKey(key)) {
+        added.add(key);
+      } else if (!_sameValue(local[key], remote[key])) {
+        changed.add(key);
+      }
+    }
+    for (final key in local.keys) {
+      if (!remote.containsKey(key)) removed.add(key);
+    }
+    added.sort();
+    changed.sort();
+    removed.sort();
+    return _SynapseMapDiff(added: added, changed: changed, removed: removed);
+  }
+
+  static bool _sameValue(Object? left, Object? right) {
+    if (left is Map && right is Map) {
+      if (left.length != right.length) return false;
+      for (final entry in left.entries) {
+        if (!right.containsKey(entry.key) || !_sameValue(entry.value, right[entry.key])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (left is List && right is List) {
+      if (left.length != right.length) return false;
+      for (var i = 0; i < left.length; i++) {
+        if (!_sameValue(left[i], right[i])) return false;
+      }
+      return true;
+    }
+    return left == right;
+  }
+
+  static Future<SynapseSyncChoice?> _showSyncChoiceDialog(
+    BuildContext context,
+    SynapseRemoteSnapshot remote, {
+    required String title,
+  }) {
+    final preview = _buildSyncPreview(remote);
+    return showDialog<SynapseSyncChoice>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: min(600, MediaQuery.sizeOf(dialogContext).width - 48),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('以下是远端与当前设备的变更预览，确认选项后才会写入本地设置。'),
+                const SizedBox(height: 12),
+                _previewSection('通用设置', preview.setting),
+                const SizedBox(height: 8),
+                _previewSection('播放设置', preview.video),
+                const SizedBox(height: 8),
+                Text(
+                  '搜索记录：新增 ${preview.searchAdded}，修改 ${preview.searchChanged}，移除 ${preview.searchRemoved}',
+                ),
+                if (preview.searchKeywords.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  _previewKeys('关键词', preview.searchKeywords),
+                ],
+                if (!preview.hasChanges) ...[
+                  const SizedBox(height: 12),
+                  const Text('没有检测到可应用的变更。'),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, SynapseSyncChoice.local),
+            child: const Text('保留本地'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, SynapseSyncChoice.remote),
+            child: const Text('使用远端'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, SynapseSyncChoice.merge),
+            child: const Text('安全合并'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _previewSection(String title, _SynapseMapDiff diff) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('$title：新增 ${diff.added.length}，修改 ${diff.changed.length}，移除 ${diff.removed.length}'),
+      _previewKeys('新增', diff.added),
+      _previewKeys('修改', diff.changed),
+      _previewKeys('移除', diff.removed),
+    ],
+  );
+
+  static Widget _previewKeys(String label, List<String> keys) {
+    if (keys.isEmpty) return const SizedBox.shrink();
+    final visible = keys.take(24).join('、');
+    final suffix = keys.length > 24 ? ' 等 ${keys.length} 项' : '';
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text('$label：$visible$suffix'),
+    );
+  }
+
+  static Map<String, dynamic> _settingsSnapshot() => {
+    'schemaVersion': _settingsSchemaVersion,
+    'setting': _safeSettings(GStorage.setting.toMap()),
+    'video': _safeSettings(GStorage.video.toMap()),
+  };
+
+  static _SynapseSettingsSections _decodeSettingsSections(Map<String, dynamic> source) {
+    final setting = source['setting'];
+    final video = source['video'];
+    if (source['schemaVersion'] == _settingsSchemaVersion && (setting is Map || video is Map)) {
+      return _SynapseSettingsSections(
+        setting: setting is Map ? _safeSettings(setting) : <String, dynamic>{},
+        video: video is Map ? _safeSettings(video) : <String, dynamic>{},
+        hasVideo: true,
+      );
+    }
+    // Older clients uploaded the setting box as a flat map.
+    return _SynapseSettingsSections(
+      setting: _safeSettings(source),
+      video: <String, dynamic>{},
+      hasVideo: false,
+    );
+  }
+
+  static Future<void> _applySettingsSection(
+    dynamic box,
+    Map<String, dynamic> values,
+    bool replace,
+  ) async {
+    if (replace) {
+      final currentKeys = (box.keys as Iterable).whereType<String>();
+      final remoteKeys = values.keys.toSet();
+      await Future.wait([
+        for (final key in currentKeys)
+          if (!_excludedSettingKeys.contains(key) &&
+              !_isSensitiveKey(key) &&
+              !remoteKeys.contains(key))
+            box.delete(key),
+      ]);
+    }
+    await box.putAll(values);
   }
 
   static bool _isSensitiveKey(String key) {

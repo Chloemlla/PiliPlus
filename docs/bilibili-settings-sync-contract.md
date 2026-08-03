@@ -142,6 +142,23 @@ GET /api/bilibili-sync/settings
 PUT /api/bilibili-sync/settings
 ```
 
+The settings payload is a versioned snapshot of both local settings boxes:
+
+```json
+{
+  "schemaVersion": 2,
+  "setting": { "SETTING_KEY": "SETTING_VALUE" },
+  "video": { "VIDEO_SETTING_KEY": "VIDEO_SETTING_VALUE" }
+}
+```
+
+The client includes every JSON-serializable value from the `setting` and
+`video` boxes. Synapse connection state, device identity, sync metadata,
+WebDAV passwords, cookies, tokens, and other credential-like keys remain
+local by design. Older flat settings snapshots are still accepted as the
+`setting` section. A client change is uploaded after a short debounce and a
+background sync runs every five minutes while the account is active.
+
 Search history uses batch upsert/tombstones and time-based incremental reads:
 
 ```json
@@ -157,7 +174,8 @@ Search history uses batch upsert/tombstones and time-based incremental reads:
 
 `POST /api/bilibili-sync/search-records/batch` and
 `GET /api/bilibili-sync/search-records/changes?since=<ISO-8601>` are the
-corresponding endpoints. The server-side credential archive is encrypted
+corresponding endpoints. Search batches and full change pages support up to
+1000 records, and the settings snapshot limit is 256 KiB. The server-side credential archive is encrypted
 with AES-GCM and is separate from synchronized settings/search records.
 Synchronized settings must not contain `cookie`, `cookies`, `SESSDATA`,
 `bili_jct`, `DedeUserID`, authorization headers, or access/refresh tokens.
@@ -166,6 +184,8 @@ Synchronized settings must not contain `cookie`, `cookies`, `SESSDATA`,
 
 - Settings use `baseVersion`; a stale write returns `409` and an opaque
   summary, never decrypted values.
+- Startup and explicit conflict flows show a preview of setting keys and search
+  record counts before applying remote or merged data.
 - Search records are isolated by authenticated user, deduplicated by stable
   record ID/normalized keyword, and deleted records remain as tombstones.
 - Incremental search reads use the server timestamp cursor and include
