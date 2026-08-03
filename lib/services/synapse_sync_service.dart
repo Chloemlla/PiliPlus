@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:pili_plus/build_config.dart';
 import 'package:pili_plus/models/synapse_oauth.dart';
 import 'package:pili_plus/models/search/search_history_entry.dart';
+import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
@@ -275,6 +276,21 @@ abstract final class SynapseSyncService {
       );
       if (choice == null) return;
       await applyRemote(remote, choice);
+    } on DioException catch (error, stackTrace) {
+      if (error.response?.statusCode == 401) {
+        CrashBreadcrumbs.record(
+          'Synapse startup discovery skipped: HTTP 401; automatic sync paused',
+        );
+        try {
+          await setEnabled(false);
+        } catch (_) {
+          // A failed local write must not turn an expired session into a
+          // startup persistence report.
+        }
+        return;
+      }
+      // Startup discovery is best effort; a later manual sync can recover it.
+      Persistence.background(Future<void>.error(error, stackTrace), label: 'Synapse startup discovery');
     } catch (error, stackTrace) {
       // Startup discovery is best effort; a later manual sync can recover it.
       Persistence.background(Future<void>.error(error, stackTrace), label: 'Synapse startup discovery');
@@ -875,4 +891,3 @@ class _SynapseSyncGateState extends State<SynapseSyncGate> {
   @override
   Widget build(BuildContext context) => widget.child;
 }
-

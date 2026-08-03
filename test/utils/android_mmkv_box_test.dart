@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -152,6 +153,29 @@ void main() {
       await box.close();
     },
   );
+
+  test('watch listeners can write another key during event delivery', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('nested_watch', store: store);
+    final events = <BoxEvent>[];
+    final secondEvent = Completer<void>();
+    final subscription = box.watch().listen((event) {
+      events.add(event);
+      if (event.key == 'first') {
+        unawaited(box.put('second', 2));
+      } else if (event.key == 'second' && !secondEvent.isCompleted) {
+        secondEvent.complete();
+      }
+    });
+
+    await box.put('first', 1);
+    await secondEvent.future.timeout(const Duration(seconds: 1));
+
+    expect(events.map((event) => event.key), ['first', 'second']);
+    expect(box.get('second'), 2);
+    await subscription.cancel();
+    await box.close();
+  });
 
   test(
     'failed batch deleteAll leaves cache, backend, and events unchanged',

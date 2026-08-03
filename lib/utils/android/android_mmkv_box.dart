@@ -105,8 +105,10 @@ final class AndroidMmkvBackedBox<E> implements Box<E> {
 
   /// Encoded keys present on disk but not yet decoded into [_cache] (lazy mode).
   final Set<String> _pendingEncodedKeys = <String>{};
+  // Keep storage mutations independent from watcher callbacks. A watcher may
+  // legitimately write another key while handling an event.
   final StreamController<BoxEvent> _events =
-      StreamController<BoxEvent>.broadcast(sync: true);
+      StreamController<BoxEvent>.broadcast();
 
   bool _open = true;
   int _nextAutoKey = 0;

@@ -78,6 +78,7 @@ abstract final class WhatsNewData {
         '授权回调只接受 code、error 和 state，并校验一次性 state。',
         '访问令牌写入加密凭据；B 站 UID bind 和后续同步流程保持不变。',
         '客户端身份与设备标识会随授权和同步请求上报，设置中可查看设备追踪状态。',
+        '失效授权不会在启动时生成错误报告；自动同步会暂停，重新授权后恢复。',
       ],
       tip: '入口：设置 → Synapse 云同步。',
     ),
