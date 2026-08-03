@@ -98,14 +98,14 @@ void main() {
       expect(report.isFatalCandidate, isTrue);
     });
 
-    test('imports lumen-crash bridge payload with author metadata', () {
+    test('imports lumen-crash watchdog metadata without SDK attribution', () {
       final report = CrashReport.fromNative({
         'recordId': 'a1b2c3d4e5f6',
         'timestamp': 2000,
         'source': 'android_uncaught',
         'severity': 'fatal',
         'module': 'MainActivity',
-        'reason': 'uncaught_exception',
+        'reason': 'startup_hang',
         'exceptionType': 'java.lang.RuntimeException',
         'message': 'boom',
         'threadName': 'main',
@@ -113,9 +113,8 @@ void main() {
         'stackTrace': 'java.lang.RuntimeException: boom',
         'systemInfo': 'App: PiliPlus',
         'recentEvents': ['12:00:00.000  LumenCrash installed'],
-        'authorName': 'ChloeMlla',
-        'authorUrl': 'https://github.com/Chloemlla/',
-        'authorFingerprint': 'abc',
+        'kind': 'startup_hang',
+        'durationMillis': 8000,
         'capture': 'lumen_crash',
       }, systemInfo: 'current system');
 
@@ -125,7 +124,11 @@ void main() {
       expect(report.reportId, 'a1b2c3d4e5f6');
       expect(report.recentEvents, ['12:00:00.000  LumenCrash installed']);
       expect(report.systemInfo, contains('App: PiliPlus'));
-      expect(report.systemInfo, contains('Crash SDK author: ChloeMlla'));
+      expect(report.reason, 'startup_hang');
+      expect(report.reportKind, 'startup_hang');
+      expect(report.reportKindLabel, '首帧超时');
+      expect(report.durationMillis, 8000);
+      expect(report.systemInfo, isNot(contains('Crash SDK author')));
       expect(report.systemInfo, contains('Capture path: lumen_crash'));
       expect(report.isFatalCandidate, isTrue);
     });

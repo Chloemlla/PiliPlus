@@ -37,6 +37,9 @@ class PiliPlusApplication : Application() {
             commitHash = "unknown"
             // Capture-only host: Flutter owns product crash UI / share.
             pasteUploadEnabled = false
+            // Capture a bounded pre-first-frame hang before Android reports a launch ANR.
+            startupHangWatchdogEnabled = true
+            startupHangTimeoutMillis = 8_000L
         }
         if (LumenCrash.isInstalled()) {
             LumenCrash.recordBreadcrumb("LumenCrash installed (piliplus host)")

@@ -271,6 +271,13 @@ class _SummaryCard extends StatelessWidget {
             _MetadataPill(label: '路由', value: report.route),
           if (report.reason.isNotEmpty)
             _MetadataPill(label: '原因', value: report.reason),
+          if (report.reportKind.isNotEmpty)
+            _MetadataPill(label: '报告类型', value: report.reportKindLabel),
+          if (report.durationMillis > 0)
+            _MetadataPill(
+              label: '无响应时长',
+              value: '${report.durationMillis} ms',
+            ),
         ],
       ),
       const SizedBox(height: 16),

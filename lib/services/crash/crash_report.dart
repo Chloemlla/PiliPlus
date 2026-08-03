@@ -26,6 +26,8 @@ class CrashReport {
   final String operation;
   final String route;
   final String reason;
+  final String reportKind;
+  final int durationMillis;
 
   const CrashReport({
     required this.reportId,
@@ -45,9 +47,19 @@ class CrashReport {
     this.operation = '',
     this.route = '',
     this.reason = '',
+    this.reportKind = '',
+    this.durationMillis = 0,
   });
 
   bool get isFatalCandidate => severity.isFatalCandidate;
+
+  String get reportKindLabel => switch (reportKind) {
+    'anr' => 'ANR',
+    'startup_hang' => '首帧超时',
+    'freeze' => '主线程冻结',
+    'crash' => '崩溃',
+    _ => reportKind,
+  };
 
   CrashReport mergeWith(CrashReport other) {
     final preferred = _severityRank(other.severity) > _severityRank(severity)
@@ -100,6 +112,10 @@ class CrashReport {
       operation: choose(preferred.operation, secondary.operation),
       route: choose(preferred.route, secondary.route),
       reason: choose(preferred.reason, secondary.reason),
+      reportKind: choose(preferred.reportKind, secondary.reportKind),
+      durationMillis: preferred.durationMillis > 0
+          ? preferred.durationMillis
+          : secondary.durationMillis,
     );
   }
 
@@ -160,7 +176,10 @@ class CrashReport {
         DateTime.now().millisecondsSinceEpoch;
     final exceptionType = _text(json['exceptionType'], 'NativeCrash');
     final rootCause = _sanitize(_text(json['message'], exceptionType));
-    final stackTrace = _sanitize(_text(json['stackTrace'], ''));
+    final stackTrace = _sanitize(
+      _text(json['stackTrace'], '', maxLength: 128 * 1024),
+    );
+    final nativeDuration = (json['durationMillis'] as num?)?.toInt() ?? 0;
     final source = CrashSource.parse(json['source']);
     final processName = _text(
       json['processName'],
@@ -182,12 +201,6 @@ class CrashReport {
         'Captured device: ${_text(json['manufacturer'], 'unknown')} '
             '${_text(json['model'], 'unknown')}',
         'Captured fingerprint: ${_text(json['fingerprint'], 'unknown')}',
-        if (json['authorName'] != null)
-          'Crash SDK author: ${_text(json['authorName'], 'unknown')}',
-        if (json['authorUrl'] != null)
-          'Crash SDK author URL: ${_text(json['authorUrl'], 'unknown')}',
-        if (json['authorFingerprint'] != null)
-          'Crash SDK fingerprint: ${_text(json['authorFingerprint'], 'unknown')}',
         if (json['capture'] != null) 'Capture path: ${_text(json['capture'], 'unknown')}',
         if (json['status'] != null) 'Exit status: ${json['status']}',
         if (json['importance'] != null)
@@ -230,10 +243,13 @@ class CrashReport {
       sessionId: _context('native:$processName:$crashedAtMillis', 'native'),
       module: _context(json['module'], 'android'),
       reason: _context(json['reason'], 'native_failure'),
+      reportKind: _context(json['kind'], ''),
+      durationMillis: nativeDuration < 0 ? 0 : nativeDuration,
     );
   }
 
   factory CrashReport.fromJson(Map<String, dynamic> json) {
+    final persistedDuration = (json['durationMillis'] as num?)?.toInt() ?? 0;
     return CrashReport(
       reportId: (json['reportId'] as String?)?.trim().isNotEmpty == true
           ? json['reportId'] as String
@@ -258,6 +274,12 @@ class CrashReport {
       operation: _context(json['operation'], ''),
       route: _context(json['route'], ''),
       reason: _context(json['reason'], ''),
+      reportKind: _context(json['reportKind'], ''),
+      durationMillis: persistedDuration < 0
+          ? 0
+          : persistedDuration > 24 * 60 * 60 * 1000
+          ? 24 * 60 * 60 * 1000
+          : persistedDuration,
     );
   }
 
@@ -279,6 +301,8 @@ class CrashReport {
     'operation': operation,
     'route': route,
     'reason': reason,
+    'reportKind': reportKind,
+    'durationMillis': durationMillis,
   };
 
   String toClipboardText() {
@@ -298,6 +322,12 @@ class CrashReport {
       ..writeln('Session: $sessionId')
       ..writeln('System info:')
       ..writeln(systemInfo);
+    if (reportKind.isNotEmpty) {
+      buffer.writeln('Report type: $reportKind');
+    }
+    if (durationMillis > 0) {
+      buffer.writeln('Unresponsive duration: $durationMillis ms');
+    }
     if (recentEvents.isNotEmpty) {
       buffer.writeln('Recent app events:');
       for (final event in recentEvents) {
@@ -332,8 +362,12 @@ class CrashReport {
     CrashSeverity.unknown => 0,
   };
 
-  static String _text(Object? value, String fallback) {
-    return _context(value, fallback, maxLength: 4096);
+  static String _text(
+    Object? value,
+    String fallback, {
+    int maxLength = 4096,
+  }) {
+    return _context(value, fallback, maxLength: maxLength);
   }
 
   static String _context(

@@ -62,25 +62,39 @@ internal class NativeCrashChannel(
     }
 
     private fun lumenReportMap(report: com.chloemlla.lumen.crash.CrashReport): Map<String, Any?> {
+        val kind = report.kind.wireValue
         return mapOf(
             "recordId" to report.reportId,
             "timestamp" to report.crashedAtMillis,
             "source" to "android_uncaught",
             "severity" to "fatal",
-            "module" to moduleFrom(report.exceptionType, report.stackTrace),
-            "reason" to "uncaught_exception",
+            "module" to if (kind == "crash") {
+                moduleFrom(report.exceptionType, report.stackTrace)
+            } else {
+                "android_process"
+            },
+            "reason" to if (kind == "crash") "uncaught_exception" else kind,
             "exceptionType" to report.exceptionType,
             "message" to report.rootCause,
             "threadName" to report.threadName,
             "processName" to report.processName,
             "stackTrace" to report.stackTrace,
-            "systemInfo" to report.systemInfo,
+            "systemInfo" to withoutSdkAttribution(report.systemInfo),
             "recentEvents" to report.recentEvents,
-            "authorName" to report.authorName,
-            "authorUrl" to report.authorUrl,
-            "authorFingerprint" to report.authorFingerprint,
+            "kind" to kind,
+            "durationMillis" to report.durationMillis,
             "capture" to "lumen_crash",
         )
+    }
+
+    private fun withoutSdkAttribution(systemInfo: String): String {
+        return systemInfo.lineSequence()
+            .filterNot {
+                it.startsWith("Crash SDK author:") ||
+                    it.startsWith("Crash SDK author URL:") ||
+                    it.startsWith("Crash SDK fingerprint:")
+            }
+            .joinToString("\n")
     }
 
     private fun moduleFrom(exceptionType: String, stackTrace: String): String {
