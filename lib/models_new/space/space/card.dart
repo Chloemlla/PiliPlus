@@ -105,8 +105,7 @@ class SpaceCard {
             json['live_fans_wearing'] as Map<String, dynamic>,
           ),
     spaceTag: (json['space_tag'] as List<dynamic>?)
-        ?.where((e) => const ['location', 'real_name'].contains(e['type']))
-        .map((e) => SpaceTag.fromJson(e as Map<String, dynamic>))
+        ?.map((e) => SpaceTag.fromJson(e as Map<String, dynamic>))
         .toList(),
     prInfo: json['pr_info'] == null
         ? null
