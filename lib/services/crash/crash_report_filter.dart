@@ -1,3 +1,5 @@
+import 'package:pili_plus/services/crash/crash_report.dart';
+
 abstract final class CrashReportFilter {
   static bool shouldIgnore(Object error, [StackTrace? stackTrace]) {
     if (_isHttp2GoawayAfterWriterClose(error, stackTrace)) return true;
@@ -12,6 +14,17 @@ abstract final class CrashReportFilter {
     if (!knownDiagnostic) return false;
     if (error is! String && _hasApplicationStack(stackTrace)) return false;
     return true;
+  }
+
+  /// System/device faults that stay in crash history but are not surfaced as
+  /// fatal. Matches a native crash whose stack is entirely inside Android's
+  /// hardware-UI shader disk cache writer (libhwui.so `ShaderCache::store`
+  /// deferred-save thread) — a firmware/driver-level SIGSEGV (seen on
+  /// MediaTek/Mali + Android 16, e.g. vivo V2426A), never an app frame.
+  static bool isKnownDeviceIssue(CrashReport report) {
+    if (report.reason != 'native_crash') return false;
+    final stack = report.stackTrace.toLowerCase();
+    return stack.contains('shadercache::store') && stack.contains('libhwui');
   }
 
   static bool _hasUsefulStack(StackTrace? stackTrace) =>

@@ -1,3 +1,5 @@
+import 'package:pili_plus/services/crash/crash_context.dart';
+import 'package:pili_plus/services/crash/crash_report.dart';
 import 'package:pili_plus/services/crash/crash_report_filter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -135,6 +137,69 @@ void main() {
             '(package:dio/src/interceptor.dart:117)',
           ),
         ),
+        isFalse,
+      );
+    });
+  });
+
+  group('CrashReportFilter.isKnownDeviceIssue', () {
+    CrashReport nativeReport({
+      required String trace,
+      String reason = 'native_crash',
+    }) {
+      return CrashReport(
+        reportId: 'r',
+        crashedAtMillis: 1,
+        crashedAtText: 't',
+        exceptionType: 'ApplicationExitInfo',
+        rootCause: 'crash',
+        threadName: 'RenderThread',
+        processName: 'com.chloemlla.piliplus',
+        systemInfo: 'OS: android',
+        stackTrace: trace,
+        source: CrashSource.androidExitInfo,
+        reason: reason,
+      );
+    }
+
+    test('matches hwui ShaderCache::store native crash', () {
+      const trace = r'''
+SIGSEGV SEGV_MAPERR
+null pointer dereference RenderThread
+nanosleep libc.so
+usleep libc.so
+void android::uirenderer::skiapipeline::ShaderCache::store(...)::$_0 libhwui.so
+__thread_proxy libhwui.so
+''';
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(nativeReport(trace: trace)),
+        isTrue,
+      );
+    });
+
+    test('matches signature case-insensitively', () {
+      const trace =
+          r'android::uirenderer::skiapipeline::ShaderCache::store libhwui.so';
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(nativeReport(trace: trace)),
+        isTrue,
+      );
+    });
+
+    test('ignores non-native crash reasons', () {
+      const trace = 'ShaderCache::store libhwui.so';
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(
+          nativeReport(trace: trace, reason: 'anr'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('ignores unrelated native crashes', () {
+      const trace = 'SIGSEGV SEGV_MAPERR\nlibflutter.so unknown frame';
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(nativeReport(trace: trace)),
         isFalse,
       );
     });

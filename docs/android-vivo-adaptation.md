@@ -142,8 +142,35 @@ what still matters for this product and what changed on 2026-07-17.
   This record does not claim hardware execution; rewind/fast-forward remain the
   documented fallback where an OEM hides the standard scrubber.
 
+## Known device faults (native crash fingerprints)
+
+### hwui `ShaderCache::store` SIGSEGV (MediaTek / Mali, Android 16)
+
+- Fingerprint: `ApplicationExitInfo` native crash (`reason = native_crash`),
+  stack inside `libhwui.so` at
+  `android::uirenderer::skiapipeline::ShaderCache::store(...)::$_0` — the
+  View-system shader disk cache's deferred write thread. Frames are
+  bionic/libc + libhwui only; no app / libflutter / libmpv frames in the
+  crashing thread.
+- First seen: 2026-08-04, build `2.1.0-faeb17343` (5413), vivo V2426A
+  (MediaTek MT6991 / Mali), Android 16 (SDK 36), while backgrounded with audio
+  playback active.
+- Verdict: system/firmware-level fault, not an app-code bug. Not introduced by
+  the 2026-08-04 background-audio refactor (a Dart-only diff); that feature
+  keeps the process + UI inflated longer in the background, which increases
+  exposure to the faulty hwui path rather than causing it.
+- Handling: `CrashReportFilter.isKnownDeviceIssue` matches this fingerprint
+  (`shadercache::store` + `libhwui` in the tombstone) and persists matched
+  reports as history (`makePending:false`) instead of surfacing a fatal startup
+  crash.
+- Untested lever: `EnableImpeller=true` removes Flutter's own GL context
+  alongside hwui's (a known Mali dual-context stressor) but hwui still compiles
+  / stores View shaders, so it is not a proven fix; Impeller was disabled
+  deliberately in `7ae92970e` and would need real-device QA before switching.
+
 ## Refresh log
 
 - 2026-07-17: Mapped Lumen Android 11-17 Vivo notes onto PiliPlus; enabled predictive back; added network security config + intent matching flags; fixed UCrop exported; hardened Seal URI grants; documented N/A product differences.
 - 2026-07-24: Media notification API 11–17: FGS immediate behavior (S+), silent LOW channel, seekable MediaStyle duration write-back; documented POST_NOTIFICATIONS / mediaPlayback while-in-use expectations.
 - 2026-07-31: Recorded source/CI verification and kept physical-device OEM validation as an explicit release QA item rather than assuming it was executed.
+- 2026-08-04: Recorded the vivo V2426A / MediaTek hwui `ShaderCache::store` native crash as a known device fault; wired its fingerprint into the crash pipeline (history-only, not fatal).

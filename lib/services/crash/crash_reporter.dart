@@ -217,7 +217,11 @@ abstract final class CrashReporter {
             json,
             systemInfo: CrashReportSystemInfo.cached,
           );
-          CrashReportStore.saveSync(report, makePending: true);
+          final knownDeviceIssue = CrashReportFilter.isKnownDeviceIssue(report);
+          CrashReportStore.saveSync(report, makePending: !knownDeviceIssue);
+          if (knownDeviceIssue) {
+            CrashBreadcrumbs.record('Known device issue: ${report.reason}');
+          }
           if (recordId != null && recordId.isNotEmpty) {
             acknowledged.add(recordId);
           }
