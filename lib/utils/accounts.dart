@@ -86,6 +86,7 @@ abstract final class Accounts {
     for (int i = 0; i < nextAccountMode.length; i++) {
       accountMode[i] = nextAccountMode[i];
     }
+    onHeartbeatLoginChanged?.call(accountMode[AccountType.heartbeat.index].isLogin);
 
     final activateAccount = _activateAccount;
     if (activateAccount != null) {
