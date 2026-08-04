@@ -306,6 +306,8 @@ internal class ClashCompatChannel(
                 "apiVersion" to apiVersion,
                 "running" to bundle.getBoolean("running", false),
                 "vpnRunning" to bundle.getBoolean("vpnRunning", false),
+                // v2: granular VPN state (0=disconnected, 1=connecting, 2=connected)
+                "vpnState" to bundle.getInt("vpnState", if (bundle.getBoolean("vpnRunning", false)) 2 else 0),
                 "partnerAppAutoAdapt" to bundle.getBoolean(
                     "partnerAppAutoAdapt",
                     bundle.getBoolean("piliPlusAutoAdapt", true),
@@ -313,10 +315,15 @@ internal class ClashCompatChannel(
                 "piliPlusAutoAdapt" to bundle.getBoolean("piliPlusAutoAdapt", true),
                 "name" to bundle.getString("name"),
                 "package" to (bundle.getString("package") ?: pkg),
+                // v2: additional status fields
                 "mode" to bundle.getString("mode"),
                 "selectedNode" to bundle.getString("selectedNode"),
                 "upTotal" to bundle.getLong("upTotal", 0L),
                 "downTotal" to bundle.getLong("downTotal", 0L),
+                "proxyDelay" to bundle.getLong("proxyDelay", 0L),
+                "aliveProxies" to bundle.getInt("aliveProxies", 0),
+                "memoryUsage" to bundle.getLong("memoryUsage", 0L),
+                "lastError" to bundle.getString("lastError"),
             )
         }
         return null

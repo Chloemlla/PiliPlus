@@ -30,6 +30,11 @@ abstract final class ClashCompat {
   static String? selectedNode;
   static int upTotalBytes = 0;
   static int downTotalBytes = 0;
+  static int vpnState = 0; // 0=disconnected, 1=connecting, 2=connected
+  static int proxyDelayMs = 0;
+  static int aliveProxies = 0;
+  static int memoryUsageBytes = 0;
+  static String? lastError;
 
   /// True when VPN path should own traffic (skip manual HTTP proxy).
   /// Prefer Clash StatusProvider truth when available so a non-Clash VPN is
@@ -140,6 +145,11 @@ abstract final class ClashCompat {
     selectedNode = map['selectedNode'] as String?;
     upTotalBytes = (map['upTotal'] as num?)?.toInt() ?? 0;
     downTotalBytes = (map['downTotal'] as num?)?.toInt() ?? 0;
+    vpnState = (map['vpnState'] as num?)?.toInt() ?? (clashVpnRunning ? 2 : 0);
+    proxyDelayMs = (map['proxyDelay'] as num?)?.toInt() ?? 0;
+    aliveProxies = (map['aliveProxies'] as num?)?.toInt() ?? 0;
+    memoryUsageBytes = (map['memoryUsage'] as num?)?.toInt() ?? 0;
+    lastError = map['lastError'] as String?;
   }
 
   static String statusLabel({required bool autoAdaptEnabled}) {
@@ -150,15 +160,21 @@ abstract final class ClashCompat {
       final profile = profileName;
       final mode = clashMode;
       final node = selectedNode;
+      final delay = proxyDelayMs > 0 ? ' · ${proxyDelayMs}ms' : '';
+      final alive = aliveProxies > 0 ? ' · $aliveProxies 在线' : '';
       final bound = processBound ? ' · 进程已绑定' : '';
       final modeInfo = mode != null ? ' · $mode' : '';
       final nodeInfo = node != null && node.isNotEmpty ? ' · $node' : '';
       if (profile != null && profile.isNotEmpty) {
-        return 'VPN 已连接 · $profile$modeInfo$nodeInfo$bound';
+        return 'VPN 已连接 · $profile$modeInfo$nodeInfo$delay$alive$bound';
       }
-      return 'VPN 已连接 · 流量自动经 Clash$modeInfo$nodeInfo$bound';
+      return 'VPN 已连接 · 流量自动经 Clash$modeInfo$nodeInfo$delay$alive$bound';
     }
     if (partnerStatusAvailable) {
+      final error = lastError;
+      if (error != null && error.isNotEmpty) {
+        return 'Clash 已停止 · $error';
+      }
       return 'Clash 已停止 · 等待重新开启';
     }
     return '已安装 Clash · 等待开启 VPN';
