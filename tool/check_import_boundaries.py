@@ -133,6 +133,7 @@ RAW_BOX_ALIAS_BASELINE = {
 ALLOWED_HTTP_TRANSPORT_IMPORTS = {
     "http/adapter_lifecycle.dart",
     "http/api.dart",
+    "http/connection_failover_interceptor.dart",
     "http/constants.dart",
     "http/network_security_policy.dart",
     "http/retry_interceptor.dart",
