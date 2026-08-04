@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:pili_plus/http/init.dart';
@@ -95,6 +96,7 @@ abstract final class LoginUtils {
           await GStorage.userInfo.put('userInfoCache', response);
         }
         await SynapseSyncService.maybeShowStartupPrompt();
+        unawaited(SynapseSyncService.syncAllBilibiliAccounts());
       }
     } else {
       // 获取用户信息失败

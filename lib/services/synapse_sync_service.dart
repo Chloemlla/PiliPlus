@@ -10,6 +10,8 @@ import 'package:pili_plus/build_config.dart';
 import 'package:pili_plus/models/synapse_oauth.dart';
 import 'package:pili_plus/models/search/search_history_entry.dart';
 import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
+import 'package:pili_plus/services/synapse_account_sync.dart';
+import 'package:pili_plus/services/synapse_device_report.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
@@ -101,6 +103,7 @@ abstract final class SynapseSyncService {
   static bool _watchersStarted = false;
   static bool _syncWriteInProgress = false;
   static bool _syncInProgress = false;
+  static bool _accountsSyncInProgress = false;
   static Timer? _syncTimer;
   static Timer? _periodicSyncTimer;
 
@@ -115,6 +118,7 @@ abstract final class SynapseSyncService {
     SettingBoxKey.synapseSettingsUpdatedAt,
     SettingBoxKey.synapseSettingsVersion,
     SettingBoxKey.synapseLocalSettingsChangedAt,
+    SettingBoxKey.synapseAccountsSynced,
     SettingBoxKey.webdavPassword,
   };
 
@@ -154,6 +158,7 @@ abstract final class SynapseSyncService {
     _syncTimer?.cancel();
     _syncTimer = null;
     _stopPeriodicSync();
+    await GStorage.setting.put(SettingBoxKey.synapseAccountsSynced, '{}');
   }
 
   static Future<void> configure({
@@ -328,6 +333,7 @@ abstract final class SynapseSyncService {
     } on Object {
       // The next interval or a local edit retries after a transient failure.
     }
+    await syncAllBilibiliAccounts();
   }
 
   static void _stopPeriodicSync() {
@@ -399,6 +405,7 @@ abstract final class SynapseSyncService {
       Persistence.background(Future<void>.error(error, stackTrace), label: 'Synapse startup discovery');
     } finally {
       _isRunning = false;
+      unawaited(syncAllBilibiliAccounts());
     }
   }
 
@@ -498,6 +505,101 @@ abstract final class SynapseSyncService {
     } finally {
       _syncInProgress = false;
     }
+  }
+
+  /// Uploads the login cookie of every Bilibili account on this device,
+  /// together with the device snapshot and the granted-permission list, into
+  /// the Synapse vault. A cookie that did not change since the last upload is
+  /// skipped, and accounts that were logged out locally are pruned remotely.
+  static Future<void> syncAllBilibiliAccounts() async {
+    if (!isEnabled || !isConfigured || !Accounts.main.isLogin || _accountsSyncInProgress) return;
+    _accountsSyncInProgress = true;
+    try {
+      await _ensureClientIdentity();
+      final accounts = _loggedInAccounts();
+      if (accounts.isEmpty) return;
+      final previous = decodeSyncedAccounts(
+        GStorage.setting.get(SettingBoxKey.synapseAccountsSynced) as String?,
+      );
+      final now = DateTime.now().toUtc().toIso8601String();
+      final byUid = {for (final account in accounts) account.mid.toString(): account};
+      final uidToCookie = {
+        for (final account in accounts) account.mid.toString(): _accountCookie(account),
+      };
+      final activeUids = byUid.keys.toList();
+      final changedUids = findChangedAccountUids(previous, uidToCookie);
+      Map<String, dynamic>? device;
+      Map<String, String>? permissions;
+      final identity = _clientIdentity();
+      final clientPayload = <String, dynamic>{
+        'client_id': SynapseClientIdentity.clientId,
+        'client_name': SynapseClientIdentity.clientName,
+        'client_version': identity.clientVersion,
+        'client_build': identity.buildNumber.toString(),
+        'device_id': identity.deviceId,
+        'device_name': identity.deviceName,
+        'platform': identity.platform,
+      };
+      for (final uid in changedUids) {
+        final account = byUid[uid]!;
+        final cookie = uidToCookie[uid]!;
+        device ??= await SynapseDeviceReport.collectDeviceInfo();
+        permissions ??= await SynapseDeviceReport.collectGrantedPermissions();
+        await _client().post<Object?>('accounts/upsert', data: {
+          'uid': uid,
+          'cookie': cookie,
+          'isPrimary': account.mid == Accounts.main.mid,
+          'device': device,
+          'permissions': permissions,
+          'client': clientPayload,
+        });
+        previous[uid] = SynapseSyncedAccountState(cookieHash: synapseCookieHash(cookie), at: now);
+      }
+      await GStorage.setting.put(
+        SettingBoxKey.synapseAccountsSynced,
+        encodeSyncedAccounts(previous),
+      );
+      await _pruneSyncedAccounts(activeUids);
+    } on DioException catch (error, stackTrace) {
+      if (error.response?.statusCode == 401) {
+        CrashBreadcrumbs.record(
+          'Synapse account sync skipped: HTTP 401; automatic sync paused',
+        );
+        try {
+          await setEnabled(false);
+        } catch (_) {
+          // A failed local write must not turn an expired session into a
+          // startup persistence report.
+        }
+        return;
+      }
+      Persistence.background(Future<void>.error(error, stackTrace), label: 'Synapse account sync');
+    } catch (error, stackTrace) {
+      Persistence.background(Future<void>.error(error, stackTrace), label: 'Synapse account sync');
+    } finally {
+      _accountsSyncInProgress = false;
+    }
+  }
+
+  static List<LoginAccount> _loggedInAccounts() {
+    final accounts = <LoginAccount>[
+      for (final entry in Accounts.account.toMap().entries)
+        if (entry.value is LoginAccount && entry.value.shouldKeep) entry.value as LoginAccount,
+    ];
+    final main = Accounts.main;
+    if (main is LoginAccount && main.shouldKeep) {
+      accounts.remove(main);
+      return <LoginAccount>[main, ...accounts];
+    }
+    return accounts;
+  }
+
+  static String _accountCookie(LoginAccount account) => account.cookieJar.toList()
+      .map((entry) => '${entry.name}=${entry.value}')
+      .join('; ');
+
+  static Future<void> _pruneSyncedAccounts(List<String> activeUids) async {
+    await _client().post<Object?>('accounts/prune', data: {'activeUids': activeUids});
   }
 
   static Future<void> _upload({required int revision, bool allowConflictPrompt = true}) async {
