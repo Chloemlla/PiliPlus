@@ -932,29 +932,6 @@ class PlPlayerController with BlockConfigMixin {
     return null;
   }
 
-  /// Reopen a network VOD as an audio-only media source while the app is in
-  /// the background. The owning page restores [dataSource] on resume.
-  Future<bool> openBackgroundAudio({
-    required String audioSource,
-    required Duration position,
-    required bool play,
-  }) async {
-    if (_playerCount == 0 ||
-        _processing ||
-        isLive ||
-        isFileSource ||
-        audioSource.isEmpty ||
-        videoPlayerController == null) {
-      return false;
-    }
-
-    await videoPlayerController!.open(
-      Media(audioSource, start: position),
-      play: play,
-    );
-    return true;
-  }
-
   // 开始播放
   Future<void> _initializePlayer() async {
     if (_playerCount == 0) return;
