@@ -43,6 +43,7 @@ internal class ClashCompatChannel(
     private var partnerWatchHandler: Handler? = null
     private val partnerWatchRunnable = Runnable { checkPartnerStatus() }
     private var partnerWatchRunning = false
+    private var partnerWatchIntervalMs = PARTNER_WATCH_INITIAL_MS
 
     init {
         methodChannel.setMethodCallHandler(this)
@@ -213,6 +214,9 @@ internal class ClashCompatChannel(
      * without the VPN network being torn down first, the ConnectivityManager
      * callback alone would miss the event and the Dart side would never learn
      * that Clash stopped routing.
+     *
+     * Uses adaptive polling: aggressive (2s) initially, backing off to 5s then
+     * 10s once the partner has been stable for several cycles.
      */
     private fun checkPartnerStatus() {
         partnerWatchRunning = false
@@ -221,12 +225,20 @@ internal class ClashCompatChannel(
             lastPartnerStatusAvailable != available
         lastPartnerStatusAvailable = available
         if (changed) {
+            // Partner became available or unavailable — reset interval for
+            // aggressive re-check.
+            partnerWatchIntervalMs = PARTNER_WATCH_INITIAL_MS
             emitStatus()
+            if (available) {
+                schedulePartnerWatch()
+            }
             return
         }
-        // Keep polling while the partner is still reachable, so we detect
-        // the moment it disappears.
+        // Keep polling while the partner is still reachable, with adaptive
+        // backoff: after a stable cycle, lengthen the interval.
         if (available) {
+            partnerWatchIntervalMs = (partnerWatchIntervalMs * 1.5).toLong()
+                .coerceAtMost(PARTNER_WATCH_MAX_MS)
             schedulePartnerWatch()
         }
     }
@@ -237,7 +249,7 @@ internal class ClashCompatChannel(
         val handler = partnerWatchHandler ?: Handler(Looper.getMainLooper()).also {
             partnerWatchHandler = it
         }
-        handler.postDelayed(partnerWatchRunnable, PARTNER_WATCH_INTERVAL_MS)
+        handler.postDelayed(partnerWatchRunnable, partnerWatchIntervalMs)
     }
 
     private fun startPartnerWatch() {
@@ -365,7 +377,8 @@ internal class ClashCompatChannel(
         private const val METHOD_PARTNER_STATUS = "partnerStatus"
         private const val PREFS = "clash_partner_compat"
         private const val KEY_AUTO_ADAPT = "clash_auto_adapt"
-        private const val PARTNER_WATCH_INTERVAL_MS = 5000L
+        private const val PARTNER_WATCH_INITIAL_MS = 2000L
+        private const val PARTNER_WATCH_MAX_MS = 10000L
 
         private val CLASH_PACKAGES = listOf(
             "com.github.metacubex.clash",
