@@ -39,6 +39,10 @@ internal class ClashCompatChannel(
     private var lastVpnActive: Boolean? = null
     private var lastVpnNetwork: Network? = null
     private var boundVpnNetwork: Network? = null
+    private var lastPartnerStatusAvailable: Boolean? = null
+    private var partnerWatchHandler: Handler? = null
+    private val partnerWatchRunnable = Runnable { checkPartnerStatus() }
+    private var partnerWatchRunning = false
 
     init {
         methodChannel.setMethodCallHandler(this)
@@ -47,6 +51,7 @@ internal class ClashCompatChannel(
 
     fun dispose() {
         stopNetworkWatch()
+        stopPartnerWatch()
         clearProcessNetworkBinding()
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
@@ -85,6 +90,7 @@ internal class ClashCompatChannel(
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         eventSink = events
         startNetworkWatch()
+        startPartnerWatch()
         // Apply binding for current state as soon as Dart starts listening.
         applyVpnProcessBinding(buildStatus())
         emitStatus()
@@ -93,6 +99,7 @@ internal class ClashCompatChannel(
     override fun onCancel(arguments: Any?) {
         // Keep network watch + process binding alive even if Flutter cancels
         // the event stream; only dispose() tears them down.
+        stopPartnerWatch()
         eventSink = null
     }
 
@@ -102,10 +109,14 @@ internal class ClashCompatChannel(
         val partner = queryPartnerStatus()
         val partnerStatusAvailable = partner != null
         // Prefer provider truth when available so a non-Clash VPN is not treated
-        // as "Clash routing". Fall back to install+VPN heuristic otherwise.
+        // as "Clash routing". When the partner was previously reachable but is
+        // now gone, the Clash process was killed — do not use the fallback
+        // heuristic because the VPN network may still be briefly active.
         val clashVpnRunning =
             if (partnerStatusAvailable) {
                 partner?.get("vpnRunning") as? Boolean ?: false
+            } else if (lastPartnerStatusAvailable == true) {
+                false
             } else {
                 clashInstalled && vpnActive
             }
@@ -128,14 +139,8 @@ internal class ClashCompatChannel(
         )
     }
 
-    private fun isClashVpnRouting(status: Map<String, Any?>): Boolean {
-        val partnerStatusAvailable = status["partnerStatusAvailable"] == true
-        return if (partnerStatusAvailable) {
-            status["clashVpnRunning"] == true
-        } else {
-            status["clashInstalled"] == true && status["vpnActive"] == true
-        }
-    }
+    private fun isClashVpnRouting(status: Map<String, Any?>): Boolean =
+        status["clashVpnRunning"] == true
 
     private fun emitStatus() {
         val status = buildStatus()
@@ -192,9 +197,59 @@ internal class ClashCompatChannel(
         // Re-evaluate when VPN goes up/down *or* the underlying Network handle
         // is replaced (Clash restart / re-establish) so process binding follows.
         if (lastVpnActive == vpnActive && lastVpnNetwork == vpnNetwork) return
+        val wasActive = lastVpnActive == true
         lastVpnActive = vpnActive
         lastVpnNetwork = vpnNetwork
+        // Restart partner watch when VPN becomes active (Clash may have started).
+        if (vpnActive && !wasActive && !partnerWatchRunning) {
+            startPartnerWatch()
+        }
         emitStatus()
+    }
+
+    /**
+     * Periodically check whether the Clash partner status provider is still
+     * reachable. When a previously available partner disappears (process killed)
+     * without the VPN network being torn down first, the ConnectivityManager
+     * callback alone would miss the event and the Dart side would never learn
+     * that Clash stopped routing.
+     */
+    private fun checkPartnerStatus() {
+        partnerWatchRunning = false
+        val available = queryPartnerStatus() != null
+        val changed = lastPartnerStatusAvailable != null &&
+            lastPartnerStatusAvailable != available
+        lastPartnerStatusAvailable = available
+        if (changed) {
+            emitStatus()
+            return
+        }
+        // Keep polling while the partner is still reachable, so we detect
+        // the moment it disappears.
+        if (available) {
+            schedulePartnerWatch()
+        }
+    }
+
+    private fun schedulePartnerWatch() {
+        if (partnerWatchRunning) return
+        partnerWatchRunning = true
+        val handler = partnerWatchHandler ?: Handler(Looper.getMainLooper()).also {
+            partnerWatchHandler = it
+        }
+        handler.postDelayed(partnerWatchRunnable, PARTNER_WATCH_INTERVAL_MS)
+    }
+
+    private fun startPartnerWatch() {
+        lastPartnerStatusAvailable = queryPartnerStatus() != null
+        if (lastPartnerStatusAvailable == true) {
+            schedulePartnerWatch()
+        }
+    }
+
+    private fun stopPartnerWatch() {
+        partnerWatchRunning = false
+        partnerWatchHandler?.removeCallbacks(partnerWatchRunnable)
     }
 
     private fun isVpnActive(): Boolean {
@@ -310,6 +365,7 @@ internal class ClashCompatChannel(
         private const val METHOD_PARTNER_STATUS = "partnerStatus"
         private const val PREFS = "clash_partner_compat"
         private const val KEY_AUTO_ADAPT = "clash_auto_adapt"
+        private const val PARTNER_WATCH_INTERVAL_MS = 5000L
 
         private val CLASH_PACKAGES = listOf(
             "com.github.metacubex.clash",

@@ -27,11 +27,11 @@ abstract final class ClashCompat {
 
   /// True when VPN path should own traffic (skip manual HTTP proxy).
   /// Prefer Clash StatusProvider truth when available so a non-Clash VPN is
-  /// not treated as Clash routing.
+  /// not treated as Clash routing. The native side handles the fallback
+  /// heuristic and partner-process-death detection.
   static bool get isClashVpnRouting {
     if (!Platform.isAndroid) return false;
-    if (partnerStatusAvailable) return clashVpnRunning;
-    return clashInstalled && vpnActive;
+    return clashVpnRunning;
   }
 
   static final StreamController<void> _statusChanged =
