@@ -1790,6 +1790,13 @@ class PlPlayerController with BlockConfigMixin {
     videoPlayerController?.setVideoTrack(onlyPlayAudio.value ? .no() : .auto());
   }
 
+  /// 原地开关视频轨道（不重开播放器），保留 demuxer 缓存，
+  /// 让前后台切换近零等待。[onlyAudio] 为 true 时仅保留音频。
+  void setOnlyPlayAudioEnabled(bool onlyAudio) {
+    onlyPlayAudio.value = onlyAudio;
+    videoPlayerController?.setVideoTrack(onlyAudio ? .no() : .auto());
+  }
+
   late final Map<String, ui.Image?> previewCache = {};
   LoadingState<VideoShotData>? videoShot;
   late final RxBool showPreview = false.obs;

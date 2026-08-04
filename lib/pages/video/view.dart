@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:io' show Platform;
 import 'dart:math';
 
@@ -101,10 +102,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   late final LocalIntroController localIntroController;
 
   bool _backgroundAudioActive = false;
-  bool _backgroundWasPlaying = false;
   bool _backgroundOnlyPlayAudio = false;
-  Duration? _backgroundAudioPosition;
   Future<void> _backgroundAudioTransition = Future<void>.value();
+  bool _isAppInBackground = false;
+  Timer? _backgroundAudioDebounceTimer;
+
+  /// 进入后台后先等待该窗口，窗口内返回则取消切换（快速切换零开销）。
+  static const Duration _backgroundAudioDebounceDelay = Duration(seconds: 3);
 
   bool get autoExitFullscreen =>
       videoDetailController.plPlayerController.autoExitFullscreen;
@@ -187,9 +191,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   void positionListener(Duration position) {
     videoDetailController.playedTime = position;
-    if (_backgroundAudioActive) {
-      _backgroundAudioPosition = position;
-    }
   }
 
   @override
@@ -197,17 +198,18 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     final isResume = state == .resumed;
     final ctr = videoDetailController.plPlayerController..visible = isResume;
     if (isResume) {
+      _isAppInBackground = false;
       if (!ctr.showDanmaku) {
         introController.startTimer();
         ctr.showDanmaku = true;
       }
+      _cancelBackgroundAudioTimers();
+      _queueBackgroundAudioTransition(_restoreForegroundVideo);
     } else if (state == .paused) {
+      _isAppInBackground = true;
       introController.cancelTimer();
       ctr.showDanmaku = false;
-      _queueBackgroundAudioTransition(_enterBackgroundAudio);
-    }
-    if (isResume) {
-      _queueBackgroundAudioTransition(_restoreForegroundVideo);
+      _armBackgroundAudioDebounce();
     }
   }
 
@@ -218,6 +220,22 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         !videoDetailController.isFileSource &&
         !ctr.isLive &&
         (!Platform.isAndroid || !AndroidHelper.isPipMode);
+  }
+
+  /// 进后台先等防抖窗口；窗口内返回则直接取消，快速切换零开销。
+  void _armBackgroundAudioDebounce() {
+    if (!_canUseBackgroundAudio) return;
+    _backgroundAudioDebounceTimer?.cancel();
+    _backgroundAudioDebounceTimer = Timer(_backgroundAudioDebounceDelay, () {
+      _backgroundAudioDebounceTimer = null;
+      if (!mounted || !_isAppInBackground) return;
+      _queueBackgroundAudioTransition(_enterBackgroundAudio);
+    });
+  }
+
+  void _cancelBackgroundAudioTimers() {
+    _backgroundAudioDebounceTimer?.cancel();
+    _backgroundAudioDebounceTimer = null;
   }
 
   void _queueBackgroundAudioTransition(Future<void> Function() transition) {
@@ -237,48 +255,28 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     );
   }
 
+  /// 原地关闭视频轨道，不重开播放器，缓存保持热状态、后台音频零中断。
+  /// mpv 的 vid=no 会停止读取视频流，视频字节不再下载。
   Future<void> _enterBackgroundAudio() async {
     if (!_canUseBackgroundAudio || _backgroundAudioActive) return;
 
     final ctr = videoDetailController.plPlayerController;
     final player = ctr.videoPlayerController;
-    final audioSource = videoDetailController.highestAudioUrl;
-    if (player == null || audioSource == null || audioSource.isEmpty) return;
+    if (player == null) return;
 
-    final position = player.state.position;
-    final wasPlaying = player.state.playing;
-    final opened = await ctr.openBackgroundAudio(
-      audioSource: audioSource,
-      position: position,
-      play: wasPlaying,
-    );
-    if (!opened || !mounted) return;
-
-    _backgroundWasPlaying = wasPlaying;
-    _backgroundAudioPosition = position;
     _backgroundOnlyPlayAudio = ctr.onlyPlayAudio.value;
     _backgroundAudioActive = true;
-    ctr.onlyPlayAudio.value = true;
-    videoDetailController
-      ..playedTime = position
-      ..defaultST = null;
+    ctr.setOnlyPlayAudioEnabled(true);
   }
 
   Future<void> _restoreForegroundVideo() async {
     if (!_backgroundAudioActive) return;
 
     final ctr = videoDetailController.plPlayerController;
-    final position =
-        _backgroundAudioPosition ?? ctr.videoPlayerController?.state.position;
-    final wasPlaying = _backgroundWasPlaying;
     final onlyPlayAudio = _backgroundOnlyPlayAudio;
     _backgroundAudioActive = false;
-    ctr.onlyPlayAudio.value = onlyPlayAudio;
-    videoDetailController
-      ..playedTime = position
-      ..defaultST = null;
-
-    await videoDetailController.playerInit(autoplay: wasPlaying);
+    // 原地恢复视频轨道，缓存仍热，近零等待。
+    ctr.setOnlyPlayAudioEnabled(onlyPlayAudio);
   }
 
   Future<void>? playCallBack() {
@@ -292,13 +290,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   // 播放器状态监听
   Future<void> playerListener(PlayerStatus status) async {
-    if (_backgroundAudioActive) {
-      if (status.isPlaying) {
-        _backgroundWasPlaying = true;
-      } else if (status.isPaused) {
-        _backgroundWasPlaying = false;
-      }
-    }
     final isPlaying = status.isPlaying;
     try {
       if (videoDetailController.scrollCtr.hasClients) {
@@ -415,6 +406,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   @override
   void dispose() {
+    _cancelBackgroundAudioTimers();
     plPlayerController
       ?..removeStatusLister(playerListener)
       ..removePositionListener(positionListener);
