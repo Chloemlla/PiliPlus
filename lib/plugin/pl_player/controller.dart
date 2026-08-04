@@ -135,8 +135,6 @@ class PlPlayerController with BlockConfigMixin {
 
   final RxBool showControls = false.obs;
 
-  final RxBool showBrightnessStatus = false.obs;
-
   final RxBool longPressStatus = false.obs;
 
   final RxBool controlsLock = false.obs;
@@ -1222,13 +1220,6 @@ class PlPlayerController with BlockConfigMixin {
     }
   }
 
-  // 还原默认速度
-  double playSpeedDefault = Pref.playSpeedDefault;
-  Future<void> setDefaultSpeed() async {
-    await _videoPlayerController?.setRate(playSpeedDefault);
-    _playbackSpeed.value = playSpeedDefault;
-  }
-
   /// 播放视频
   Future<void> play({bool repeat = false, bool hideControls = true}) async {
     if (_playerCount == 0) return;
@@ -1330,14 +1321,6 @@ class PlPlayerController with BlockConfigMixin {
       videoFit.value = .contain;
     } else {
       videoFit.value = _prefFit;
-    }
-  }
-
-  /// 设置后台播放
-  void setBackgroundPlay(bool val) {
-    videoPlayerServiceHandler?.enableBackgroundPlay = val;
-    if (!tempPlayerConf) {
-      setting.put(SettingBoxKey.enableBackgroundPlay, val);
     }
   }
 

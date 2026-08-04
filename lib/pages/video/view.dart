@@ -149,6 +149,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
     PlPlayerController.setPlayCallBack(playCallBack);
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
+    videoPlayerServiceHandler?.onMiniPlayer = _openMiniPlayerFromNotification;
 
     if (videoDetailController.removeSafeArea) {
       hideSystemBar();
@@ -288,6 +289,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     return plPlayerController?.play();
   }
 
+  /// 通知栏「小窗播放」动作：唤出当前视频的应用内小窗播放器。
+  /// 页面销毁后回调会被清除，此处再防御一次避免误触已销毁的控制器。
+  Future<void> _openMiniPlayerFromNotification() async {
+    if (videoDetailController.isClosed) return;
+    await videoDetailController.openInAppMiniPlayer();
+  }
+
   // 播放器状态监听
   Future<void> playerListener(PlayerStatus status) async {
     final isPlaying = status.isPlaying;
@@ -407,6 +415,10 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   @override
   void dispose() {
     _cancelBackgroundAudioTimers();
+    if (videoPlayerServiceHandler?.onMiniPlayer ==
+        _openMiniPlayerFromNotification) {
+      videoPlayerServiceHandler!.onMiniPlayer = null;
+    }
     plPlayerController
       ?..removeStatusLister(playerListener)
       ..removePositionListener(positionListener);

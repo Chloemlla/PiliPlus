@@ -26,8 +26,6 @@ class NativeMediaNotificationService {
     _channel.setMethodCallHandler(_handleMethodCall);
   }
 
-  Future<void> start(Map<String, Object?> state) => _invoke('start', state);
-
   Future<void> updateMetadata(Map<String, Object?> state) =>
       _invoke('updateMetadata', state);
 
