@@ -182,6 +182,13 @@ abstract final class SynapseSyncService {
   static Future<Map<String, dynamic>> authorizeAndBind(BuildContext context, {required String baseUrl}) async {
     final uri = _providerBaseUri(_parseBaseUrl(baseUrl));
     final handoff = await _SynapseOAuthHandoff.start(uri);
+    if (!context.mounted) {
+      handoff.cancel();
+      throw const SynapseOAuthException(
+        SynapseOAuthErrorCode.cancelled,
+        'Synapse 授权页面已关闭',
+      );
+    }
     Object? outcome;
     try {
       outcome = await showDialog<Object?>(
@@ -780,15 +787,22 @@ abstract final class SynapseSyncService {
     if (replace) {
       final currentKeys = (box.keys as Iterable).whereType<String>();
       final remoteKeys = values.keys.toSet();
-      await Future.wait([
-        for (final key in currentKeys)
-          if (!_excludedSettingKeys.contains(key) &&
-              !_isSensitiveKey(key) &&
-              !remoteKeys.contains(key))
-            box.delete(key),
-      ]);
+      final deletions = <Future<void>>[];
+      for (final key in currentKeys) {
+        if (_excludedSettingKeys.contains(key) ||
+            _isSensitiveKey(key) ||
+            remoteKeys.contains(key)) {
+          continue;
+        }
+        deletions.add(_deleteBoxKey(box, key));
+      }
+      await Future.wait<void>(deletions);
     }
     await box.putAll(values);
+  }
+
+  static Future<void> _deleteBoxKey(dynamic box, String key) async {
+    await box.delete(key);
   }
 
   static bool _isSensitiveKey(String key) {
