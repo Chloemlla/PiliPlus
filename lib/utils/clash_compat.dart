@@ -25,6 +25,11 @@ abstract final class ClashCompat {
   static String? profileName;
   static String? clashPackage;
   static bool _fallbackForced = false;
+  static int partnerApiVersion = 0;
+  static String? clashMode;
+  static String? selectedNode;
+  static int upTotalBytes = 0;
+  static int downTotalBytes = 0;
 
   /// True when VPN path should own traffic (skip manual HTTP proxy).
   /// Prefer Clash StatusProvider truth when available so a non-Clash VPN is
@@ -130,6 +135,11 @@ abstract final class ClashCompat {
     }
     profileName = map['profileName'] as String?;
     clashPackage = map['clashPackage'] as String?;
+    partnerApiVersion = (map['apiVersion'] as num?)?.toInt() ?? 0;
+    clashMode = map['mode'] as String?;
+    selectedNode = map['selectedNode'] as String?;
+    upTotalBytes = (map['upTotal'] as num?)?.toInt() ?? 0;
+    downTotalBytes = (map['downTotal'] as num?)?.toInt() ?? 0;
   }
 
   static String statusLabel({required bool autoAdaptEnabled}) {
@@ -138,11 +148,18 @@ abstract final class ClashCompat {
     if (!clashInstalled) return '未检测到 Clash Meta';
     if (isClashVpnRouting) {
       final profile = profileName;
+      final mode = clashMode;
+      final node = selectedNode;
       final bound = processBound ? ' · 进程已绑定' : '';
+      final modeInfo = mode != null ? ' · $mode' : '';
+      final nodeInfo = node != null && node.isNotEmpty ? ' · $node' : '';
       if (profile != null && profile.isNotEmpty) {
-        return 'VPN 已连接 · $profile$bound';
+        return 'VPN 已连接 · $profile$modeInfo$nodeInfo$bound';
       }
-      return 'VPN 已连接 · 流量自动经 Clash$bound';
+      return 'VPN 已连接 · 流量自动经 Clash$modeInfo$nodeInfo$bound';
+    }
+    if (partnerStatusAvailable) {
+      return 'Clash 已停止 · 等待重新开启';
     }
     return '已安装 Clash · 等待开启 VPN';
   }

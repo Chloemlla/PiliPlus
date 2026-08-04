@@ -298,7 +298,12 @@ internal class ClashCompatChannel(
             val bundle = runCatching {
                 resolver.call(uri, METHOD_PARTNER_STATUS, null, null)
             }.getOrNull() ?: continue
+            // Check apiVersion for forward compatibility. If the schema is
+            // newer than what we understand, we can still read the fields we
+            // know about (older clients already omit unknown fields gracefully).
+            val apiVersion = bundle.getInt("apiVersion", 0)
             return mapOf(
+                "apiVersion" to apiVersion,
                 "running" to bundle.getBoolean("running", false),
                 "vpnRunning" to bundle.getBoolean("vpnRunning", false),
                 "partnerAppAutoAdapt" to bundle.getBoolean(
@@ -308,6 +313,10 @@ internal class ClashCompatChannel(
                 "piliPlusAutoAdapt" to bundle.getBoolean("piliPlusAutoAdapt", true),
                 "name" to bundle.getString("name"),
                 "package" to (bundle.getString("package") ?: pkg),
+                "mode" to bundle.getString("mode"),
+                "selectedNode" to bundle.getString("selectedNode"),
+                "upTotal" to bundle.getLong("upTotal", 0L),
+                "downTotal" to bundle.getLong("downTotal", 0L),
             )
         }
         return null

@@ -60,6 +60,12 @@
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
+        <!-- Clash Meta for Android partner integration: allows StatusProvider
+             to recognize PiliPlus as a trusted partner for read-only status
+             queries and VPN access-control auto-include. -->
+        <meta-data
+            android:name="com.github.kr328.clash.partner"
+            android:value="true" />
         <activity
             android:name=".QrScannerActivity"
             android:exported="false"
