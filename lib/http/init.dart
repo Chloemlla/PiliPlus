@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:pili_plus/http/adapter_lifecycle.dart';
 import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/connection_failover_interceptor.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/network_security_policy.dart';
 import 'package:pili_plus/http/retry_interceptor.dart';
@@ -260,6 +261,9 @@ class Request {
         ),
       );
     }
+
+    // 连接失败检测 Clash VPN 死锁，主动回退默认网络
+    dio.interceptors.add(ConnectionFailoverInterceptor());
 
     dio
       ..transformer = BackgroundTransformer()

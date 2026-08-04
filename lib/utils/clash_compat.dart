@@ -24,6 +24,7 @@ abstract final class ClashCompat {
   static bool autoAdaptEnabled = true;
   static String? profileName;
   static String? clashPackage;
+  static bool _fallbackForced = false;
 
   /// True when VPN path should own traffic (skip manual HTTP proxy).
   /// Prefer Clash StatusProvider truth when available so a non-Clash VPN is
@@ -31,7 +32,31 @@ abstract final class ClashCompat {
   /// heuristic and partner-process-death detection.
   static bool get isClashVpnRouting {
     if (!Platform.isAndroid) return false;
+    if (_fallbackForced) return false;
     return clashVpnRunning;
+  }
+
+  /// Force the routing flag off when the HTTP layer detects repeated
+  /// connection failures while Clash was supposed to be routing. This
+  /// provides an immediate fallback without waiting for the native
+  /// partner status poll (up to 5s).
+  static void forceFallback() {
+    _fallbackForced = true;
+    if (!_statusChanged.isClosed) {
+      _statusChanged.add(null);
+    }
+  }
+
+  /// Clear the forced fallback so the next native status event can
+  /// re-enable Clash routing when Clash comes back.
+  static void clearFallback() {
+    _fallbackForced = false;
+    // Notify listeners so the adapter pool is re-evaluated. If Clash
+    // came back during the fallback window, isClashVpnRouting now
+    // returns the native clashVpnRunning value again.
+    if (!_statusChanged.isClosed) {
+      _statusChanged.add(null);
+    }
   }
 
   static final StreamController<void> _statusChanged =
