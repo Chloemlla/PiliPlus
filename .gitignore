@@ -157,5 +157,4 @@ test*
 /fuck-my-shit-mountain/
 .agents/skills/
 .codex/
-.trellis/
 Install-CodexTrellis.ps1

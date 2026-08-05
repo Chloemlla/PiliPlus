@@ -1,4 +1,16 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+
+/**
+ * Returns the current build time in ISO-8601 format (UTC).
+ * Respects SOURCE_DATE_EPOCH for reproducible builds.
+ */
+fun buildTimeIso(): String {
+    val epochSeconds = System.getenv("SOURCE_DATE_EPOCH")?.toLongOrNull()
+    val instant = if (epochSeconds != null) Instant.ofEpochSecond(epochSeconds) else Instant.now()
+    return DateTimeFormatter.ISO_INSTANT.format(instant)
+}
 
 val targetAndroidSdk = 37
 extra["targetAndroidSdk"] = targetAndroidSdk

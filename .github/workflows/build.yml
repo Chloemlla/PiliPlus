@@ -105,8 +105,11 @@ jobs:
     needs: quality
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_android == 'true' }}
     runs-on: ubuntu-latest
+    outputs:
+      pilipili_VERSION_NAME: ${{ steps.set_release_metadata.outputs.pilipili_VERSION_NAME }}
+      pilipili_SHORT_HASH: ${{ steps.set_release_metadata.outputs.pilipili_SHORT_HASH }}
     permissions:
-      contents: write
+      contents: read
       packages: read
     env:
       GITHUB_ACTOR: ${{ github.actor }}
@@ -158,32 +161,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
-      - name: Resolve lumen-crash version
+      - name: Set lumen-crash version
         shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(
-            curl -fsSL \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              "https://api.github.com/repos/Chloemlla/Project-Lumen/releases?per_page=100" \
-            | jq -r '
-                [.[]
-                  | select(.draft == false)
-                  | select(.tag_name | startswith("lumen-crash-v"))
-                ]
-                | sort_by(.published_at // .created_at)
-                | reverse
-                | .[0].tag_name
-                | sub("^lumen-crash-v"; "")
-              '
-          )"
-          if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
-            echo "::error::No lumen-crash release found"
-            exit 1
-          fi
-          echo "Resolved lumen-crash version: ${VERSION}"
-          echo "LUMEN_CRASH_VERSION=${VERSION}" >> "$GITHUB_ENV"
+        run: echo "LUMEN_CRASH_VERSION=0.1.0" >> "$GITHUB_ENV"
 
       - name: Apply Patch
         shell: pwsh
@@ -197,6 +177,7 @@ jobs:
         shell: bash
 
       - name: Set release metadata
+        id: set_release_metadata
         shell: pwsh
         run: |
           $versionLine = Get-Content -Path pubspec.yaml -Encoding UTF8 |
@@ -218,8 +199,11 @@ jobs:
 
           Add-Content -Path $env:GITHUB_ENV -Value "pilipili_VERSION_NAME=$versionName"
           Add-Content -Path $env:GITHUB_ENV -Value "pilipili_SHORT_HASH=$shortHash"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "pilipili_VERSION_NAME=$versionName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "pilipili_SHORT_HASH=$shortHash"
 
       - name: Write key
+        if: ${{ github.event_name != 'pull_request' }}
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -339,19 +323,6 @@ jobs:
           done
         shell: bash
 
-      - name: Automatic release
-        if: success() && github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          make_latest: true
-          generate_release_notes: true
-          tag_name: "v${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
-          prerelease: false
-          name: "PiliPlus-android ${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
-          files: PiliPlus_android_*.apk
-
       - name: Upload Android arm64-v8a
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -372,6 +343,41 @@ jobs:
           archive: false
           name: Android_x86_64
           path: PiliPlus_android_*_x86_64.apk
+
+  android-release:
+    name: Release Android APK
+    needs: android
+    if: success() && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download arm64-v8a artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: Android_arm64-v8a
+
+      - name: Download armeabi-v7a artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: Android_armeabi-v7a
+
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: Android_x86_64
+
+      - name: Automatic release
+        uses: softprops/action-gh-release@7c4723f7a335432393329f8f1c564994ce50185d
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: "v${{ needs.android.outputs.pilipili_VERSION_NAME }}-${{ needs.android.outputs.pilipili_SHORT_HASH }}"
+          prerelease: false
+          name: "PiliPlus-android ${{ needs.android.outputs.pilipili_VERSION_NAME }}-${{ needs.android.outputs.pilipili_SHORT_HASH }}"
+          files: "*.apk"
 
   ios:
     needs: quality

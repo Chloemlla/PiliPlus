@@ -244,10 +244,8 @@ Write-Success "Keystore 生成成功: $keystoreFile"
 
 Write-Host ''
 Write-Host '  正在编码为 Base64...'
-$base64File = 'keystore_base64.txt'
 $keystoreBytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $keystoreFile).Path)
 $keystoreBase64 = [System.Convert]::ToBase64String($keystoreBytes)
-[System.IO.File]::WriteAllText((Join-Path (Get-Location) $base64File), $keystoreBase64, $utf8NoBom)
 
 if ([string]::IsNullOrWhiteSpace($keystoreBase64)) {
   Stop-WithError 'Base64 内容为空'
@@ -266,7 +264,7 @@ Write-Host "仓库: $repo"
 Write-Host ''
 Write-Host '变量列表:'
 Write-Host '  1. KEYSTORE_BASE64'
-Write-Host "     长度: $((Get-Item -LiteralPath $base64File).Length) 字符"
+Write-Host "     长度: $($keystoreBase64.Length) 字符"
 Write-Host '     值: [已隐藏]'
 Write-Host ''
 Write-Host '  2. KEYSTORE_PASSWORD'
@@ -338,15 +336,6 @@ Write-Host '[重要提示]'
 Write-Host "  1. 请妥善保管 $keystoreFile 文件并备份"
 Write-Host '  2. 该文件已在 .gitignore 中，不会被提交到 git'
 Write-Host '  3. 现在可以运行 GitHub Actions 构建签名的 APK/AAB'
-Write-Host "  4. 临时文件 $base64File 已生成，可以手动删除"
 Write-Host ''
-
-if (Test-Path -LiteralPath $base64File) {
-  $deleteTemp = Read-Host '是否删除临时 Base64 文件? (Y/N)'
-  if ($deleteTemp -ieq 'Y') {
-    Remove-Item -LiteralPath $base64File -Force
-    Write-Success "已删除 $base64File"
-  }
-}
 
 Pause-ForUser
