@@ -16,7 +16,6 @@ library;
 
 import 'dart:ui' as ui show TextHeightBehavior;
 
-import 'package:pili_plus/common/widgets/more_text/rich_text_more.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -145,7 +144,7 @@ import 'package:flutter/rendering.dart';
 ///  * [RichText], which gives you more control over the text styles.
 ///  * [DefaultTextStyle], which sets default styles for [Text] widgets.
 ///  * [SelectableRegion], which provides an overview of the selection system.
-class Text extends StatelessWidget {
+abstract class BaseText extends StatelessWidget {
   /// Creates a text widget.
   ///
   /// If the [style] argument is null, the text will use the style from the
@@ -155,7 +154,7 @@ class Text extends StatelessWidget {
   /// If the [softWrap] is true or null, the glyph causing overflow, and those
   /// that follow, will not be rendered. Otherwise, it will be shown with the
   /// given overflow option.
-  const Text(
+  const BaseText(
     String this.data, {
     super.key,
     this.style,
@@ -178,8 +177,6 @@ class Text extends StatelessWidget {
     this.textWidthBasis,
     this.textHeightBehavior,
     this.selectionColor,
-    required this.primary,
-    this.onShowMore,
   }) : textSpan = null,
        assert(
          textScaler == null || textScaleFactor == null,
@@ -194,7 +191,7 @@ class Text extends StatelessWidget {
   /// * [WidgetSpan]s define embedded inline widgets.
   ///
   /// See [RichText] which provides a lower-level way to draw text.
-  const Text.rich(
+  const BaseText.rich(
     InlineSpan this.textSpan, {
     super.key,
     this.style,
@@ -217,8 +214,6 @@ class Text extends StatelessWidget {
     this.textWidthBasis,
     this.textHeightBehavior,
     this.selectionColor,
-    required this.primary,
-    this.onShowMore,
   }) : data = null,
        assert(
          textScaler == null || textScaleFactor == null,
@@ -367,10 +362,6 @@ class Text extends StatelessWidget {
   /// (semi-transparent grey).
   final Color? selectionColor;
 
-  final Color primary;
-
-  final VoidCallback? onShowMore;
-
   @override
   Widget build(BuildContext context) {
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(context);
@@ -415,7 +406,7 @@ class Text extends StatelessWidget {
       ),
       (null, null) => MediaQuery.textScalerOf(context),
     };
-    Widget result = RichTextMore(
+    Widget result = createRichText(
       textAlign: textAlign ?? defaultTextStyle.textAlign ?? TextAlign.start,
       textDirection:
           textDirection, // RichText uses Directionality.of to obtain a default if this is null.
@@ -437,8 +428,6 @@ class Text extends StatelessWidget {
           DefaultSelectionStyle.of(context).selectionColor ??
           DefaultSelectionStyle.defaultColor,
       text: effectiveTextSpan,
-      primary: primary,
-      onShowMore: onShowMore,
     );
     if (semanticsLabel != null || semanticsIdentifier != null) {
       result = Semantics(
@@ -453,4 +442,19 @@ class Text extends StatelessWidget {
     }
     return result;
   }
+
+  Widget createRichText({
+    required TextAlign textAlign,
+    TextDirection? textDirection,
+    Locale? locale,
+    required bool softWrap,
+    required TextOverflow overflow,
+    required TextScaler textScaler,
+    int? maxLines,
+    StrutStyle? strutStyle,
+    required TextWidthBasis textWidthBasis,
+    ui.TextHeightBehavior? textHeightBehavior,
+    required Color selectionColor,
+    required TextSpan text,
+  });
 }

@@ -1,9 +1,9 @@
 // 内容
 import 'package:pili_plus/common/widgets/custom_icon.dart';
-import 'package:pili_plus/common/widgets/flutter/text/text.dart' as custom_text;
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
+import 'package:pili_plus/common/widgets/text_more/text_more.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/pages/dynamics/widgets/rich_node_panel.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
@@ -90,7 +90,7 @@ Widget content(
                           item.modules.moduleDynamic,
                         ),
                 )
-              : custom_text.Text.rich(
+              : TextMore.rich(
                   style: floor == 1
                       ? const TextStyle(fontSize: 15)
                       : const TextStyle(fontSize: 14),

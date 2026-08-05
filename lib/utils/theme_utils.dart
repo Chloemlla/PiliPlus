@@ -151,6 +151,11 @@ abstract final class ThemeUtils {
           },
         ),
       ),
+      expansionTileTheme: const ExpansionTileThemeData(
+        shape: Border(),
+        collapsedShape: Border(),
+      ),
+      listTileTheme: const ListTileThemeData(controlAffinity: .leading),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),

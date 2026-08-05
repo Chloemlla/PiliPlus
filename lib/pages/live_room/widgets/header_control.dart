@@ -339,13 +339,11 @@ Obx(
           snapSizes: [maxChildSize],
           initialChildSize: maxChildSize,
           builder: (context, scrollController) {
-            final theme = Theme.of(context);
-            final secondary = theme.colorScheme.secondary;
-            final onSurfaceVariant = theme.colorScheme.onSurfaceVariant;
+            final colorScheme = ColorScheme.of(context);
+            final secondary = colorScheme.secondary;
+            final onSurfaceVariant = colorScheme.onSurfaceVariant;
             final currStyle = TextStyle(fontSize: 14, color: secondary);
-            return Theme(
-              data: theme.copyWith(dividerColor: Colors.transparent),
-              child: Column(
+            return Column(
                 children: [
                   InkWell(
                     onTap: Get.back,
@@ -357,7 +355,7 @@ Obx(
                           width: 32,
                           height: 3,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.outline,
+                            color: colorScheme.outline,
                             borderRadius: const .all(.circular(1.5)),
                           ),
                         ),
@@ -477,8 +475,6 @@ class _ExpansionTile extends ExpansionTile {
     required super.title,
     // ignore: unused_element_parameter
     super.dense = true,
-    // ignore: unused_element_parameter
-    super.controlAffinity = .leading,
     // ignore: unused_element_parameter
     super.childrenPadding = const .only(left: 20),
     super.initiallyExpanded,

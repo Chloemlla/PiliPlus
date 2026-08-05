@@ -104,62 +104,54 @@ class _HistoryPageState extends State<HistoryPage>
                 left: padding.left,
                 right: padding.right,
               ),
-              child: Column(
-                children: [
-                  ?_buildPauseTip,
-                  Expanded(
-                    child: Obx(() {
-                      final tabs = _historyController.tabs;
-                      if (tabs.isEmpty) {
-                        return child;
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              child: Obx(() {
+                final tabs = _historyController.tabs;
+                if (tabs.isEmpty) {
+                  return child;
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ?_buildPauseTip,
+                    TabBar(
+                      controller: _historyController.tabController,
+                      onTap: (index) {
+                        if (!_historyController
+                            .tabController!
+                            .indexIsChanging) {
+                          currCtr().scrollController.animToTop();
+                        } else {
+                          if (enableMultiSelect) {
+                            currCtr(
+                              _historyController.tabController!.previousIndex,
+                            ).handleSelect();
+                          }
+                        }
+                      },
+                      tabs: [
+                        const Tab(text: '全部'),
+                        ...tabs.map((item) => Tab(text: item.name)),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        physics: enableMultiSelect
+                            ? const NeverScrollableScrollPhysics()
+                            : tabBarScrollPhysics,
+                        controller: _historyController.tabController,
+                        horizontalDragGestureRecognizer:
+                            CustomHorizontalDragGestureRecognizer.new,
                         children: [
-                          TabBar(
-                            controller: _historyController.tabController,
-                            onTap: (index) {
-                              if (!_historyController
-                                  .tabController!
-                                  .indexIsChanging) {
-                                currCtr().scrollController.animToTop();
-                              } else {
-                                if (enableMultiSelect) {
-                                  currCtr(
-                                    _historyController
-                                        .tabController!
-                                        .previousIndex,
-                                  ).handleSelect();
-                                }
-                              }
-                            },
-                            tabs: [
-                              const Tab(text: '全部'),
-                              ...tabs.map((item) => Tab(text: item.name)),
-                            ],
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              physics: enableMultiSelect
-                                  ? const NeverScrollableScrollPhysics()
-                                  : tabBarScrollPhysics,
-                              controller: _historyController.tabController,
-                              horizontalDragGestureRecognizer:
-                                  CustomHorizontalDragGestureRecognizer.new,
-                              children: [
-                                KeepAliveWrapper(child: child),
-                                ...tabs.map(
-                                  (item) => HistoryPage(type: item.type),
-                                ),
-                              ],
-                            ),
+                          KeepAliveWrapper(child: child),
+                          ...tabs.map(
+                            (item) => HistoryPage(type: item.type),
                           ),
                         ],
-                      );
-                    }),
-                  ),
-                ],
-              ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ),
           ),
         );
