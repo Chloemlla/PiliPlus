@@ -50,6 +50,8 @@ import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/plugin/pl_player/view/view.dart';
+import 'package:pili_plus/services/live_update_service.dart';
+import 'package:pili_plus/services/pip_persistent_service.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart'
     show shutdownTimerService;
@@ -102,7 +104,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   late final LocalIntroController localIntroController;
 
   bool _backgroundAudioActive = false;
-  bool _backgroundOnlyPlayAudio = false;
   Future<void> _backgroundAudioTransition = Future<void>.value();
   bool _isAppInBackground = false;
   Timer? _backgroundAudioDebounceTimer;
@@ -150,6 +151,9 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     PlPlayerController.setPlayCallBack(playCallBack);
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
     videoPlayerServiceHandler?.onMiniPlayer = _openMiniPlayerFromNotification;
+    if (Platform.isAndroid) {
+      PipPersistentService.instance.onPipModeChanged = _onPipModeChanged;
+    }
 
     if (videoDetailController.removeSafeArea) {
       hideSystemBar();
@@ -206,12 +210,53 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       }
       _cancelBackgroundAudioTimers();
       _queueBackgroundAudioTransition(_restoreForegroundVideo);
+      _stopLiveUpdateOnForeground();
     } else if (state == .paused) {
       _isAppInBackground = true;
       introController.cancelTimer();
       ctr.showDanmaku = false;
       _armBackgroundAudioDebounce();
+      _startLiveUpdateOnBackground(ctr);
     }
+  }
+
+  /// 进入 PiP 时停止 Live Update 通知（PiP 已有自己的窗口）。
+  void _onPipModeChanged(bool isInPipMode) {
+    if (isInPipMode) {
+      liveUpdateService.stop();
+    }
+  }
+
+  /// 应用进入后台且未开启 PiP 时，启动 Live Update 进度通知。
+  void _startLiveUpdateOnBackground(PlPlayerController ctr) {
+    if (!Platform.isAndroid) return;
+    if (AndroidHelper.isPipMode) return;
+    if (!videoPlayerServiceHandler?.enableBackgroundPlay ?? true) return;
+    if (!ctr.playerStatus.isPlaying) return;
+
+    final handler = videoPlayerServiceHandler;
+    if (handler == null) return;
+    final mediaItem = handler.currentMediaItem;
+    if (mediaItem == null) return;
+
+    final duration = mediaItem.duration?.inMilliseconds ?? 0;
+    final position = ctr.positionInMilliseconds;
+
+    liveUpdateService.start(
+      title: mediaItem.title,
+      artist: mediaItem.artist,
+      subText: mediaItem.isLive == true ? '直播中' : '${ctr.playbackSpeed}x',
+      artUri: mediaItem.artUri?.toString(),
+      max: duration,
+      progress: position,
+      playing: ctr.playerStatus.isPlaying,
+    );
+  }
+
+  /// 应用回到前台时停止 Live Update 通知。
+  void _stopLiveUpdateOnForeground() {
+    if (!Platform.isAndroid) return;
+    liveUpdateService.stop();
   }
 
   bool get _canUseBackgroundAudio {
@@ -265,7 +310,6 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     final player = ctr.videoPlayerController;
     if (player == null) return;
 
-    _backgroundOnlyPlayAudio = ctr.onlyPlayAudio.value;
     _backgroundAudioActive = true;
     ctr.setOnlyPlayAudioEnabled(true);
   }
@@ -274,10 +318,14 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     if (!_backgroundAudioActive) return;
 
     final ctr = videoDetailController.plPlayerController;
-    final onlyPlayAudio = _backgroundOnlyPlayAudio;
     _backgroundAudioActive = false;
-    // 原地恢复视频轨道，缓存仍热，近零等待。
-    ctr.setOnlyPlayAudioEnabled(onlyPlayAudio);
+    // 返回前台时恢复视频轨道。若用户在后台期间通过通知栏手动切换了音频模式，
+    // setOnlyPlayAudioEnabled(false) 会保持当前状态（已是视频模式）。
+    ctr.setOnlyPlayAudioEnabled(false);
+    // 强制重开媒体以重新初始化视频解码器。
+    // setVideoTrack(.auto()) 在 mpv 中不可靠——vid=no 后重建视频输出管线可能失败。
+    // refreshPlayer 会重新 open 当前媒体，确保视频解码器被正确初始化。
+    await ctr.refreshPlayer(play: ctr.playerStatus.isPlaying);
   }
 
   Future<void>? playCallBack() {
@@ -415,6 +463,12 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   @override
   void dispose() {
     _cancelBackgroundAudioTimers();
+    // 页面在后台音频状态被销毁时，恢复共享播放器的视频轨道。
+    // 避免其他页面复用该播放器时出现黑屏（仅音频无视频）。
+    if (_backgroundAudioActive) {
+      _backgroundAudioActive = false;
+      videoDetailController.plPlayerController.setOnlyPlayAudioEnabled(false);
+    }
     if (videoPlayerServiceHandler?.onMiniPlayer ==
         _openMiniPlayerFromNotification) {
       videoPlayerServiceHandler!.onMiniPlayer = null;
@@ -451,6 +505,12 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
       }
     }
     removeObserverMobile(this);
+    if (Platform.isAndroid) {
+      if (PipPersistentService.instance.onPipModeChanged == _onPipModeChanged) {
+        PipPersistentService.instance.onPipModeChanged = null;
+      }
+      liveUpdateService.stop();
+    }
 
     super.dispose();
   }

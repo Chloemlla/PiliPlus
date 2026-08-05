@@ -24,6 +24,7 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         NativeMediaService.attachFlutterEngine(this, flutterEngine)
+        LiveUpdateService.attachFlutterEngine(this, flutterEngine)
         qrScannerChannel = QrScannerChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         nativeCrashChannel = NativeCrashChannel(
             applicationContext,
@@ -67,6 +68,7 @@ class MainActivity : AudioServiceActivity() {
         clashCompatChannel = null
         pipChannel = null
         NativeMediaService.detachFlutterEngine()
+        LiveUpdateService.detachFlutterEngine()
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

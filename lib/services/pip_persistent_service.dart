@@ -101,12 +101,17 @@ class PipPersistentService {
   bool _platformCallbacksInstalled = false;
   Future<void> _operationTail = Future<void>.value();
 
+  /// Callback invoked when Android PiP mode changes.
+  /// [isInPipMode] is true when entering PiP, false when exiting.
+  void Function(bool isInPipMode)? onPipModeChanged;
+
   void ensurePlatformCallbacks() {
     if (_platformCallbacksInstalled || !Platform.isAndroid) return;
     _platformCallbacksInstalled = true;
     _channel.setMethodCallHandler((call) async {
       if (call.method != 'modeChanged') return;
       final isInPipMode = call.arguments as bool? ?? false;
+      onPipModeChanged?.call(isInPipMode);
       if (!isInPipMode) {
         await clearPipState();
       }

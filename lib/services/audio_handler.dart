@@ -13,6 +13,7 @@ import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/services/live_update_service.dart';
 import 'package:pili_plus/services/native_media_notification_service.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
@@ -118,6 +119,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   VideoPlayerServiceHandler() {
     if (Platform.isAndroid) {
       nativeMediaNotificationService
+        ..ensureInitialized()
+        ..onAction = _handleNativeAction;
+      liveUpdateService
         ..ensureInitialized()
         ..onAction = _handleNativeAction;
     }
@@ -366,6 +370,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
           isLive,
           status.isPlaying,
         );
+      }
+      // 播放完成时停止 Live Update 通知
+      if (status.isCompleted && liveUpdateService.isActive) {
+        liveUpdateService.stop();
       }
       return;
     }
@@ -636,6 +644,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       _lastStatus = PlayerStatus.paused;
       _item.clear();
       nativeMediaNotificationService.stop();
+      liveUpdateService.stop();
       return;
     }
     mediaItem.add(null);
@@ -723,7 +732,18 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         'videoActions': _lastVideoActions,
         ..._nativePlaybackFlags(),
       });
-      return;
+    }
+
+    // 后台 Live Update 进度通知
+    if (liveUpdateService.isActive) {
+      liveUpdateService.update(
+        progress: position.inMilliseconds,
+        max: _currentMediaItem?.duration?.inMilliseconds,
+        playing: _lastStatus.isPlaying,
+        subText: _lastStatus.isPlaying
+            ? '${_lastPlaybackSpeed}x'
+            : '已暂停',
+      );
     }
 
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
