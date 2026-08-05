@@ -1,22 +1,22 @@
-import 'package:PiliPlus/common/widgets/animated_height.dart';
-import 'package:PiliPlus/common/widgets/draggable_sheet/dyn.dart';
-import 'package:PiliPlus/common/widgets/flutter/text_field/text_field.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+// DraggableScrollableSheet is from package:flutter/widgets.dart
+import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
     show platformClampingPhysics;
-import 'package:PiliPlus/http/dynamics.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/publish_panel_type.dart';
-import 'package:PiliPlus/models/dynamics/result.dart';
-import 'package:PiliPlus/pages/common/publish/common_rich_text_pub_page.dart';
-import 'package:PiliPlus/pages/dynamics_mention/controller.dart';
-import 'package:PiliPlus/pages/emote/controller.dart';
-import 'package:PiliPlus/pages/emote/view.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
+import 'package:pili_plus/http/dynamics.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/publish_panel_type.dart';
+import 'package:pili_plus/models/dynamics/result.dart';
+import 'package:pili_plus/pages/common/publish/common_rich_text_pub_page.dart';
+import 'package:pili_plus/pages/dynamics_mention/controller.dart';
+import 'package:pili_plus/pages/emote/controller.dart';
+import 'package:pili_plus/pages/emote/view.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/request_utils.dart';
 import 'package:flutter/material.dart' hide TextField;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/animated_height.dart';
 
 class RepostPanel extends CommonRichTextPubPage {
   const RepostPanel({
@@ -124,7 +124,7 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel>
       curve: Curves.ease,
       duration: _durtion,
       child: _expanded
-          ? DynDraggableScrollableSheet(
+          ? DraggableScrollableSheet(
               snap: true,
               expand: false,
               minChildSize: 0,

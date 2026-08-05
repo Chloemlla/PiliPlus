@@ -1,48 +1,53 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' show max;
 
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
-import 'package:PiliPlus/common/widgets/image_grid/image_grid_view.dart'
+import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart'
     show ImageGridView, ImageModel;
-import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
-import 'package:PiliPlus/grpc/reply.dart';
-import 'package:PiliPlus/http/fav.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/audio_normalization.dart';
-import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
-import 'package:PiliPlus/models/common/member/tab_type.dart';
-import 'package:PiliPlus/models/common/reply/reply_sort_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/skip_type.dart';
-import 'package:PiliPlus/models/common/super_resolution_type.dart';
-import 'package:PiliPlus/models/dynamics/result.dart'
+import 'package:pili_plus/common/widgets/pendant_avatar.dart';
+import 'package:pili_plus/grpc/reply.dart';
+import 'package:pili_plus/http/fav.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/audio_normalization.dart';
+import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
+import 'package:pili_plus/models/common/member/tab_type.dart';
+import 'package:pili_plus/models/common/reply/reply_sort_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
+import 'package:pili_plus/models/common/super_resolution_type.dart';
+import 'package:pili_plus/models/dynamics/result.dart'
     show DynamicsDataModel, ItemModulesModel;
-import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
-import 'package:PiliPlus/pages/home/controller.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/pages/setting/models/model.dart';
-import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
-import 'package:PiliPlus/pages/setting/widgets/slider_dialog.dart';
-import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/filtering_text.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/path_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/update.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
+import 'package:pili_plus/pages/home/controller.dart';
+import 'package:pili_plus/pages/main/controller.dart';
+import 'package:pili_plus/pages/setting/models/model.dart';
+import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
+import 'package:pili_plus/pages/setting/widgets/slider_dialog.dart';
+import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/clash_compat.dart';
+import 'package:pili_plus/http/init.dart' show Request;
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/filtering_text.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/path_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/update.dart';
+import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide RefreshIndicator;
@@ -112,6 +117,16 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.showViewPoints,
     defaultVal: true,
   ),
+  if (Accounts.main.isLogin)
+    NormalModel(
+      title: 'Synapse 云同步',
+      subtitle: '通过 Synapse-Client 授权后完整同步设置和搜索历史；绑定时校验当前 B 站登录',
+      leading: const Icon(Icons.cloud_sync_outlined),
+      getSubtitle: () => SynapseSyncService.isEnabled
+          ? '已启用（绑定 UID ${SynapseSyncService.boundMid}） · ${SynapseSyncService.deviceTrackingStatus}'
+          : SynapseSyncService.deviceTrackingStatus,
+      onTap: _showSynapseSyncDialog,
+    ),
   const SwitchModel(
     title: '视频页显示相关视频',
     leading: Icon(MdiIcons.motionPlayOutline),
@@ -235,6 +250,104 @@ List<SettingsModel> get extraSettings => [
     leading: Icon(Icons.open_in_browser),
     setKey: SettingBoxKey.openInBrowser,
     defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '委托 Seal 时自动开始下载',
+    subtitle: '需在 Seal 设置中开启 Allow external auto-start；关闭时将打开 Seal 确认界面',
+    leading: Icon(Icons.download_for_offline_outlined),
+    setKey: SettingBoxKey.sealAutoStart,
+    defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '下载时去除标记广告片段',
+    subtitle: '使用空降助手（SponsorBlock）已标记片段，经 Seal 分段合成正片；默认赞助/自我推广，不含精彩时刻',
+    leading: Icon(Icons.content_cut_rounded),
+    setKey: SettingBoxKey.stripMarkedSegmentsEnabled,
+    defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '去除片段前询问类别',
+    subtitle: '开启后每次下载前可多选要剥离的空降助手类别',
+    leading: Icon(Icons.checklist_outlined),
+    setKey: SettingBoxKey.stripAlwaysAskCategories,
+    defaultVal: false,
+  ),
+  NormalModel(
+    title: '默认去除标记类别',
+    getSubtitle: () {
+      final cats = Pref.stripSegmentCategories;
+      if (cats.isEmpty) return '赞助 / 自我推广';
+      final titles = <String>[];
+      for (final name in cats) {
+        try {
+          titles.add(SegmentType.values.byName(name).shortTitle);
+        } catch (_) {
+          titles.add(name);
+        }
+      }
+      return titles.join(' / ');
+    },
+    leading: const Icon(Icons.category_outlined),
+    onTap: _showStripCategoriesDialog,
+  ),
+  NormalModel(
+    title: '去除片段最小时长',
+    getSubtitle: () {
+      final ms = Pref.stripMinSegmentMs;
+      if (ms < 1000) return '${ms}ms';
+      final sec = ms / 1000;
+      if (sec == sec.roundToDouble()) return '${sec.toInt()}s';
+      return '${sec.toStringAsFixed(1)}s';
+    },
+    leading: const Icon(Icons.timer_outlined),
+    onTap: _showStripMinDurationDialog,
+  ),
+  const SwitchModel(
+    title: '委托 Seal 时传递登录 Cookie',
+    subtitle: '将所选 B 站账号凭证临时交给 Seal（任务级）。需在 Seal 开启「允许外部应用提供 Cookies」',
+    leading: Icon(Icons.cookie_outlined),
+    setKey: SettingBoxKey.sealCookiePassthrough,
+    defaultVal: true,
+  ),
+  const SwitchModel(
+    title: '每次询问 Seal 下载账号',
+    subtitle: '关闭且已记住账号时将跳过账号选择',
+    leading: Icon(Icons.manage_accounts_outlined),
+    setKey: SettingBoxKey.sealCookieAlwaysAsk,
+    defaultVal: false,
+  ),
+  NormalModel(
+    title: '清除记住的 Seal 下载账号',
+    getSubtitle: () {
+      final mid = Pref.sealCookieRememberMid;
+      if (!Pref.sealCookieRemember || mid == 0) {
+        return '当前未记住账号';
+      }
+      return '已记住 UID $mid';
+    },
+    leading: const Icon(Icons.person_off_outlined),
+    onTap: (context, setState) async {
+      await Pref.clearSealCookieRemember();
+      setState();
+    },
+  ),
+  NormalModel(
+    title: '直播提醒设置',
+    subtitle: '按账号订阅 UP 主直播标题或分区关键词',
+    leading: const Icon(Icons.notifications_active_outlined),
+    onTap: (context, setState) => Get.toNamed('/liveAlerts'),
+  ),
+  NormalModel(
+    title: '下载管理',
+    subtitle: '管理 Seal 下载任务',
+    leading: const Icon(Icons.download_outlined),
+    onTap: (context, setState) => Get.toNamed('/downloadManager'),
+  ),
+  NormalModel(
+    title: '弹幕高亮',
+    subtitle: '设置关键词高亮规则',
+    leading: const Icon(Icons.highlight),
+    onTap: (context, setState) => Get.toNamed('/danmakuHighlight'),
   ),
   NormalModel(
     title: '横向滑动阈值',
@@ -584,10 +697,26 @@ List<SettingsModel> get extraSettings => [
     defaultVal: false,
     onChanged: (value) => MemberTabType.showMemberShop = value,
   ),
+  SplitModel(
+    normalModel: NormalModel.split(
+      title: 'Clash VPN 自动适配',
+      getSubtitle: () =>
+          ClashCompat.statusLabel(autoAdaptEnabled: Pref.clashAutoAdapt),
+      leading: const Icon(Icons.vpn_lock_outlined),
+    ),
+    switchModel: SwitchModel.split(
+      defaultVal: true,
+      setKey: SettingBoxKey.clashAutoAdapt,
+      onChanged: (value) {
+        unawaited(ClashCompat.setAutoAdaptEnabled(value));
+        Request.resetAdaptersForClashAdapt();
+      },
+    ),
+  ),
   const SplitModel(
     normalModel: NormalModel.split(
       title: '设置代理',
-      subtitle: '设置代理 host:port',
+      subtitle: '设置代理 host:port（Clash VPN 活跃且自动适配开启时自动忽略）',
       leading: Icon(Icons.airplane_ticket_outlined),
     ),
     switchModel: SwitchModel.split(
@@ -617,6 +746,82 @@ List<SettingsModel> get extraSettings => [
   ),
 ];
 
+Future<void> _showSynapseSyncDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final urlController = TextEditingController(text: SynapseSyncService.baseUrl);
+  try {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Synapse 云同步'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。设置变更会在短暂延迟后上传，并每五分钟检查远端。'),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(SynapseSyncService.deviceTrackingStatus),
+              ),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(labelText: '服务地址'),
+                keyboardType: TextInputType.url,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          if (SynapseSyncService.isConfigured)
+            TextButton(
+              onPressed: () async {
+                await SynapseSyncService.clearCredentials();
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+              },
+              child: const Text('清除凭据'),
+            ),
+          if (SynapseSyncService.isConfigured)
+            TextButton(
+              onPressed: () async {
+                try {
+                  final applied = await SynapseSyncService.previewChanges(dialogContext);
+                  if (applied && dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (error) {
+                  SmartDialog.showToast(error.toString());
+                }
+              },
+              child: const Text('预览变更'),
+            ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final result = await SynapseSyncService.authorizeAndBind(
+                  dialogContext,
+                  baseUrl: urlController.text,
+                );
+                SmartDialog.showToast('Synapse 已绑定 UID ${result['uid']}');
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+              } catch (error) {
+                SmartDialog.showToast(error.toString());
+              }
+            },
+            child: const Text('保存并启用'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) setState();
+  } finally {
+    urlController.dispose();
+  }
+}
 Future<void> audioNormalization(
   BuildContext context,
   VoidCallback setState, {
@@ -1245,4 +1450,125 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
       ],
     ),
   );
+}
+
+Future<void> _showStripCategoriesDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final options = SegmentType.values
+      .where((t) => t != SegmentType.poi_highlight)
+      .toList(growable: false);
+  final selected = {...Pref.stripSegmentCategories};
+  if (selected.isEmpty) {
+    selected.addAll(const {'sponsor', 'selfpromo'});
+  }
+  final result = await showModalBottomSheet<Set<String>>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final theme = Theme.of(context);
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    '默认去除空降助手标记类别',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (final t in options)
+                        CheckboxListTile(
+                          dense: true,
+                          value: selected.contains(t.name),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          secondary: Icon(
+                            Icons.circle,
+                            size: 12,
+                            color: t.color,
+                          ),
+                          title: Text(t.title),
+                          subtitle: Text(
+                            t.shortTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onChanged: (v) {
+                            setModalState(() {
+                              if (v == true) {
+                                selected.add(t.name);
+                              } else {
+                                selected.remove(t.name);
+                              }
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: selected.isEmpty
+                              ? null
+                              : () => Navigator.of(context).pop({...selected}),
+                          child: Text('保存（${selected.length}）'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+  if (result == null) return;
+  await Pref.setStripSegmentCategories(result);
+  setState();
+}
+
+Future<void> _showStripMinDurationDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<double>(
+    context: context,
+    builder: (context) => SliderDialog(
+      title: const Text('去除空降助手片段最小时长'),
+      min: 0,
+      max: 30,
+      divisions: 30,
+      precise: 0,
+      value: (Pref.stripMinSegmentMs / 1000).clamp(0, 30).toDouble(),
+      suffix: 's',
+    ),
+  );
+  if (res == null) return;
+  await Pref.setStripMinSegmentMs((res * 1000).round());
+  setState();
 }

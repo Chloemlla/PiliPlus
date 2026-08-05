@@ -1,6 +1,6 @@
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/models/common/image_type.dart';
-import 'package:PiliPlus/models_new/follow/list.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/models/common/image_type.dart';
+import 'package:pili_plus/models_new/follow/list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

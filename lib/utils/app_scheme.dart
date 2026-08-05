@@ -1,28 +1,30 @@
 // ignore_for_file: constant_identifier_names
 
-import 'dart:async' show StreamSubscription;
+import 'dart:async';
+import 'dart:io' show Platform, Process;
 
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:pili_plus/common/widgets/view_safe_area.dart';
+import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/models/common/fav_type.dart';
-import 'package:PiliPlus/models/common/video/source_type.dart';
-import 'package:PiliPlus/pages/audio/view.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/vote.dart';
-import 'package:PiliPlus/pages/fan/view.dart';
-import 'package:PiliPlus/pages/follow/view.dart';
-import 'package:PiliPlus/pages/follow_type/followed/view.dart';
-import 'package:PiliPlus/pages/live/view.dart';
-import 'package:PiliPlus/pages/rank/view.dart';
-import 'package:PiliPlus/pages/subscription_detail/view.dart';
-import 'package:PiliPlus/pages/video/reply_reply/view.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:PiliPlus/utils/url_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/models/common/fav_type.dart';
+import 'package:pili_plus/models/common/video/source_type.dart';
+import 'package:pili_plus/models/synapse_oauth.dart';
+import 'package:pili_plus/pages/audio/view.dart';
+import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
+import 'package:pili_plus/pages/fan/view.dart';
+import 'package:pili_plus/pages/follow/view.dart';
+import 'package:pili_plus/pages/follow_type/followed/view.dart';
+import 'package:pili_plus/pages/live/view.dart';
+import 'package:pili_plus/pages/rank/view.dart';
+import 'package:pili_plus/pages/subscription_detail/view.dart';
+import 'package:pili_plus/pages/video/reply_reply/view.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/url_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,13 +37,73 @@ abstract final class PiliScheme {
   static final uriDigitRegExp = RegExp(r'/(\d+)');
   static final _prefixRegex = RegExp(r'^\S+://');
 
+  /// Valid callbacks are buffered because a cold-start deep link can arrive
+  /// before the authorization dialog subscribes.
+  static final _pendingOAuthCallbackController =
+      StreamController<SynapseOAuthCallback>.broadcast();
+  static final List<SynapseOAuthCallback> _pendingOAuthCallbacks = [];
+  static Stream<SynapseOAuthCallback> get pendingOAuthCallback =>
+      _pendingOAuthCallbackController.stream;
+
+  static SynapseOAuthCallback? takePendingOAuthCallback(String state) {
+    final index = _pendingOAuthCallbacks.indexWhere(
+      (callback) => callback.state == state,
+    );
+    if (index < 0) return null;
+    return _pendingOAuthCallbacks.removeAt(index);
+  }
+
+  static void discardPendingOAuthCallback(SynapseOAuthCallback callback) {
+    _pendingOAuthCallbacks.remove(callback);
+  }
+
   static void init() {
-    // Register our protocol only on Windows platform
-    // registerProtocolHandler('bilibili');
+    // Register piliplus:// protocol on Windows for deep link auth callback
+    _registerWindowsProtocol();
+
     appLinks = AppLinks();
+
+    // Handle initial link (e.g. from protocol handler launch)
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        routePush(uri);
+      }
+    });
 
     listener?.cancel();
     listener = appLinks.uriLinkStream.listen(routePush);
+  }
+
+  /// Register piliplus:// protocol in Windows registry so the browser can
+  /// launch PiliPlus via deep link. Writes to HKCU (no admin required).
+  static void _registerWindowsProtocol() {
+    if (!Platform.isWindows) return;
+    try {
+      final exe = Platform.resolvedExecutable;
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus',
+        '/ve', '/d', 'URL:PiliPlus Protocol',
+        '/f',
+      ]);
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus',
+        '/v', 'URL Protocol', '/d', '',
+        '/f',
+      ]);
+      Process.run('reg', [
+        'add', 'HKCU\\Software\\Classes\\piliplus\\shell\\open\\command',
+        '/ve', '/d', '"$exe" "%1"',
+        '/f',
+      ]);
+    } on Object {
+      // Best-effort; portable builds may skip protocol registration.
+    }
+  }
+
+  static void dispose() {
+    listener?.cancel();
+    _pendingOAuthCallbacks.clear();
+    _pendingOAuthCallbackController.close();
   }
 
   static int? _videoProgress(Map<String, String> queryParameters) {
@@ -99,6 +161,18 @@ abstract final class PiliScheme {
     final String path = uri.path;
 
     switch (scheme) {
+      case 'piliplus':
+        if (host == 'synapse-auth') {
+          final callback = SynapseOAuthCallback.tryParse(uri);
+          if (callback == null) return false;
+          _pendingOAuthCallbacks.add(callback);
+          if (_pendingOAuthCallbacks.length > 8) {
+            _pendingOAuthCallbacks.removeAt(0);
+          }
+          _pendingOAuthCallbackController.add(callback);
+          return true;
+        }
+        return false;
       case 'bilibili':
         switch (host) {
           case 'root':

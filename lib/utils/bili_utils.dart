@@ -1,4 +1,4 @@
-import 'package:PiliPlus/common/widgets/svg/level_icon.dart';
+import 'package:pili_plus/common/widgets/svg/level_icon.dart';
 import 'package:flutter/material.dart';
 
 abstract final class BiliUtils {

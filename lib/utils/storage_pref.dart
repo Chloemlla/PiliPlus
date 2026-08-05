@@ -1,46 +1,49 @@
 import 'dart:io';
 
-import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
+import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop;
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/models/common/bar_hide_type.dart';
-import 'package:PiliPlus/models/common/dynamic/dynamic_badge_mode.dart';
-import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
-import 'package:PiliPlus/models/common/dynamic/up_panel_position.dart';
-import 'package:PiliPlus/models/common/follow_order_type.dart';
-import 'package:PiliPlus/models/common/member/tab_type.dart';
-import 'package:PiliPlus/models/common/msg/msg_unread_type.dart';
-import 'package:PiliPlus/models/common/nav_bar_config.dart';
-import 'package:PiliPlus/models/common/reply/reply_sort_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/skip_type.dart';
-import 'package:PiliPlus/models/common/super_chat_type.dart';
-import 'package:PiliPlus/models/common/super_resolution_type.dart';
-import 'package:PiliPlus/models/common/theme/theme_type.dart';
-import 'package:PiliPlus/models/common/video/audio_quality.dart';
-import 'package:PiliPlus/models/common/video/cdn_type.dart';
-import 'package:PiliPlus/models/common/video/live_quality.dart';
-import 'package:PiliPlus/models/common/video/subtitle_pref_type.dart';
-import 'package:PiliPlus/models/common/video/video_decode_type.dart';
-import 'package:PiliPlus/models/common/video/video_quality.dart';
-import 'package:PiliPlus/models/user/danmaku_rule.dart';
-import 'package:PiliPlus/models/user/info.dart';
-import 'package:PiliPlus/pages/setting/pages/fullscreen_sc_size.dart'
+import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/models/common/bar_hide_type.dart';
+import 'package:pili_plus/models/common/dynamic/dynamic_badge_mode.dart';
+import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
+import 'package:pili_plus/models/common/dynamic/up_panel_position.dart';
+import 'package:pili_plus/models/common/follow_order_type.dart';
+import 'package:pili_plus/models/common/member/tab_type.dart';
+import 'package:pili_plus/models/common/msg/msg_unread_type.dart';
+import 'package:pili_plus/models/common/nav_bar_config.dart';
+import 'package:pili_plus/models/common/reply/reply_sort_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
+import 'package:pili_plus/models/common/super_chat_type.dart';
+import 'package:pili_plus/models/common/super_resolution_type.dart';
+import 'package:pili_plus/models/common/theme/theme_type.dart';
+import 'package:pili_plus/models/common/video/audio_quality.dart';
+import 'package:pili_plus/models/common/video/cdn_type.dart';
+import 'package:pili_plus/models/common/video/live_quality.dart';
+import 'package:pili_plus/models/common/video/subtitle_pref_type.dart';
+import 'package:pili_plus/models/common/video/video_decode_type.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
+import 'package:pili_plus/models/user/danmaku_rule.dart';
+import 'package:pili_plus/models/user/info.dart';
+import 'package:pili_plus/pages/setting/pages/fullscreen_sc_size.dart'
     show kFullScreenSCWidth;
-import 'package:PiliPlus/plugin/pl_player/models/audio_output_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
-import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
-import 'package:PiliPlus/plugin/pl_player/models/hwdec_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/utils/device_utils.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/login_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/plugin/pl_player/models/audio_output_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/bottom_progress_behavior.dart';
+import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:pili_plus/plugin/pl_player/models/hwdec_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/bilibili_device_identity.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/setting_secret_store.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart' show FlexSchemeVariant;
 import 'package:flutter/foundation.dart';
@@ -126,10 +129,8 @@ abstract final class Pref {
     }
     return SegmentType.values
         .map(
-          (item) => Pair(
-            first: item,
-            second: SkipType.values[list[item.index]],
-          ),
+          (item) =>
+              Pair(first: item, second: SkipType.values[list[item.index]]),
         )
         .toList();
   }
@@ -139,13 +140,11 @@ abstract final class Pref {
     if (list == null || list.length != SegmentType.values.length) {
       return SegmentType.values.map((i) => i.color).toList();
     }
-    return SegmentType.values.map(
-      (item) {
-        final String e = list[item.index];
-        final color = e.isNotEmpty ? int.tryParse('FF$e', radix: 16) : null;
-        return color != null ? Color(color) : item.color;
-      },
-    ).toList();
+    return SegmentType.values.map((item) {
+      final String e = list[item.index];
+      final color = e.isNotEmpty ? int.tryParse('FF$e', radix: 16) : null;
+      return color != null ? Color(color) : item.color;
+    }).toList();
   }
 
   static bool get feedBackEnable =>
@@ -470,6 +469,91 @@ abstract final class Pref {
   static bool get openInBrowser =>
       _setting.get(SettingBoxKey.openInBrowser, defaultValue: false);
 
+  static bool get sealAutoStart =>
+      _setting.get(SettingBoxKey.sealAutoStart, defaultValue: false);
+
+  /// When true, attach logged-in Bilibili cookies to Seal delegate (protocol v2).
+  static bool get sealCookiePassthrough =>
+      _setting.get(SettingBoxKey.sealCookiePassthrough, defaultValue: true);
+
+  static bool get sealCookieRemember =>
+      _setting.get(SettingBoxKey.sealCookieRemember, defaultValue: false);
+
+  /// Remembered mid for Seal cookie account; 0 = none.
+  static int get sealCookieRememberMid {
+    final v = _setting.get(
+      SettingBoxKey.sealCookieRememberMid,
+      defaultValue: 0,
+    );
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
+  static bool get sealCookieAlwaysAsk =>
+      _setting.get(SettingBoxKey.sealCookieAlwaysAsk, defaultValue: false);
+
+  static Future<void> setSealCookieRemember({
+    required bool remember,
+    int mid = 0,
+  }) async {
+    await _setting.put(SettingBoxKey.sealCookieRemember, remember);
+    await _setting.put(
+      SettingBoxKey.sealCookieRememberMid,
+      remember ? mid : 0,
+    );
+  }
+
+  static Future<void> clearSealCookieRemember() =>
+      setSealCookieRemember(remember: false, mid: 0);
+
+  /// Opt-in: when downloading via Seal, strip SponsorBlock-marked ad ranges.
+  static bool get stripMarkedSegmentsEnabled => _setting.get(
+    SettingBoxKey.stripMarkedSegmentsEnabled,
+    defaultValue: false,
+  );
+
+  /// Default strip categories (SegmentType.name). Never includes poi_highlight.
+  static Set<String> get stripSegmentCategories {
+    final raw = _setting.get(SettingBoxKey.stripSegmentCategories);
+    if (raw is List && raw.isNotEmpty) {
+      return {
+        for (final e in raw)
+          if (e is String && e.isNotEmpty && e != 'poi_highlight') e,
+      };
+    }
+    return const {'sponsor', 'selfpromo'};
+  }
+
+  /// Min segment length for strip (ms). Defaults from blockLimit (seconds).
+  static int get stripMinSegmentMs {
+    final stored = _setting.get(SettingBoxKey.stripMinSegmentMs);
+    if (stored is int && stored > 0) return stored;
+    final fromLimit = (blockLimit * 1000).round();
+    return fromLimit > 0 ? fromLimit : 1000;
+  }
+
+  static bool get stripAlwaysAskCategories => _setting.get(
+    SettingBoxKey.stripAlwaysAskCategories,
+    defaultValue: false,
+  );
+
+  static Future<void> setStripSegmentCategories(Set<String> categories) async {
+    final cleaned = {
+      for (final e in categories)
+        if (e.isNotEmpty && e != 'poi_highlight') e,
+    };
+    await _setting.put(
+      SettingBoxKey.stripSegmentCategories,
+      cleaned.toList(growable: false),
+    );
+  }
+
+  static Future<void> setStripMinSegmentMs(int ms) async {
+    final v = ms < 0 ? 0 : ms;
+    await _setting.put(SettingBoxKey.stripMinSegmentMs, v);
+  }
+
   static bool get savedRcmdTip =>
       _setting.get(SettingBoxKey.savedRcmdTip, defaultValue: true);
 
@@ -606,6 +690,7 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.webdavUsername, defaultValue: '');
 
   static String get webdavPassword =>
+      SettingSecretStore.read(SettingBoxKey.webdavPassword) ??
       _setting.get(SettingBoxKey.webdavPassword, defaultValue: '');
 
   static String get webdavDirectory =>
@@ -654,6 +739,11 @@ abstract final class Pref {
   static bool get applyFilterToRelatedVideos => _setting.get(
     SettingBoxKey.applyFilterToRelatedVideos,
     defaultValue: true,
+  );
+
+  static bool get autoOpenClipboardVideoLink => _setting.get(
+    SettingBoxKey.autoOpenClipboardVideoLink,
+    defaultValue: false,
   );
 
   static bool get enableBackgroundPlay =>
@@ -736,6 +826,10 @@ abstract final class Pref {
 
   static bool get enableSystemProxy =>
       _setting.get(SettingBoxKey.enableSystemProxy, defaultValue: false);
+
+  /// When true (default), skip manual HTTP proxy while Clash Meta VPN is routing.
+  static bool get clashAutoAdapt =>
+      _setting.get(SettingBoxKey.clashAutoAdapt, defaultValue: true);
 
   static bool get enableHttp2 =>
       _setting.get(SettingBoxKey.enableHttp2, defaultValue: false);
@@ -862,6 +956,24 @@ abstract final class Pref {
   static double get longPressSpeedDefault =>
       _video.get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0);
 
+  static double get longPressSpeedGain => _video.get(
+    VideoBoxKey.longPressSpeedGain,
+    defaultValue: LongPressSpeedFormulaDefaults.gain,
+  );
+
+  static LongPressSpeedFormula get longPressSpeedFormula =>
+      LongPressSpeedFormula.fromIndex(
+        _video.get(
+          VideoBoxKey.longPressSpeedFormula,
+          defaultValue: LongPressSpeedFormula.multiply.index,
+        ),
+      );
+
+  static String get longPressSpeedCustomFormula => _video.get(
+    VideoBoxKey.longPressSpeedCustomFormula,
+    defaultValue: LongPressSpeedFormulaDefaults.customFormula,
+  );
+
   static bool get defaultShowComment =>
       _setting.get(SettingBoxKey.defaultShowComment, defaultValue: false);
 
@@ -923,6 +1035,7 @@ abstract final class Pref {
       buvid = LoginUtils.generateBuvid();
       _localCache.put(LocalCacheKey.buvid, buvid);
     }
+    BilibiliDeviceIdentity.buvid = buvid;
     return buvid;
   }
 
@@ -1033,3 +1146,5 @@ abstract final class Pref {
 
   static List? get liveStream => _setting.get(SettingBoxKey.liveStream);
 }
+
+

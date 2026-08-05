@@ -1,16 +1,21 @@
-import 'dart:async' show FutureOr;
+import 'dart:async';
 import 'dart:io' show Platform;
 
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/user.dart';
-import 'package:PiliPlus/main.dart';
-import 'package:PiliPlus/services/account_service.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/user.dart';
+import 'package:pili_plus/main.dart';
+import 'package:pili_plus/services/account_service.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/bilibili_device_identity.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/utils/web_cookie_sync.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' show Digest;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
@@ -18,29 +23,55 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract final class LoginUtils {
-  static FutureOr setWebCookie([Account? account]) {
+  static Future<void> initializeSession() async {
+    Request.installAccountManager();
+    Accounts.configureSessionHandlers(
+      activateAccount: Request.buvidActive,
+      onMainLogin: onLoginMain,
+      onMainLogout: onLogoutMain,
+    );
+    await Accounts.refresh();
+    await setWebCookie();
+
+    if (Accounts.main.isLogin) {
+      final coin = Pref.userInfoCache?.money;
+      if (coin == null) {
+        await syncCoin();
+      } else {
+        GlobalData().coins = coin;
+      }
+      await SynapseSyncService.maybeShowStartupPrompt();
+    }
+  }
+
+  static Future<void> syncCoin() async {
+    final res = await UserHttp.getCoin();
+    if (res case Success(:final response)) {
+      GlobalData().coins = response;
+    }
+  }
+
+  static Future<void> setWebCookie([Account? account]) async {
     if (Platform.isLinux) {
-      return null;
+      return;
     }
     final cookies = (account ?? Accounts.main).cookieJar.toList();
     final webManager = web.CookieManager.instance(
       webViewEnvironment: webViewEnvironment,
     );
-    final isWindows = Platform.isWindows;
-    return Future.wait(
-      cookies.map(
-        (cookie) => webManager.setCookie(
-          url: web.WebUri(
-            '${isWindows ? 'https://' : ''} ${cookie.domain}',
-          ),
+    await WebCookieSync.writeAll(
+      cookies,
+      write: (origin, cookie) async {
+        await webManager.setCookie(
+          url: web.WebUri(origin.toString()),
           name: cookie.name,
           value: cookie.value,
           path: cookie.path ?? '/',
           domain: cookie.domain,
           isSecure: cookie.secure,
           isHttpOnly: cookie.httpOnly,
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -48,7 +79,7 @@ abstract final class LoginUtils {
     final account = Accounts.main;
     final res = await UserHttp.userInfo();
     if (res case Success(:final response)) {
-      setWebCookie(account);
+      await setWebCookie(account);
       RequestUtils.syncHistoryStatus();
       if (response.isLogin == true) {
         final accountService = Get.find<AccountService>()
@@ -64,6 +95,8 @@ abstract final class LoginUtils {
         if (response != Pref.userInfoCache) {
           await GStorage.userInfo.put('userInfoCache', response);
         }
+        await SynapseSyncService.maybeShowStartupPrompt();
+        unawaited(SynapseSyncService.syncAllBilibiliAccounts());
       }
     } else {
       // 获取用户信息失败
@@ -86,6 +119,7 @@ abstract final class LoginUtils {
       ..isLogin.value = false;
 
     return Future.wait([
+      SynapseSyncService.disableForLogout(),
       if (!Platform.isLinux)
         web.CookieManager.instance(
           webViewEnvironment: webViewEnvironment,
@@ -98,10 +132,12 @@ abstract final class LoginUtils {
     final md5Str = Digest(
       List.generate(16, (_) => Utils.random.nextInt(256)),
     ).toString();
-    return 'XY${md5Str[2]}${md5Str[12]}${md5Str[22]}$md5Str';
+    final buvid = 'XY${md5Str[2]}${md5Str[12]}${md5Str[22]}$md5Str';
+    BilibiliDeviceIdentity.buvid = buvid;
+    return buvid;
   }
 
-  static final buvid = Pref.buvid;
+  static String get buvid => Pref.buvid;
 
   // static String getUUID() {
   //   return const Uuid().v4().replaceAll('-', '');

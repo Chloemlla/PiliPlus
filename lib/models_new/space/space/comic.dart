@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/space/space_archive/item.dart';
+import 'package:pili_plus/models_new/space/space_archive/item.dart';
 
 class Comic {
   int? count;

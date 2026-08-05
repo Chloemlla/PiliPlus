@@ -1,17 +1,17 @@
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/badge.dart';
-import 'package:PiliPlus/common/widgets/image/image_save.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/stat/stat.dart';
-import 'package:PiliPlus/common/widgets/video_card/video_card_v.dart';
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/models/common/badge_type.dart';
-import 'package:PiliPlus/models/common/stat_type.dart';
-import 'package:PiliPlus/models_new/member/coin_like_arc/item.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/image/image_save.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/stat/stat.dart';
+import 'package:pili_plus/common/widgets/video_card/video_card_v.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/models/common/badge_type.dart';
+import 'package:pili_plus/models/common/stat_type.dart';
+import 'package:pili_plus/models_new/member/coin_like_arc/item.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart';
 
 class MemberCoinLikeItem extends StatelessWidget {
@@ -121,16 +121,20 @@ class MemberCoinLikeItem extends StatelessWidget {
                         type: StatType.danmaku,
                         value: item.danmaku,
                       ),
-                      const Spacer(),
-                      Text(
-                        DateFormatUtils.dateFormat(
-                          item.ctime,
-                          short: VideoCardV.shortFormat,
-                          long: VideoCardV.longFormat,
-                        ),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.outline,
+                      Expanded(
+                        child: Text(
+                          DateFormatUtils.dateFormat(
+                            item.ctime,
+                            short: VideoCardV.shortFormat,
+                            long: VideoCardV.longFormat,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),

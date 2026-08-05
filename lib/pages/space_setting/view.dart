@@ -1,12 +1,12 @@
 import 'dart:math';
 
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/space_setting/privacy.dart';
-import 'package:PiliPlus/pages/space_setting/controller.dart';
+import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/space_setting/privacy.dart';
+import 'package:pili_plus/pages/space_setting/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class SpaceSettingPage extends StatefulWidget {
   const SpaceSettingPage({super.key});

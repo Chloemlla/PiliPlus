@@ -1,8 +1,8 @@
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models_new/video/video_note_list/data.dart';
-import 'package:PiliPlus/models_new/video/video_note_list/list.dart';
-import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models_new/video/video_note_list/data.dart';
+import 'package:pili_plus/models_new/video/video_note_list/list.dart';
+import 'package:pili_plus/pages/common/common_list_controller.dart';
 import 'package:get/get.dart';
 
 class NoteListPageCtr

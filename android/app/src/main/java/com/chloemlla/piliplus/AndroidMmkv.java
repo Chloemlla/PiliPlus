@@ -1,0 +1,262 @@
+package com.chloemlla.piliplus;
+
+import android.content.Context;
+
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.github.dart_lang.jni_flutter.JniFlutterPlugin;
+import com.tencent.mmkv.MMKV;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.Iterator;
+
+@Keep
+public final class AndroidMmkv {
+    private static final String BOX_PREFIX = "pili_plus_";
+
+    private static volatile boolean initialized = false;
+    private static volatile boolean unavailable = false;
+
+    private AndroidMmkv() {
+    }
+
+    public static boolean initialize() {
+        return initialize(JniFlutterPlugin.getApplicationContext());
+    }
+
+    public static boolean initialize(Context context) {
+        if (initialized) return true;
+        if (unavailable || context == null) return false;
+
+        synchronized (AndroidMmkv.class) {
+            if (initialized) return true;
+            try {
+                MMKV.initialize(context.getApplicationContext());
+                initialized = true;
+                return true;
+            } catch (Throwable ignored) {
+                unavailable = true;
+                return false;
+            }
+        }
+    }
+
+    public static boolean isAvailable() {
+        return initialized || initialize();
+    }
+
+    @Nullable
+    public static synchronized String exportBox(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return null;
+
+            JSONObject entries = new JSONObject();
+            String[] keys = mmkv.allKeys();
+            if (keys != null) {
+                for (String key : keys) {
+                    entries.put(key, mmkv.decodeString(key, ""));
+                }
+            }
+            return entries.toString();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Export only keys (no values) for cheap lazy box open. */
+    @Nullable
+    public static String exportKeys(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return null;
+
+            JSONArray keysJson = new JSONArray();
+            String[] keys = mmkv.allKeys();
+            if (keys != null) {
+                for (String key : keys) {
+                    keysJson.put(key);
+                }
+            }
+            return keysJson.toString();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static int count(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return -1;
+            String[] keys = mmkv.allKeys();
+            return keys == null ? 0 : keys.length;
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    public static boolean containsKey(@NonNull String name, @NonNull String key) {
+        try {
+            MMKV mmkv = box(name);
+            return mmkv != null && mmkv.containsKey(key);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    @Nullable
+    public static String getString(@NonNull String name, @NonNull String key) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null || !mmkv.containsKey(key)) return null;
+            return mmkv.decodeString(key, null);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static synchronized boolean replaceBox(@NonNull String name, @NonNull String json) {
+        String previous = exportBox(name);
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null || previous == null) return false;
+
+            JSONObject entries = new JSONObject(json);
+            if (restoreEntries(mmkv, entries)) return true;
+            restoreEntries(mmkv, new JSONObject(previous));
+        } catch (Throwable ignored) {
+            try {
+                MMKV mmkv = box(name);
+                if (mmkv != null && previous != null) {
+                    restoreEntries(mmkv, new JSONObject(previous));
+                }
+            } catch (Throwable restoreIgnored) {
+                // The caller still receives failure; the export remains available for diagnosis.
+            }
+        }
+        return false;
+    }
+
+    private static boolean restoreEntries(@NonNull MMKV mmkv, @NonNull JSONObject entries) {
+        try {
+            mmkv.clearAll();
+            for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
+                String key = it.next();
+                if (!mmkv.encode(key, entries.optString(key))) return false;
+            }
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static boolean putString(
+            @NonNull String name,
+            @NonNull String key,
+            @NonNull String value
+    ) {
+        try {
+            MMKV mmkv = box(name);
+            return mmkv != null && mmkv.encode(key, value);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static synchronized boolean putAllStrings(@NonNull String name, @NonNull String json) {
+        String previous = exportBox(name);
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null || previous == null) return false;
+
+            JSONObject entries = new JSONObject(json);
+            for (Iterator<String> it = entries.keys(); it.hasNext(); ) {
+                String key = it.next();
+                if (!mmkv.encode(key, entries.optString(key))) {
+                    restoreEntries(mmkv, new JSONObject(previous));
+                    return false;
+                }
+            }
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            restoreBox(name, previous);
+            return false;
+        }
+    }
+
+    public static boolean removeValue(@NonNull String name, @NonNull String key) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return false;
+            mmkv.removeValueForKey(key);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static synchronized boolean removeValues(@NonNull String name, @NonNull String keysJson) {
+        String previous = exportBox(name);
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null || previous == null) return false;
+
+            JSONArray keys = new JSONArray(keysJson);
+            String[] keyArray = new String[keys.length()];
+            for (int i = 0; i < keys.length(); i++) {
+                keyArray[i] = keys.getString(i);
+            }
+            mmkv.removeValuesForKeys(keyArray);
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            restoreBox(name, previous);
+            return false;
+        }
+    }
+
+    private static void restoreBox(@NonNull String name, @Nullable String previous) {
+        if (previous == null) return;
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv != null) restoreEntries(mmkv, new JSONObject(previous));
+        } catch (Throwable ignored) {
+            // Keep the original operation failure visible to the caller.
+        }
+    }
+
+    public static boolean clearBox(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return false;
+            mmkv.clearAll();
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    public static boolean sync(@NonNull String name) {
+        try {
+            MMKV mmkv = box(name);
+            if (mmkv == null) return false;
+            mmkv.sync();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    @Nullable
+    private static MMKV box(String name) {
+        if (!isAvailable()) return null;
+        return MMKV.mmkvWithID(BOX_PREFIX + name, MMKV.SINGLE_PROCESS_MODE);
+    }
+}

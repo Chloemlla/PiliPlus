@@ -1,24 +1,24 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
-import 'package:PiliPlus/pages/common/multi_select/base.dart'
+import 'package:pili_plus/common/widgets/appbar/appbar.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
+import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
+import 'package:pili_plus/pages/common/multi_select/base.dart'
     show BaseMultiSelectMixin;
-import 'package:PiliPlus/pages/download/controller.dart';
-import 'package:PiliPlus/pages/download/detail/widgets/item.dart';
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/utils/grid.dart';
-import 'package:PiliPlus/utils/storage.dart';
+import 'package:pili_plus/pages/download/controller.dart';
+import 'package:pili_plus/pages/download/detail/widgets/item.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/utils/grid.dart';
+import 'package:pili_plus/utils/storage.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class DownloadDetailPage extends StatefulWidget {
   const DownloadDetailPage({
@@ -172,7 +172,7 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
                                 removeList: true,
                               );
                             }
-                            GStorage.watchProgress.delete(entry.cid.toString());
+                            GStorage.watchProgressStore.delete(entry.cid.toString());
                           },
                           controller: this,
                         );
@@ -201,7 +201,7 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
         final isDeleteAll = allChecked.length == _downloadItems.length;
         await Future.wait([
           if (isDeleteAll) _closeSub(),
-          GStorage.watchProgress.deleteAll(
+          GStorage.watchProgressStore.deleteAll(
             allChecked.map((e) => e.cid.toString()),
           ),
           for (final entry in allChecked)
@@ -228,3 +228,4 @@ class _DownloadDetailPageState extends State<DownloadDetailPage>
     );
   }
 }
+

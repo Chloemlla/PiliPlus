@@ -1,9 +1,10 @@
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/cupertino.dart' show CupertinoThemeData;
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 abstract final class ThemeUtils {
   static late ThemeData lightTheme;
@@ -70,6 +71,12 @@ abstract final class ThemeUtils {
         centerTitle: false,
         scrolledUnderElevation: 0,
         backgroundColor: colorScheme.surface,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemStatusBarContrastEnforced: false,
+          statusBarBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarIconBrightness: isDark ? Brightness.dark : Brightness.light,
+        ),
         titleTextStyle: TextStyle(
           fontSize: 16,
           color: colorScheme.onSurface,

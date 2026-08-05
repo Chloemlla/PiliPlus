@@ -1,72 +1,70 @@
+import 'dart:async' show Timer;
 import 'dart:io' show Platform;
 import 'dart:math';
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/keep_alive_wrapper.dart';
-import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
-import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_behavior.dart'
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/keep_alive_wrapper.dart';
+import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
+import 'package:pili_plus/common/widgets/scroll_behavior.dart'
     show NoOverscrollIndicator;
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
     show tabBarView, platformAlwaysClampingPhysics, platformClampingPhysics;
-import 'package:PiliPlus/common/widgets/simple_app_bar.dart';
-import 'package:PiliPlus/common/widgets/sliver/video_header.dart';
-import 'package:PiliPlus/common/widgets/svg/play_icon.dart';
-import 'package:PiliPlus/models/common/episode_panel_type.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/page.dart';
-import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
-import 'package:PiliPlus/models_new/video/video_tag/data.dart';
-import 'package:PiliPlus/pages/common/common_intro_controller.dart';
-import 'package:PiliPlus/pages/danmaku/view.dart';
-import 'package:PiliPlus/pages/episode_panel/view.dart';
-import 'package:PiliPlus/pages/video/ai_conclusion/view.dart';
-import 'package:PiliPlus/pages/video/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/local/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/local/view.dart';
-import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/pgc/view.dart';
-import 'package:PiliPlus/pages/video/introduction/pgc/widgets/intro_detail.dart';
-import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/ugc/view.dart';
-import 'package:PiliPlus/pages/video/introduction/ugc/widgets/page.dart';
-import 'package:PiliPlus/pages/video/introduction/ugc/widgets/season.dart';
-import 'package:PiliPlus/pages/video/member/controller.dart';
-import 'package:PiliPlus/pages/video/member/view.dart';
-import 'package:PiliPlus/pages/video/related/view.dart';
-import 'package:PiliPlus/pages/video/reply/controller.dart';
-import 'package:PiliPlus/pages/video/reply/view.dart';
-import 'package:PiliPlus/pages/video/view_point/view.dart';
-import 'package:PiliPlus/pages/video/widgets/header_control.dart';
-import 'package:PiliPlus/pages/video/widgets/player_focus.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
-import 'package:PiliPlus/plugin/pl_player/view/view.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/services/shutdown_timer_service.dart'
+import 'package:pili_plus/common/widgets/simple_app_bar.dart';
+import 'package:pili_plus/common/widgets/sliver/video_header.dart';
+import 'package:pili_plus/common/widgets/svg/play_icon.dart';
+import 'package:pili_plus/models/common/episode_panel_type.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
+import 'package:pili_plus/models_new/video/video_detail/page.dart';
+import 'package:pili_plus/models_new/video/video_detail/ugc_season.dart';
+import 'package:pili_plus/models_new/video/video_tag/data.dart';
+import 'package:pili_plus/pages/common/common_intro_controller.dart';
+import 'package:pili_plus/pages/danmaku/view.dart';
+import 'package:pili_plus/pages/episode_panel/view.dart';
+import 'package:pili_plus/pages/video/ai_conclusion/view.dart';
+import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/pages/video/introduction/local/controller.dart';
+import 'package:pili_plus/pages/video/introduction/local/view.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/view.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/widgets/intro_detail.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/view.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/widgets/page.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/widgets/season.dart';
+import 'package:pili_plus/pages/video/member/controller.dart';
+import 'package:pili_plus/pages/video/member/view.dart';
+import 'package:pili_plus/pages/video/related/view.dart';
+import 'package:pili_plus/pages/video/reply/controller.dart';
+import 'package:pili_plus/pages/video/reply/view.dart';
+import 'package:pili_plus/pages/video/view_point/view.dart';
+import 'package:pili_plus/pages/video/widgets/header_control.dart';
+import 'package:pili_plus/pages/video/widgets/player_focus.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:pili_plus/plugin/pl_player/view/view.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/shutdown_timer_service.dart'
     show shutdownTimerService;
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/android/bindings.g.dart';
-import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/max_screen_size.dart';
-import 'package:PiliPlus/utils/mobile_observer.dart';
-import 'package:PiliPlus/utils/num_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/max_screen_size.dart';
+import 'package:pili_plus/utils/mobile_observer.dart';
+import 'package:pili_plus/utils/num_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, clampDouble;
 import 'package:flutter/material.dart';
@@ -74,6 +72,8 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class VideoDetailPageV extends StatefulWidget {
   const VideoDetailPageV({super.key});
@@ -100,6 +100,15 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   late final UgcIntroController ugcIntroController;
   late final PgcIntroController pgcIntroController;
   late final LocalIntroController localIntroController;
+
+  bool _backgroundAudioActive = false;
+  bool _backgroundOnlyPlayAudio = false;
+  Future<void> _backgroundAudioTransition = Future<void>.value();
+  bool _isAppInBackground = false;
+  Timer? _backgroundAudioDebounceTimer;
+
+  /// 进入后台后先等待该窗口，窗口内返回则取消切换（快速切换零开销）。
+  static const Duration _backgroundAudioDebounceDelay = Duration(seconds: 3);
 
   bool get autoExitFullscreen =>
       videoDetailController.plPlayerController.autoExitFullscreen;
@@ -140,6 +149,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
     PlPlayerController.setPlayCallBack(playCallBack);
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
+    videoPlayerServiceHandler?.onMiniPlayer = _openMiniPlayerFromNotification;
 
     if (videoDetailController.removeSafeArea) {
       hideSystemBar();
@@ -189,14 +199,85 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     final isResume = state == .resumed;
     final ctr = videoDetailController.plPlayerController..visible = isResume;
     if (isResume) {
+      _isAppInBackground = false;
       if (!ctr.showDanmaku) {
         introController.startTimer();
         ctr.showDanmaku = true;
       }
+      _cancelBackgroundAudioTimers();
+      _queueBackgroundAudioTransition(_restoreForegroundVideo);
     } else if (state == .paused) {
+      _isAppInBackground = true;
       introController.cancelTimer();
       ctr.showDanmaku = false;
+      _armBackgroundAudioDebounce();
     }
+  }
+
+  bool get _canUseBackgroundAudio {
+    final ctr = videoDetailController.plPlayerController;
+    return PlatformUtils.isMobile &&
+        ctr.continuePlayInBackground.value &&
+        !videoDetailController.isFileSource &&
+        !ctr.isLive &&
+        (!Platform.isAndroid || !AndroidHelper.isPipMode);
+  }
+
+  /// 进后台先等防抖窗口；窗口内返回则直接取消，快速切换零开销。
+  void _armBackgroundAudioDebounce() {
+    if (!_canUseBackgroundAudio) return;
+    _backgroundAudioDebounceTimer?.cancel();
+    _backgroundAudioDebounceTimer = Timer(_backgroundAudioDebounceDelay, () {
+      _backgroundAudioDebounceTimer = null;
+      if (!mounted || !_isAppInBackground) return;
+      _queueBackgroundAudioTransition(_enterBackgroundAudio);
+    });
+  }
+
+  void _cancelBackgroundAudioTimers() {
+    _backgroundAudioDebounceTimer?.cancel();
+    _backgroundAudioDebounceTimer = null;
+  }
+
+  void _queueBackgroundAudioTransition(Future<void> Function() transition) {
+    _backgroundAudioTransition = _backgroundAudioTransition.then<void>(
+      (_) async {
+        if (!mounted) return;
+        try {
+          await transition();
+        } catch (error, stackTrace) {
+          if (kDebugMode) {
+            debugPrint(
+              'background audio transition failed: $error\n$stackTrace',
+            );
+          }
+        }
+      },
+    );
+  }
+
+  /// 原地关闭视频轨道，不重开播放器，缓存保持热状态、后台音频零中断。
+  /// mpv 的 vid=no 会停止读取视频流，视频字节不再下载。
+  Future<void> _enterBackgroundAudio() async {
+    if (!_canUseBackgroundAudio || _backgroundAudioActive) return;
+
+    final ctr = videoDetailController.plPlayerController;
+    final player = ctr.videoPlayerController;
+    if (player == null) return;
+
+    _backgroundOnlyPlayAudio = ctr.onlyPlayAudio.value;
+    _backgroundAudioActive = true;
+    ctr.setOnlyPlayAudioEnabled(true);
+  }
+
+  Future<void> _restoreForegroundVideo() async {
+    if (!_backgroundAudioActive) return;
+
+    final ctr = videoDetailController.plPlayerController;
+    final onlyPlayAudio = _backgroundOnlyPlayAudio;
+    _backgroundAudioActive = false;
+    // 原地恢复视频轨道，缓存仍热，近零等待。
+    ctr.setOnlyPlayAudioEnabled(onlyPlayAudio);
   }
 
   Future<void>? playCallBack() {
@@ -206,6 +287,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         ..addPositionListener(positionListener);
     }
     return plPlayerController?.play();
+  }
+
+  /// 通知栏「小窗播放」动作：唤出当前视频的应用内小窗播放器。
+  /// 页面销毁后回调会被清除，此处再防御一次避免误触已销毁的控制器。
+  Future<void> _openMiniPlayerFromNotification() async {
+    if (videoDetailController.isClosed) return;
+    await videoDetailController.openInAppMiniPlayer();
   }
 
   // 播放器状态监听
@@ -263,7 +351,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
           case PlayRepeat.listOrder:
           case PlayRepeat.listCycle:
           case PlayRepeat.autoPlayRelated:
-            exitFlag = !introController.nextPlay();
+            exitFlag = !introController.nextPlay(skipCharging: true);
           case PlayRepeat.pause:
         }
       }
@@ -326,6 +414,11 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
 
   @override
   void dispose() {
+    _cancelBackgroundAudioTimers();
+    if (videoPlayerServiceHandler?.onMiniPlayer ==
+        _openMiniPlayerFromNotification) {
+      videoPlayerServiceHandler!.onMiniPlayer = null;
+    }
     plPlayerController
       ?..removeStatusLister(playerListener)
       ..removePositionListener(positionListener);
@@ -491,34 +584,27 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         return SimpleScaffold(
           appBar: removeAppBar(isFullScreen)
               ? null
-              : Obx(
-                  () {
-                    final scrollRatio = videoDetailController.scrollRatio.value;
-                    final brightness = colorScheme.brightness;
-                    final Brightness statusBarBrightness;
-                    final Brightness statusBarIconBrightness;
-                    final backgroundColor = isPortrait && scrollRatio > 0
-                        ? Color.lerp(
-                            Colors.black,
-                            colorScheme.surface,
-                            scrollRatio,
-                          )!
-                        : Colors.black;
-                    if (isPortrait && scrollRatio >= 0.5) {
-                      statusBarBrightness = brightness;
-                      statusBarIconBrightness = brightness.reverse;
-                    } else {
-                      statusBarBrightness = .dark;
-                      statusBarIconBrightness = .light;
-                    }
-                    return SimpleAppBar(
-                      height: padding.top,
-                      backgroundColor: backgroundColor,
-                      brightness: brightness,
-                      statusBarBrightness: statusBarBrightness,
-                      statusBarIconBrightness: statusBarIconBrightness,
-                    );
-                  },
+              : PreferredSize(
+                  preferredSize: const .fromHeight(0),
+                  child: Obx(
+                    () {
+                      final scrollRatio =
+                          videoDetailController.scrollRatio.value;
+                      final backgroundColor = isPortrait && scrollRatio > 0
+                          ? Color.lerp(
+                              Colors.black,
+                              colorScheme.surface,
+                              scrollRatio,
+                            )!
+                          : Colors.black;
+                      return SimpleAppBar(
+                        height: padding.top,
+                        backgroundColor: backgroundColor,
+                        brightness: colorScheme.brightness,
+                        statusBarIconBrightness: colorScheme.brightness,
+                      );
+                    },
+                  ),
                 ),
           body: ExtendedNestedScrollView(
             onlyOneScrollInBody: true,

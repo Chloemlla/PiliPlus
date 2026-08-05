@@ -2,69 +2,71 @@ import 'dart:async';
 import 'dart:math' show min;
 import 'dart:ui';
 
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/in_app_mini_player.dart';
+import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:pili_plus/controllers/quality_recommendation_controller.dart';
+import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
-import 'package:PiliPlus/grpc/dm.dart';
-import 'package:PiliPlus/http/fav.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/user.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/action_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/post_segment_model.dart';
-import 'package:PiliPlus/models/common/sponsor_block/segment_model.dart';
-import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
-import 'package:PiliPlus/models/common/video/audio_quality.dart';
-import 'package:PiliPlus/models/common/video/source_type.dart';
-import 'package:PiliPlus/models/common/video/video_decode_type.dart';
-import 'package:PiliPlus/models/common/video/video_quality.dart';
-import 'package:PiliPlus/models/common/video/video_type.dart';
-import 'package:PiliPlus/models/video/play/url.dart';
-import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
-import 'package:PiliPlus/models_new/media_list/media_list.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
-import 'package:PiliPlus/models_new/video/video_detail/data.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/page.dart';
-import 'package:PiliPlus/models_new/video/video_pbp/data.dart';
-import 'package:PiliPlus/models_new/video/video_play_info/subtitle.dart';
-import 'package:PiliPlus/models_new/video/video_stein_edgeinfo/data.dart';
-import 'package:PiliPlus/pages/audio/view.dart';
-import 'package:PiliPlus/pages/common/publish/publish_route.dart';
-import 'package:PiliPlus/pages/search/widgets/search_text.dart';
-import 'package:PiliPlus/pages/sponsor_block/block_mixin.dart';
-import 'package:PiliPlus/pages/video/download_panel/view.dart';
-import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
-import 'package:PiliPlus/pages/video/medialist/view.dart';
-import 'package:PiliPlus/pages/video/note/view.dart';
-import 'package:PiliPlus/pages/video/post_panel/view.dart';
-import 'package:PiliPlus/pages/video/send_danmaku/view.dart';
-import 'package:PiliPlus/pages/video/widgets/header_control.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
-import 'package:PiliPlus/plugin/pl_player/models/heart_beat_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/connectivity_utils.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/extension/nested_scroll_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
-import 'package:PiliPlus/utils/video_utils.dart';
+import 'package:pili_plus/grpc/dm.dart';
+import 'package:pili_plus/http/fav.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/user.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/action_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/post_segment_model.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_model.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
+import 'package:pili_plus/models/common/video/audio_quality.dart';
+import 'package:pili_plus/models/common/video/source_type.dart';
+import 'package:pili_plus/models/common/video/video_decode_type.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
+import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/models/video/play/url.dart';
+import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
+import 'package:pili_plus/models_new/media_list/media_list.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
+import 'package:pili_plus/models_new/video/video_detail/data.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
+import 'package:pili_plus/models_new/video/video_detail/page.dart';
+import 'package:pili_plus/models_new/video/video_pbp/data.dart';
+import 'package:pili_plus/models_new/video/video_play_info/subtitle.dart';
+import 'package:pili_plus/models_new/video/video_stein_edgeinfo/data.dart';
+import 'package:pili_plus/pages/audio/view.dart';
+import 'package:pili_plus/pages/common/publish/publish_route.dart';
+import 'package:pili_plus/pages/search/widgets/search_text.dart';
+import 'package:pili_plus/pages/sponsor_block/block_mixin.dart';
+import 'package:pili_plus/pages/video/download_panel/view.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
+import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
+import 'package:pili_plus/pages/video/medialist/view.dart';
+import 'package:pili_plus/pages/video/note/view.dart';
+import 'package:pili_plus/pages/video/post_panel/view.dart';
+import 'package:pili_plus/pages/video/send_danmaku/view.dart';
+import 'package:pili_plus/pages/video/widgets/header_control.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/data_source.dart';
+import 'package:pili_plus/plugin/pl_player/models/heart_beat_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/connectivity_utils.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/extension/nested_scroll_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/theme_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/utils/video_utils.dart';
 import 'package:collection/collection.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
     show ExtendedNestedScrollViewState;
@@ -74,6 +76,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:media_kit/media_kit.dart' hide Subtitle;
 
 class VideoDetailController extends GetxController
@@ -94,6 +97,7 @@ class VideoDetailController extends GetxController
   @override
   late final isUgc = videoType == VideoType.ugc;
   VideoType? _actualVideoType;
+  VideoType get actualVideoType => _actualVideoType ?? videoType;
 
   // 页面来源 稍后再看 收藏夹
   late bool isPlayAll;
@@ -102,7 +106,9 @@ class VideoDetailController extends GetxController
   late bool isFileSource;
   late bool _mediaDesc = false;
   late final RxList<MediaListItemModel> mediaList = <MediaListItemModel>[].obs;
-  late String watchLaterTitle;
+
+  /// Playlist / 稍后再看 panel title. Empty when not [isPlayAll].
+  String watchLaterTitle = '';
 
   /// tabs相关配置
   late TabController tabCtr;
@@ -113,6 +119,7 @@ class VideoDetailController extends GetxController
 
   /// 播放器配置 画质 音质 解码格式
   final Rxn<VideoQuality> currentVideoQa = Rxn<VideoQuality>();
+  late final QualityRecommendationController qualityRecommendationController;
   AudioQuality? currentAudioQa;
   late VideoDecodeFormatType currentDecodeFormats;
 
@@ -318,12 +325,18 @@ class VideoDetailController extends GetxController
 
   final isLoginVideo = Accounts.get(AccountType.video).isLogin;
 
-  late final watchProgress = GStorage.watchProgress;
+  late final watchProgress = GStorage.watchProgressStore;
   void cacheLocalProgress() {
     if (plPlayerController.playerStatus.isCompleted) {
-      watchProgress.put(cid.value.toString(), entry.totalTimeMilli);
+      Persistence.background(
+        watchProgress.put(cid.value.toString(), entry.totalTimeMilli),
+        label: 'completed video progress',
+      );
     } else if (playedTime case final playedTime?) {
-      watchProgress.put(cid.value.toString(), playedTime.inMilliseconds);
+      Persistence.background(
+        watchProgress.put(cid.value.toString(), playedTime.inMilliseconds),
+        label: 'video progress',
+      );
     }
   }
 
@@ -367,6 +380,9 @@ class VideoDetailController extends GetxController
     seasonId = args['seasonId'];
     pgcType = args['pgcType'];
     heroTag = args['heroTag'];
+    qualityRecommendationController = QualityRecommendationController(
+      onApplyQuality: _applyRecommendedQuality,
+    );
     cover = RxString(args['cover'] ?? '');
     isVertical = RxBool(args['isVertical'] ?? false);
 
@@ -549,10 +565,7 @@ class VideoDetailController extends GetxController
       alignment: Alignment.centerLeft,
       child: SlideTransition(
         position: animation.drive(
-          Tween<Offset>(
-            begin: const Offset(-1.0, 0.0),
-            end: Offset.zero,
-          ),
+          Tween<Offset>(begin: const Offset(-1.0, 0.0), end: Offset.zero),
         ),
         child: Padding(
           padding: const EdgeInsets.only(top: 5),
@@ -674,6 +687,32 @@ class VideoDetailController extends GetxController
     return bestVideo ?? videoList.first;
   }
 
+  Uri? _qualityProbeUri(Iterable<VideoItem> videos) {
+    for (final url in videos.expand((video) => video.playUrls)) {
+      final uri = Uri.tryParse(url);
+      if (uri != null &&
+          uri.hasScheme &&
+          (uri.scheme == 'http' || uri.scheme == 'https')) {
+        return uri;
+      }
+    }
+    return null;
+  }
+
+  bool _applyRecommendedQuality(int qualityCode) {
+    final videos = data.dash?.video;
+    final quality = videos
+        ?.firstWhereOrNull((video) => video.quality.code == qualityCode)
+        ?.quality;
+    if (quality == null) return false;
+    if (currentVideoQa.value?.code == quality.code) return true;
+
+    plPlayerController.cacheVideoQa = quality.code;
+    currentVideoQa.value = quality;
+    updatePlayer();
+    return true;
+  }
+
   /// 更新画质、音质
   void updatePlayer() {
     final currentVideoQa = this.currentVideoQa.value;
@@ -727,10 +766,7 @@ class VideoDetailController extends GetxController
               isMp4: entry.mediaType == 1,
               hasDashAudio: entry.hasDashAudio,
             )
-          : NetworkSource(
-              videoSource: videoUrl!,
-              audioSource: audioUrl,
-            ),
+          : NetworkSource(videoSource: videoUrl!, audioSource: audioUrl),
       seekTo: seek,
       duration: data.timeLength == null
           ? null
@@ -746,6 +782,9 @@ class VideoDetailController extends GetxController
       videoType: videoType,
       onInit: () {
         videoState.value = true;
+        qualityRecommendationController.onPlaybackReady(
+          currentVideoQa.value?.code,
+        );
         setSubtitle(vttSubtitlesIndex.value);
       },
       width: firstVideo.width,
@@ -771,6 +810,73 @@ class VideoDetailController extends GetxController
     }
 
     defaultST = null;
+  }
+
+  Future<void> openInAppMiniPlayer({String? title}) async {
+    final currentCid = cid.value;
+    final routeArgs = Map<dynamic, dynamic>.of(args)
+      ..['aid'] = aid
+      ..['bvid'] = bvid
+      ..['cid'] = currentCid
+      ..['cover'] = cover.value
+      ..['progress'] = plPlayerController.positionInMilliseconds
+      ..['heroTag'] = Utils.makeHeroTag(currentCid);
+
+    if (epId != null) {
+      routeArgs['epId'] = epId;
+    } else {
+      routeArgs.remove('epId');
+    }
+    if (seasonId != null) {
+      routeArgs['seasonId'] = seasonId;
+    } else {
+      routeArgs.remove('seasonId');
+    }
+    if (pgcType != null) {
+      routeArgs['pgcType'] = pgcType;
+    } else {
+      routeArgs.remove('pgcType');
+    }
+
+    if (isFileSource) {
+      routeArgs
+        ..['entry'] = entry
+        ..['dirPath'] = args['dirPath'];
+    }
+
+    final success = await InAppMiniPlayerService.instance.show(
+      sourceController: plPlayerController,
+      title: title ?? (isFileSource ? entry.showTitle : args['title']) ?? bvid,
+      isLive: false,
+      aid: aid,
+      bvid: bvid,
+      cid: currentCid,
+      epid: isUgc ? null : epId,
+      seasonId: isUgc ? null : seasonId,
+      pgcType: isUgc ? null : pgcType,
+      videoType: videoType,
+      onOpenSource: (progress) async {
+        await Get.toNamed(
+          '/videoV',
+          arguments: Map<dynamic, dynamic>.of(routeArgs)
+            ..['progress'] = progress
+            ..['heroTag'] = Utils.makeHeroTag(currentCid),
+          preventDuplicates: false,
+        );
+      },
+    );
+
+    if (!success) {
+      return;
+    }
+
+    if (plPlayerController.controlsLock.value) {
+      plPlayerController.onLockControl(false);
+    }
+    if (plPlayerController.isFullScreen.value) {
+      await plPlayerController.triggerFullScreen(status: false);
+    }
+    SmartDialog.showToast('已转入应用内小窗');
   }
 
   bool isQuerying = false;
@@ -822,7 +928,7 @@ class VideoDetailController extends GetxController
       epid: epId,
       seasonId: seasonId,
       tryLook: plPlayerController.tryLook,
-      videoType: _actualVideoType ?? videoType,
+      videoType: actualVideoType,
       language: currLang.value,
       voiceBalance: plPlayerController.enableAudioNormalization,
     );
@@ -885,6 +991,10 @@ class VideoDetailController extends GetxController
           _setVideoHeight();
           currentDecodeFormats = VideoDecodeFormatType.AVC;
           currentVideoQa.value = videoQuality;
+          await qualityRecommendationController.setAvailableQualities(
+            [videoQuality.code],
+            currentQualityCode: plPlayerController.cacheVideoQa,
+          );
           await _initPlayerIfNeeded(autoFullScreenFlag);
           isQuerying = false;
           return;
@@ -904,16 +1014,19 @@ class VideoDetailController extends GetxController
       // if (kDebugMode) debugPrint("allVideosList:${allVideosList}");
       // 当前可播放的最高质量视频
       final curHighestVideoQa = videoList.first.quality.code;
-      // 预设的画质为null，则当前可用的最高质量
-      int targetVideoQa = curHighestVideoQa;
-      if (data.acceptQuality?.isNotEmpty == true &&
-          plPlayerController.cacheVideoQa! <= curHighestVideoQa) {
-        // 如果预设的画质低于当前最高
-        targetVideoQa = data.acceptQuality!.findClosestTarget(
-          (e) => e <= plPlayerController.cacheVideoQa!,
-          (a, b) => a > b ? a : b,
-        );
-      }
+      final availableQualities = videoList
+          .map((video) => video.quality.code)
+          .toSet();
+      final recommendation = await qualityRecommendationController
+          .setAvailableQualities(
+            availableQualities,
+            probeUri: _qualityProbeUri(videoList),
+            currentQualityCode: plPlayerController.cacheVideoQa,
+          );
+      // RecommendationService only returns qn values from the supplied DASH
+      // set. Keep the existing highest-quality fallback for malformed data.
+      final targetVideoQa = recommendation?.qualityCode ?? curHighestVideoQa;
+      plPlayerController.cacheVideoQa = targetVideoQa;
       currentVideoQa.value = VideoQuality.fromCode(targetVideoQa);
 
       /// 优先顺序 设置中指定解码格式 -> 当前可选的首个解码格式
@@ -1244,6 +1357,7 @@ class VideoDetailController extends GetxController
       ..dispose();
     subtitles.clear();
     vttSubtitles.clear();
+    qualityRecommendationController.dispose();
     super.onClose();
   }
 
@@ -1256,6 +1370,7 @@ class VideoDetailController extends GetxController
     defaultST = null;
     videoUrl = null;
     audioUrl = null;
+    qualityRecommendationController.clearRecommendation();
 
     // danmaku
     savedDanmaku = null;
@@ -1303,10 +1418,7 @@ class VideoDetailController extends GetxController
     try {
       final res = await Request().get(
         'https://bvc.bilivideo.com/pbp/data',
-        queryParameters: {
-          'bvid': bvid,
-          'cid': cid.value,
-        },
+        queryParameters: {'bvid': bvid, 'cid': cid.value},
       );
       PbpData data = PbpData.fromJson(res.data);
       int stepSec = data.stepSec ?? 0;
@@ -1573,13 +1685,7 @@ class VideoDetailController extends GetxController
       if (kDebugMode) {
         debugPrint(title);
       }
-      Get.toNamed(
-        '/dlna',
-        parameters: {
-          'url': url,
-          'title': ?title,
-        },
-      );
+      Get.toNamed('/dlna', parameters: {'url': url, 'title': ?title});
     } else {
       res.toast();
     }

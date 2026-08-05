@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HTTPS-first default for targetSdk 37 / Android 17 cleartext deprecation path.
+  Runtime certificate bypass remains a separate Dio/user setting and must not be
+  modeled as usesCleartextTraffic=true.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

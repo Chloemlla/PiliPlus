@@ -1,21 +1,20 @@
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/view_sliver_safe_area.dart';
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/common/widgets/dialog/export_import.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
+import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
-import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
-import 'package:PiliPlus/utils/app_scheme.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/reply_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
-import 'package:PiliPlus/utils/waterfall.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:pili_plus/pages/my_reply/controller.dart';
+import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/reply_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/waterfall.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
@@ -27,40 +26,36 @@ class MyReply extends StatefulWidget {
 }
 
 class _MyReplyState extends State<MyReply> with DynMixin {
-  final List<ReplyInfo> _replies = <ReplyInfo>[];
+  late final MyReplyController _controller;
 
   @override
   void initState() {
     super.initState();
-    _initReply();
-  }
-
-  void _initReply() {
-    _replies
-      ..assignAll(GStorage.reply!.values.map(ReplyInfo.fromBuffer))
-      ..sort((a, b) => b.ctime.compareTo(a.ctime)); // rpid not aligned;
+    _controller = MyReplyController(GStorage.favoriteReplyStore)..reload();
+    if (_controller.invalidStoredCount > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          SmartDialog.showToast(
+            '已跳过 ${_controller.invalidStoredCount} 条损坏的本地收藏',
+          );
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SimpleScaffold(
+    final replies = _controller.replies;
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('我的评论'),
+        title: Text('收藏的评论（${_controller.count}）'),
         actions: [
-          if (kDebugMode)
-            IconButton(
-              tooltip: 'Clear',
-              onPressed: () => showConfirmDialog(
-                context: context,
-                title: const Text('Clear Local Storage?'),
-                onConfirm: () {
-                  GStorage.reply!.clear();
-                  _replies.clear();
-                  setState(() {});
-                },
-              ),
-              icon: const Icon(Icons.clear_all),
-            ),
+          IconButton(
+            tooltip: '清空收藏',
+            onPressed: _controller.count == 0 ? null : _clearFavorites,
+            icon: const Icon(Icons.delete_sweep_outlined),
+          ),
           IconButton(
             tooltip: '导出',
             onPressed: _showExportDialog,
@@ -77,24 +72,26 @@ class _MyReplyState extends State<MyReply> with DynMixin {
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          _replies.isNotEmpty
+          replies.isNotEmpty
               ? ViewSliverSafeArea(
                   sliver: SliverWaterfallFlow(
                     gridDelegate: dynGridDelegate,
                     delegate: SliverChildBuilderDelegate(
-                      childCount: _replies.length,
+                      childCount: _controller.count,
                       (context, index) => ReplyItemGrpc(
                         replyLevel: 0,
                         needDivider: false,
-                        replyItem: _replies[index],
+                        replyItem: replies[index],
                         replyReply: _replyReply,
-                        onDelete: (_, _) => _onDelete(index),
+                        onDelete: (reply, _) => _onDelete(reply),
                         onCheckReply: _onCheckReply,
                       ),
                     ),
                   ),
                 )
-              : const HttpError(),
+              : const HttpError(
+                  errMsg: '暂无收藏的评论\n可在评论更多菜单中收藏',
+                ),
         ],
       ),
     );
@@ -123,9 +120,11 @@ class _MyReplyState extends State<MyReply> with DynMixin {
     }
   }
 
-  void _onDelete(int index) {
-    _replies.removeAt(index);
-    setState(() {});
+  Future<void> _onDelete(ReplyInfo reply) async {
+    await _controller.delete(reply.id.toString());
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onCheckReply(ReplyInfo replyInfo) {
@@ -142,9 +141,7 @@ class _MyReplyState extends State<MyReply> with DynMixin {
   }
 
   String _onExport() {
-    return Utils.jsonEncoder.convert(
-      _replies.map((e) => e.toProto3Json()).toList(),
-    );
+    return _controller.exportJson();
   }
 
   void _showExportDialog() {
@@ -179,16 +176,23 @@ class _MyReplyState extends State<MyReply> with DynMixin {
     );
   }
 
-  Future<void> _onImport(List<dynamic> list) async {
-    await GStorage.reply!.putAll({
-      for (var e in list)
-        e['id'].toString(): (ReplyInfo.create()..mergeFromProto3Json(e))
-            .writeToBuffer(),
-    });
-    if (mounted) {
-      _initReply();
-      setState(() {});
-    }
+  Future<void> _onImport(Object? value) async {
+    final summary = await _controller.importJson(value);
+    if (!mounted) return;
+    setState(() {});
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导入摘要'),
+        content: Text(summary.message),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showImportDialog() {
@@ -204,7 +208,7 @@ class _MyReplyState extends State<MyReply> with DynMixin {
             title: const Text('从剪贴板导入', style: style),
             onTap: () {
               Get.back();
-              importFromClipBoard<List<dynamic>>(
+              importFromClipBoard<Object?>(
                 context,
                 title: '评论',
                 onExport: _onExport,
@@ -218,11 +222,24 @@ class _MyReplyState extends State<MyReply> with DynMixin {
             title: const Text('从本地文件导入', style: style),
             onTap: () {
               Get.back();
-              importFromLocalFile<List<dynamic>>(onImport: _onImport);
+              importFromLocalFile<Object?>(onImport: _onImport);
             },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _clearFavorites() async {
+    final confirmed = await showConfirmDialog(
+      context: context,
+      title: const Text('清空收藏的评论'),
+      content: Text('确定清空全部 ${_controller.count} 条本地评论收藏吗？此操作无法撤销。'),
+    );
+    if (!confirmed) return;
+    await _controller.clear();
+    if (!mounted) return;
+    setState(() {});
+    SmartDialog.showToast('已清空收藏');
   }
 }

@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/dynamic/dyn_reaction/item.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_reaction/item.dart';
 
 class DynReactionData {
   bool? hasMore;

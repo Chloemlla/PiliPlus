@@ -1,4 +1,4 @@
-import 'package:PiliPlus/pages/setting/widgets/checkbox_num.dart';
+import 'package:pili_plus/pages/setting/widgets/checkbox_num.dart';
 import 'package:flutter/material.dart';
 
 class OrderedCheckboxListTile extends StatelessWidget {

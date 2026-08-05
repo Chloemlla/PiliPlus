@@ -1,20 +1,29 @@
-import 'package:PiliPlus/utils/path_utils.dart';
+import 'package:pili_plus/utils/path_utils.dart';
 import 'package:path/path.dart' as path;
 
 sealed class DataSource {
   final String videoSource;
   final String? audioSource;
+  final bool cache;
 
   DataSource({
     required this.videoSource,
     required this.audioSource,
+    this.cache = true,
   });
+
+  DataSource copy() => NetworkSource(
+    videoSource: videoSource,
+    audioSource: audioSource,
+    cache: cache,
+  );
 }
 
 class NetworkSource extends DataSource {
   NetworkSource({
     required super.videoSource,
     required super.audioSource,
+    super.cache,
   });
 }
 
@@ -36,5 +45,6 @@ class FileSource extends DataSource {
          audioSource: isMp4 || !hasDashAudio
              ? null
              : path.join(dir, typeTag, PathUtils.audioNameType2),
+         cache: false,
        );
 }

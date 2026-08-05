@@ -3,67 +3,69 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/cropped_image.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/disabled_icon.dart';
-import 'package:PiliPlus/common/widgets/gesture/immediate_tap_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/gesture/mouse_interactive_viewer.dart';
-import 'package:PiliPlus/common/widgets/gesture/player_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/common/widgets/player_bar.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/models/common/sponsor_block/action_type.dart';
-import 'package:PiliPlus/models/common/sponsor_block/post_segment_model.dart';
-import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
-import 'package:PiliPlus/models/common/super_resolution_type.dart';
-import 'package:PiliPlus/models/common/video/video_quality.dart';
-import 'package:PiliPlus/models/video/play/url.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
-import 'package:PiliPlus/pages/common/common_intro_controller.dart';
-import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
-import 'package:PiliPlus/pages/live_room/widgets/bottom_control.dart'
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/cropped_image.dart';
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/common/widgets/disabled_icon.dart';
+import 'package:pili_plus/common/widgets/gesture/immediate_tap_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/gesture/mouse_interactive_viewer.dart';
+import 'package:pili_plus/common/widgets/gesture/player_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/loading_widget.dart';
+import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/player_bar.dart';
+import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
+import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:pili_plus/common/widgets/view_safe_area.dart';
+import 'package:pili_plus/models/common/sponsor_block/action_type.dart';
+import 'package:pili_plus/models/common/sponsor_block/post_segment_model.dart';
+import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
+import 'package:pili_plus/models/common/super_resolution_type.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
+import 'package:pili_plus/models/video/play/url.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
+import 'package:pili_plus/models_new/video/video_detail/ugc_season.dart';
+import 'package:pili_plus/pages/common/common_intro_controller.dart';
+import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
+import 'package:pili_plus/pages/live_room/widgets/bottom_control.dart'
     as live_bottom;
-import 'package:PiliPlus/pages/video/controller.dart';
-import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
-import 'package:PiliPlus/pages/video/post_panel/popup_menu_text.dart';
-import 'package:PiliPlus/pages/video/post_panel/view.dart';
-import 'package:PiliPlus/pages/video/widgets/header_control.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/bottom_control_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/data_status.dart';
-import 'package:PiliPlus/plugin/pl_player/models/double_tap_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
-import 'package:PiliPlus/plugin/pl_player/models/gesture_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/app_bar_ani.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/backward_seek.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/bottom_control.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/common_btn.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/forward_seek.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/mpv_convert_webp.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/play_pause_btn.dart';
-import 'package:PiliPlus/utils/android/bindings.g.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/connectivity_utils.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/mobile_observer.dart';
-import 'package:PiliPlus/utils/path_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
+import 'package:pili_plus/pages/video/post_panel/popup_menu_text.dart';
+import 'package:pili_plus/pages/video/post_panel/view.dart';
+import 'package:pili_plus/pages/video/quality/quality_widgets.dart';
+import 'package:pili_plus/pages/video/widgets/header_control.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/bottom_control_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/data_status.dart';
+import 'package:pili_plus/plugin/pl_player/models/double_tap_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:pili_plus/plugin/pl_player/models/gesture_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/app_bar_ani.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/backward_seek.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/bottom_control.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/common_btn.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/forward_seek.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/mpv_convert_webp.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/play_pause_btn.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/connectivity_utils.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/mobile_observer.dart';
+import 'package:pili_plus/utils/path_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:collection/collection.dart';
 import 'package:easy_debounce/easy_throttle.dart';
@@ -84,6 +86,8 @@ import 'package:screen_brightness_platform_interface/screen_brightness_platform_
 import 'package:window_manager/window_manager.dart';
 
 part 'widgets.dart';
+
+enum _QualityMenuAction { mode }
 
 class PLVideoPlayer extends StatefulWidget {
   const PLVideoPlayer({
@@ -387,6 +391,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     super.dispose();
   }
 
+  Future<void> _persistSelectedVideoQuality(int quality) async {
+    await GStorage.setting.put(
+      await ConnectivityUtils.isWiFi
+          ? SettingBoxKey.defaultVideoQa
+          : SettingBoxKey.defaultVideoQaCellular,
+      quality,
+    );
+  }
+
   // 动态构建底部控制条
   Widget buildBottomControl(
     VideoDetailController videoDetailController,
@@ -467,7 +480,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               tooltip: '高能进度条',
               icon: DisabledIcon(
                 disable: !show,
-                child: const Icon(
+                child: Icon(
                   Icons.show_chart,
                   size: 22,
                   color: Colors.white,
@@ -556,7 +569,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         width: widgetWidth,
         height: 30,
         tooltip: '选集',
-        icon: const Icon(
+        icon: Icon(
           Icons.list,
           size: 22,
           color: Colors.white,
@@ -687,9 +700,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               child: SizedBox(
                 width: widgetWidth,
                 height: 30,
-                child: const Icon(
+                child: Icon(
                   Icons.translate,
-                  size: 18,
+                  size: 22,
                   color: Colors.white,
                 ),
               ),
@@ -742,12 +755,12 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                 width: widgetWidth,
                 height: 30,
                 child: val == 0
-                    ? const Icon(
+                    ? Icon(
                         Icons.closed_caption_off_outlined,
                         size: 22,
                         color: Colors.white,
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.closed_caption_off_rounded,
                         size: 22,
                         color: Colors.white,
@@ -811,45 +824,57 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               .map((i) => i.id)
               .toSet()
               .length;
-          return PopupMenuButton<int>(
+          return PopupMenuButton<Object>(
             tooltip: '画质',
             requestFocus: false,
             initialValue: currentVideoQa.code,
             color: Colors.black.withValues(alpha: 0.8),
+            onSelected: (value) {
+              if (value == _QualityMenuAction.mode) {
+                unawaited(
+                  showQualityModeSelector(
+                    context,
+                    videoDetailController.qualityRecommendationController,
+                  ),
+                );
+                return;
+              }
+              if (value is! int || currentVideoQa.code == value) return;
+
+              final newQa = VideoQuality.fromCode(value);
+              videoDetailController
+                ..plPlayerController.cacheVideoQa = newQa.code
+                ..currentVideoQa.value = newQa
+                ..updatePlayer();
+
+              SmartDialog.showToast("画质已变为：${newQa.desc}");
+
+              if (!plPlayerController.tempPlayerConf) {
+                Persistence.background(
+                  _persistSelectedVideoQuality(value),
+                  label: 'selected video quality',
+                );
+              }
+            },
             itemBuilder: (context) {
-              return List.generate(
-                totalQaSam,
-                (index) {
+              return <PopupMenuEntry<Object>>[
+                PopupMenuItem<Object>(
+                  value: _QualityMenuAction.mode,
+                  height: 42,
+                  child: QualityModeIndicator(
+                    controller:
+                        videoDetailController.qualityRecommendationController,
+                  ),
+                ),
+                const PopupMenuDivider(),
+                ...List.generate(totalQaSam, (index) {
                   final item = videoFormat[index];
                   final enabled = index >= totalQaSam - usefulQaSam;
-                  return PopupMenuItem<int>(
+                  return PopupMenuItem<Object>(
                     enabled: enabled,
                     height: 35,
                     padding: const EdgeInsets.only(left: 15, right: 10),
                     value: item.quality,
-                    onTap: () async {
-                      if (currentVideoQa.code == item.quality) {
-                        return;
-                      }
-                      final int quality = item.quality!;
-                      final newQa = VideoQuality.fromCode(quality);
-                      videoDetailController
-                        ..plPlayerController.cacheVideoQa = newQa.code
-                        ..currentVideoQa.value = newQa
-                        ..updatePlayer();
-
-                      SmartDialog.showToast("画质已变为：${newQa.desc}");
-
-                      // update
-                      if (!plPlayerController.tempPlayerConf) {
-                        GStorage.setting.put(
-                          await ConnectivityUtils.isWiFi
-                              ? SettingBoxKey.defaultVideoQa
-                              : SettingBoxKey.defaultVideoQaCellular,
-                          quality,
-                        );
-                      }
-                    },
                     child: Text(
                       item.newDesc ?? '',
                       style: enabled
@@ -860,8 +885,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                             ),
                     ),
                   );
-                },
-              );
+                }),
+              ];
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -880,8 +905,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         height: 30,
         tooltip: isFullScreen ? '退出全屏' : '全屏',
         icon: isFullScreen
-            ? const Icon(Icons.fullscreen_exit, size: 24, color: Colors.white)
-            : const Icon(Icons.fullscreen, size: 24, color: Colors.white),
+            ? Icon(Icons.fullscreen_exit, size: 22, color: Colors.white)
+            : Icon(Icons.fullscreen, size: 22, color: Colors.white),
         onTap: () =>
             plPlayerController.triggerFullScreen(status: !isFullScreen),
         onSecondaryTap: () => plPlayerController.triggerFullScreen(
@@ -1232,6 +1257,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     return true;
   }
 
+  bool _isLongPressSpeedArea(Offset offset) => offset.dx >= maxWidth / 2;
+
   void _onPointerDown(PointerDownEvent event) {
     if (PlatformUtils.isDesktop) {
       final buttons = event.buttons;
@@ -1251,13 +1278,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       }
     }
 
+    final isLongPressSpeedArea = _isLongPressSpeedArea(event.localPosition);
     final controlsUnlock = !plPlayerController.controlsLock.value;
     if (PlatformUtils.isMobile) {
       _tapGestureRecognizer.addPointer(event);
       if (controlsUnlock) {
         if (!plPlayerController.isLive) {
           _doubleTapGestureRecognizer.addPointer(event);
-          longPressRecognizer.addPointer(event);
+          if (isLongPressSpeedArea) {
+            longPressRecognizer.addPointer(event);
+          }
         }
         _scaleGestureRecognizer
           ..isPosAllowed = _isPositionAllowed(event.localPosition)
@@ -1269,7 +1299,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       } else {
         _tapGestureRecognizer.addPointer(event);
         _doubleTapGestureRecognizer.addPointer(event);
-        longPressRecognizer.addPointer(event);
+        if (isLongPressSpeedArea) {
+          longPressRecognizer.addPointer(event);
+        }
       }
       _scaleGestureRecognizer.addPointer(event);
     }
@@ -1361,6 +1393,12 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           Positioned.fill(top: 4, child: danmaku),
 
         if (!isLive)
+          if (widget.videoDetailController case final controller?)
+            QualityChipOverlay(
+              controller: controller.qualityRecommendationController,
+            ),
+
+        if (!isLive)
           Positioned.fill(
             child: IgnorePointer(
               ignoring: !plPlayerController.enableDragSubtitle,
@@ -1414,7 +1452,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                       ),
                       child: Obx(
                         () => Text(
-                          '${plPlayerController.enableAutoLongPressSpeed ? (plPlayerController.longPressStatus.value ? plPlayerController.lastPlaybackSpeed : plPlayerController.playbackSpeed) * 2 : plPlayerController.longPressSpeed}倍速中',
+                          '${plPlayerController.longPressTargetSpeedText}倍速中',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
@@ -1427,6 +1465,39 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               ),
             ),
           ),
+
+        /// 键盘快捷键（Z/X/C）倍速提示，显示于播放器内中下部
+        Obx(
+          () => AnimatedOpacity(
+            curve: Curves.easeInOut,
+            opacity: plPlayerController.keyboardSpeedToast.value > 0
+                ? 1.0
+                : 0.0,
+            duration: const Duration(milliseconds: 150),
+            child: Align(
+              alignment: const Alignment(0, 0.65),
+              child: IgnorePointer(
+                ignoring: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0x88000000),
+                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                  ),
+                  child: Text(
+                    plPlayerController.keyboardSpeedToast.value > 0
+                        ? '${plPlayerController.keyboardSpeedToast.value.toStringAsFixed(1)}x'
+                        : '',
+                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
 
         /// 时间进度 toast
         if (!isLive)

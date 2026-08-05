@@ -1,8 +1,8 @@
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/models_new/search/search_trending/data.dart';
-import 'package:PiliPlus/models_new/search/search_trending/list.dart';
-import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/models_new/search/search_trending/data.dart';
+import 'package:pili_plus/models_new/search/search_trending/list.dart';
+import 'package:pili_plus/pages/common/common_list_controller.dart';
 
 class SearchTrendingController
     extends CommonListController<SearchTrendingData, SearchTrendingItemModel> {

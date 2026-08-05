@@ -1,4 +1,4 @@
-import 'package:PiliPlus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:flutter/material.dart';
 
 class SliderDialog extends StatefulWidget {

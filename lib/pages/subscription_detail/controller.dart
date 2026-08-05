@@ -1,9 +1,9 @@
-import 'package:PiliPlus/http/fav.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/sub/sub/list.dart';
-import 'package:PiliPlus/models_new/sub/sub_detail/data.dart';
-import 'package:PiliPlus/models_new/sub/sub_detail/media.dart';
-import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:pili_plus/http/fav.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/sub/sub/list.dart';
+import 'package:pili_plus/models_new/sub/sub_detail/data.dart';
+import 'package:pili_plus/models_new/sub/sub_detail/media.dart';
+import 'package:pili_plus/pages/common/common_list_controller.dart';
 import 'package:get/get.dart';
 
 class SubDetailController

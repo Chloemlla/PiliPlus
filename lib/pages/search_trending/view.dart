@@ -1,20 +1,18 @@
 import 'dart:math';
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/sliver/trending_header.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/search/search_trending/list.dart';
-import 'package:PiliPlus/pages/search_trending/controller.dart';
-import 'package:PiliPlus/utils/color_utils.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/search/search_trending/list.dart';
+import 'package:pili_plus/pages/search_trending/controller.dart';
+import 'package:pili_plus/utils/color_utils.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/get_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/image_utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
@@ -30,7 +28,6 @@ class SearchTrendingPage extends StatefulWidget {
 class _SearchTrendingPageState extends State<SearchTrendingPage> {
   final _controller = Get.putOrFind(SearchTrendingController.new);
 
-  late double _offset;
   final RxDouble _scrollRatio = 0.0.obs;
 
   @override
@@ -40,43 +37,17 @@ class _SearchTrendingPageState extends State<SearchTrendingPage> {
     final size = context.mediaQuerySize;
     final maxWidth = size.width - padding.horizontal;
     final width = size.isPortrait ? maxWidth : min(640.0, maxWidth * 0.6);
-    final height = width * 528 / 1125;
-    _offset = height - 56 - padding.top;
-    return Material(
-      child: Stack(
+    return Scaffold(
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
         children: [
-          Padding(
-            padding: .only(left: padding.left, right: padding.right),
-            child: Center(
-              child: SizedBox(
-                width: width,
-                child: refreshIndicator(
-                  onRefresh: _controller.onRefresh,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      TrendingHeader(
-                        offset: _offset,
-                        onScrollRatioChanged: _scrollRatio.call,
-                        child: Image.asset(
-                          width: width,
-                          height: height,
-                          cacheWidth: width.cacheSize(context),
-                          Assets.trendingBanner,
-                          filterQuality: .low,
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: .only(bottom: padding.bottom + 100),
-                        sliver: Obx(
-                          () =>
-                              _buildBody(theme, _controller.loadingState.value),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          SliverPadding(
+            padding: .only(bottom: padding.bottom + 100),
+            sliver: Obx(
+              () =>
+                  _buildBody(theme, _controller.loadingState.value),
             ),
           ),
           Positioned(

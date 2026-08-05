@@ -1,26 +1,25 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/nav_bar_config.dart';
-import 'package:PiliPlus/models_new/fav/fav_folder/list.dart';
-import 'package:PiliPlus/pages/common/common_page.dart';
-import 'package:PiliPlus/pages/home/view.dart';
-import 'package:PiliPlus/pages/login/controller.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/pages/mine/controller.dart';
-import 'package:PiliPlus/pages/mine/widgets/item.dart';
-import 'package:PiliPlus/utils/bili_utils.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/nav_bar_config.dart';
+import 'package:pili_plus/models_new/fav/fav_folder/list.dart';
+import 'package:pili_plus/pages/common/common_page.dart';
+import 'package:pili_plus/pages/home/view.dart';
+import 'package:pili_plus/pages/login/controller.dart';
+import 'package:pili_plus/pages/main/controller.dart';
+import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/pages/mine/widgets/item.dart';
+import 'package:pili_plus/utils/bili_utils.dart';
+import 'package:pili_plus/utils/extension/get_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
@@ -102,36 +101,44 @@ class _MediaPageState extends CommonPageState<MinePage>
   }
 
   Widget _buildActions(Color primary) {
-    return Row(
-      mainAxisAlignment: .spaceEvenly,
-      children: controller.list
-          .map(
-            (e) => Flexible(
-              child: InkWell(
-                onTap: e.onTap,
-                borderRadius: Style.mdRadius,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 80),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        children: controller.list
+            .map(
+              (e) => SizedBox(
+                width: 72,
+                child: InkWell(
+                  onTap: e.onTap,
+                  borderRadius: Style.mdRadius,
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: Column(
-                      spacing: 6,
+                      spacing: 4,
                       mainAxisSize: .min,
                       mainAxisAlignment: .center,
                       children: [
-                        Icon(e.icon, color: primary),
-                        Text(
-                          e.title,
-                          style: const TextStyle(fontSize: 13),
+                        Icon(e.icon, color: primary, size: 22),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            e.title,
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-          )
-          .toList(),
+            )
+            .toList(),
+      ),
     );
   }
 
@@ -164,15 +171,14 @@ class _MediaPageState extends CommonPageState<MinePage>
           ),
           msgBadge(_mainController),
         ],
-        if (GStorage.reply != null)
-          IconButton(
-            iconSize: iconSize,
-            padding: padding,
-            style: style,
-            tooltip: '评论记录',
-            onPressed: () => Get.toNamed('/myReply'),
-            icon: const Icon(Icons.message_outlined),
-          ),
+        IconButton(
+          iconSize: iconSize,
+          padding: padding,
+          style: style,
+          tooltip: '收藏的评论',
+          onPressed: () => Get.toNamed('/myReply'),
+          icon: const Icon(Icons.star_outline),
+        ),
         Obx(
           () {
             final anonymity = MineController.anonymity.value;
@@ -410,29 +416,29 @@ class _MediaPageState extends CommonPageState<MinePage>
     required TextStyle? labelStyle,
     required VoidCallback onTap,
   }) {
-    return Flexible(
+    return Expanded(
       child: InkWell(
         onTap: onTap,
         borderRadius: Style.mdRadius,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 80),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Column(
-              spacing: 4,
-              mainAxisSize: .min,
-              mainAxisAlignment: .center,
-              children: [
-                Text(
-                  count?.toString() ?? '-',
-                  style: countStyle,
-                ),
-                Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            spacing: 2,
+            mainAxisSize: .min,
+            mainAxisAlignment: .center,
+            children: [
+              Text(
+                count?.toString() ?? '-',
+                style: countStyle,
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
                   name,
                   style: labelStyle,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

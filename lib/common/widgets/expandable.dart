@@ -1,4 +1,4 @@
-import 'package:PiliPlus/common/widgets/animated_multi_height.dart';
+import 'package:pili_plus/common/widgets/animated_multi_height.dart';
 import 'package:flutter/material.dart';
 
 class ExpandablePanel extends StatelessWidget {

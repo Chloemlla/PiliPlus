@@ -1,14 +1,14 @@
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models_new/sub/sub/list.dart';
-import 'package:PiliPlus/models_new/sub/sub_detail/media.dart';
-import 'package:PiliPlus/pages/subscription_detail/controller.dart';
-import 'package:PiliPlus/pages/subscription_detail/widget/sub_video_card.dart';
-import 'package:PiliPlus/utils/grid.dart';
-import 'package:PiliPlus/utils/num_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/sub/sub/list.dart';
+import 'package:pili_plus/models_new/sub/sub_detail/media.dart';
+import 'package:pili_plus/pages/subscription_detail/controller.dart';
+import 'package:pili_plus/pages/subscription_detail/widget/sub_video_card.dart';
+import 'package:pili_plus/utils/grid.dart';
+import 'package:pili_plus/utils/num_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

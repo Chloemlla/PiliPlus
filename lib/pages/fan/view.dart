@@ -1,12 +1,12 @@
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/models_new/follow/list.dart';
-import 'package:PiliPlus/pages/fan/controller.dart';
-import 'package:PiliPlus/pages/follow_type/view.dart';
-import 'package:PiliPlus/pages/follow_type/widgets/item.dart';
-import 'package:PiliPlus/pages/share/view.dart' show UserModel;
-import 'package:PiliPlus/utils/parse_int.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/models_new/follow/list.dart';
+import 'package:pili_plus/pages/fan/controller.dart';
+import 'package:pili_plus/pages/follow_type/view.dart';
+import 'package:pili_plus/pages/follow_type/widgets/item.dart';
+import 'package:pili_plus/pages/share/view.dart' show UserModel;
+import 'package:pili_plus/utils/parse_int.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

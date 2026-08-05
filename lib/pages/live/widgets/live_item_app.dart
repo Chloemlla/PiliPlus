@@ -1,13 +1,13 @@
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/image/image_save.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/http/live.dart';
-import 'package:PiliPlus/models_new/live/live_feed_index/card_data_list_item.dart';
-import 'package:PiliPlus/models_new/live/live_feed_index/feedback.dart';
-import 'package:PiliPlus/pages/search/widgets/search_text.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/image/image_save.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/http/live.dart';
+import 'package:pili_plus/models_new/live/live_feed_index/card_data_list_item.dart';
+import 'package:pili_plus/models_new/live/live_feed_index/feedback.dart';
+import 'package:pili_plus/pages/search/widgets/search_text.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -200,14 +200,22 @@ class LiveCardVApp extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            item.areaName.toString(),
-            style: const TextStyle(fontSize: 11, color: Colors.white),
+          Expanded(
+            child: Text(
+              item.areaName.toString(),
+              style: const TextStyle(fontSize: 11, color: Colors.white),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (item.watchedShow?.textLarge case final textLarge?)
-            Text(
-              textLarge,
-              style: const TextStyle(fontSize: 11, color: Colors.white),
+            Flexible(
+              child: Text(
+                textLarge,
+                style: const TextStyle(fontSize: 11, color: Colors.white),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
         ],
       ),

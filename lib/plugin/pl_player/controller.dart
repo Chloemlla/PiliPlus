@@ -1,53 +1,59 @@
-import 'dart:async' show StreamSubscription, Timer;
+import 'dart:async'
+    show StreamSubscription, Timer, unawaited;
 import 'dart:convert' show ascii, utf8;
 import 'dart:io' show Platform;
 import 'dart:math' show max, min;
 import 'dart:ui' as ui;
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/http/browser_ua.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/models/common/audio_normalization.dart';
-import 'package:PiliPlus/models/common/super_resolution_type.dart';
-import 'package:PiliPlus/models/common/video/video_type.dart';
-import 'package:PiliPlus/models/user/danmaku_rule.dart';
-import 'package:PiliPlus/models/video/play/url.dart';
-import 'package:PiliPlus/models_new/video/video_shot/data.dart';
-import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
-import 'package:PiliPlus/pages/setting/models/play_settings.dart'
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/http/browser_ua.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/models/common/audio_normalization.dart';
+import 'package:pili_plus/models/common/super_resolution_type.dart';
+import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/models/user/danmaku_rule.dart';
+import 'package:pili_plus/models/video/play/url.dart';
+import 'package:pili_plus/models_new/video/video_shot/data.dart';
+import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
+import 'package:pili_plus/pages/setting/models/play_settings.dart'
     show kMaxVolume;
-import 'package:PiliPlus/pages/sponsor_block/block_mixin.dart';
-import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
-import 'package:PiliPlus/plugin/pl_player/models/data_status.dart';
-import 'package:PiliPlus/plugin/pl_player/models/double_tap_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/duration.dart';
-import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
-import 'package:PiliPlus/plugin/pl_player/models/heart_beat_type.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
-import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/android/android_helper.dart';
-import 'package:PiliPlus/utils/android/bindings.g.dart';
-import 'package:PiliPlus/utils/asset_utils.dart';
-import 'package:PiliPlus/utils/device_utils.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension/box_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/path_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/pages/sponsor_block/block_mixin.dart';
+import 'package:pili_plus/plugin/pl_player/models/data_source.dart';
+import 'package:pili_plus/plugin/pl_player/models/data_status.dart';
+import 'package:pili_plus/plugin/pl_player/models/double_tap_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/duration.dart';
+import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:pili_plus/plugin/pl_player/models/heart_beat_type.dart';
+import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
+import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:pili_plus/plugin/pl_player/utils/stream_error.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/pip_persistent_service.dart';
+import 'package:pili_plus/services/watch_stats_service.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/asset_utils.dart';
+import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:pili_plus/utils/extension/box_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/path_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:archive/archive.dart' show getCrc32;
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
@@ -71,6 +77,7 @@ typedef PlayCallback = Future<void>? Function();
 class PlPlayerController with BlockConfigMixin {
   Player? _videoPlayerController;
   VideoController? _videoController;
+  final bool _isDetached;
 
   static PlPlayerController? _instance;
 
@@ -96,13 +103,28 @@ class PlPlayerController with BlockConfigMixin {
   void updateDuration(Duration value) {
     duration.value = value.inSeconds;
     durationInMilliseconds = value.inMilliseconds;
+    if (value > Duration.zero) {
+      videoPlayerServiceHandler?.onDurationChange(value);
+    }
   }
 
   int _playerCount = 0;
 
   late double lastPlaybackSpeed = 1.0;
+  late double _activeLongPressSpeed = Pref.longPressSpeedDefault;
   final RxDouble _playbackSpeed = Pref.playSpeedDefault.obs;
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
+
+  /// 键盘快捷键倍速提示（Z/X/C），显示于播放器内中下部
+  final RxDouble keyboardSpeedToast = RxDouble(0.0);
+  Timer? _keyboardSpeedTimer;
+  void showKeyboardSpeedToast(double speed) {
+    keyboardSpeedToast.value = speed;
+    _keyboardSpeedTimer?.cancel();
+    _keyboardSpeedTimer = Timer(const Duration(seconds: 1), () {
+      keyboardSpeedToast.value = 0.0;
+    });
+  }
 
   final RxDouble volume = RxDouble(
     PlatformUtils.isDesktop ? Pref.desktopVolume : 1.0,
@@ -112,8 +134,6 @@ class PlPlayerController with BlockConfigMixin {
   final RxDouble brightness = (-1.0).obs;
 
   final RxBool showControls = false.obs;
-
-  final RxBool showBrightnessStatus = false.obs;
 
   final RxBool longPressStatus = false.obs;
 
@@ -143,6 +163,10 @@ class PlPlayerController with BlockConfigMixin {
   int? width;
   int? height;
 
+  final WatchSessionTracker _watchSessionTracker = WatchSessionTracker();
+  bool _watchPlaybackActive = false;
+  int _lastPersistedPipPositionMs = -1;
+
   late final tryLook = !Accounts.get(AccountType.video).isLogin && Pref.p1080;
 
   late DataSource dataSource;
@@ -161,6 +185,13 @@ class PlPlayerController with BlockConfigMixin {
 
   // 长按倍速
   double get longPressSpeed => _longPressSpeed.value;
+
+  double get longPressTargetSpeed => longPressStatus.value
+      ? _activeLongPressSpeed
+      : _resolveLongPressSpeed(playbackSpeed);
+
+  String get longPressTargetSpeedText =>
+      longPressTargetSpeed.toPrecision(3).toString();
 
   /// [videoPlayerController] instance of Player
   Player? get videoPlayerController => _videoPlayerController;
@@ -208,9 +239,9 @@ class PlPlayerController with BlockConfigMixin {
     return windowManager.setAlwaysOnTop(value);
   }
 
-  Future<void> exitDesktopPip() {
+  Future<void> exitDesktopPip() async {
     isDesktopPip = false;
-    return Future.wait([
+    await Future.wait([
       if (showWindowTitleBar)
         windowManager.setTitleBarStyle(TitleBarStyle.normal),
       windowManager.setMinimumSize(const Size(400, 700)),
@@ -218,11 +249,13 @@ class PlPlayerController with BlockConfigMixin {
       setAlwaysOnTop(false),
       windowManager.setAspectRatio(0),
     ]);
+    _clearPipState();
   }
 
   Future<void> enterDesktopPip() async {
     if (isFullScreen.value) return;
 
+    _persistPipState(force: true);
     isDesktopPip = true;
 
     _lastWindowBounds = await windowManager.getBounds();
@@ -280,6 +313,7 @@ class PlPlayerController with BlockConfigMixin {
   void enterPip({bool autoEnter = false}) {
     if (videoPlayerController != null) {
       final state = videoPlayerController!.state;
+      _persistPipState(position: state.position, force: true);
       PageUtils.enterPip(
         autoEnter: autoEnter,
         width: state.width == 0 ? width : state.width,
@@ -312,6 +346,9 @@ class PlPlayerController with BlockConfigMixin {
 
   late List<double> speedList = Pref.speedList;
   late bool enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
+  late double longPressSpeedGain = Pref.longPressSpeedGain;
+  late LongPressSpeedFormula longPressSpeedFormula = Pref.longPressSpeedFormula;
+  late String longPressSpeedCustomFormula = Pref.longPressSpeedCustomFormula;
   late final showControlDuration = Pref.enableLongShowControl
       ? const Duration(seconds: 30)
       : const Duration(seconds: 3);
@@ -529,8 +566,9 @@ class PlPlayerController with BlockConfigMixin {
   }
 
   // 添加一个私有构造函数
-  PlPlayerController._() {
-    if (PlatformUtils.isMobile) {
+  PlPlayerController._({this._isDetached = false}) {
+    PipPersistentService.instance.ensurePlatformCallbacks();
+    if (!_isDetached && PlatformUtils.isMobile) {
       _orientationListener = NativeDeviceOrientationPlatform.instance
           .onOrientationChanged(
             checkIsAutoRotate: checkIsAutoRotate,
@@ -543,7 +581,7 @@ class PlPlayerController with BlockConfigMixin {
       enableHeart = false;
     }
 
-    if (Platform.isAndroid && autoPiP) {
+    if (!_isDetached && Platform.isAndroid && autoPiP) {
       if (DeviceUtils.sdkInt < 31) {
         AndroidHelper$ToDart.onUserLeaveHint = Runnable.implement(
           $Runnable(run: _onUserLeaveHint),
@@ -566,6 +604,12 @@ class PlPlayerController with BlockConfigMixin {
     return (_instance ??= PlPlayerController._())
       ..isLive = isLive
       .._playerCount += 1;
+  }
+
+  static PlPlayerController detached({bool isLive = false}) {
+    return PlPlayerController._(isDetached: true)
+      ..isLive = isLive
+      .._playerCount = 1;
   }
 
   bool _processing = false;
@@ -606,6 +650,15 @@ class PlPlayerController with BlockConfigMixin {
     Volume? volume,
     bool autoFullScreenFlag = false,
   }) async {
+    _finishWatchStatsSession();
+    _watchPlaybackActive = false;
+    final restoredPipPosition = bvid == null || cid == null
+        ? null
+        : PipPersistentService.instance.restorePositionFor(
+            bvid: bvid,
+            cid: cid,
+          );
+    final initialPosition = restoredPipPosition ?? seekTo;
     try {
       _processing = true;
       this.isLive = isLive;
@@ -626,6 +679,13 @@ class PlPlayerController with BlockConfigMixin {
       _epid = epid;
       _seasonId = seasonId;
       _pgcType = pgcType;
+      if (!isLive && bvid != null) {
+        _watchSessionTracker.begin(
+          metadata: _currentWatchMetadata(),
+          position: initialPosition ?? Duration.zero,
+          at: DateTime.now(),
+        );
+      }
 
       if (showSeekPreview) {
         _clearPreview();
@@ -640,18 +700,19 @@ class PlPlayerController with BlockConfigMixin {
         return;
       }
       // 配置Player 音轨、字幕等等
-      await _createVideoController(dataSource, seekTo, volume);
+      await _createVideoController(dataSource, initialPosition, volume);
 
       if (_playerCount == 0) {
         _removeListeners();
-        _videoPlayerController?.dispose();
+        final p = _videoPlayerController;
         _videoPlayerController = null;
         _videoController = null;
+        if (p != null) unawaited(_releasePlayer(p));
         return;
       }
 
       updateDuration(duration ?? _videoPlayerController!.state.duration);
-      position.value = buffered.value = seekTo?.inSeconds ?? 0;
+      position.value = buffered.value = initialPosition?.inSeconds ?? 0;
 
       dataStatus.value = .loaded;
 
@@ -731,6 +792,7 @@ class PlPlayerController with BlockConfigMixin {
     final opt = {
       'video-sync': Pref.videoSync,
       if (Platform.isAndroid) 'ao': Pref.audioOutput,
+      'stream-lavf-o': 'reconnect=1',
       'volume':
           (PlatformUtils.isMobile ? Pref.playerVolume : volume.value * 100)
               .toString(),
@@ -788,7 +850,7 @@ class PlPlayerController with BlockConfigMixin {
       player = await _initPlayer();
       if (_playerCount == 0) {
         _removeListeners();
-        player.dispose();
+        unawaited(_releasePlayer(player));
         player = null;
         _videoController = null;
         return;
@@ -801,7 +863,7 @@ class PlPlayerController with BlockConfigMixin {
 
     final Map<String, String> extras = {};
 
-    if (dataSource is FileSource) {
+    if (!dataSource.cache) {
       extras['cache'] = 'no';
     } else {
       if (isLive) {
@@ -832,14 +894,10 @@ class PlPlayerController with BlockConfigMixin {
           audioNormalization = _audioNormalizationParam.replaceFirstMapped(
             loudnormRegExp,
             (i) =>
-                'loudnorm=${volume.format(
-                  Map.fromEntries(
-                    i.group(1)!.split(':').map((item) {
-                      final parts = item.split('=');
-                      return MapEntry(parts[0].toLowerCase(), num.parse(parts[1]));
-                    }),
-                  ),
-                )}',
+                'loudnorm=${volume.format(Map.fromEntries(i.group(1)!.split(':').map((item) {
+                  final parts = item.split('=');
+                  return MapEntry(parts[0].toLowerCase(), num.parse(parts[1]));
+                })))}',
           );
         } else {
           audioNormalization = _audioNormalizationParam.replaceFirst(
@@ -854,23 +912,19 @@ class PlPlayerController with BlockConfigMixin {
     }
 
     await player.open(
-      Media(
-        video,
-        start: seekTo,
-        extras: extras.isEmpty ? null : extras,
-      ),
+      Media(video, start: seekTo, extras: extras.isEmpty ? null : extras),
       play: false,
     );
   }
 
-  Future<void>? refreshPlayer() {
+  Future<void>? refreshPlayer({bool play = true}) {
     if (dataSource is FileSource) {
       return null;
     }
     if (_videoPlayerController case final ctr? when (ctr.current.isNotEmpty)) {
       return ctr.open(
         ctr.current.last.copyWith(start: ctr.state.position),
-        play: true,
+        play: play,
       );
     }
     return null;
@@ -878,7 +932,7 @@ class PlPlayerController with BlockConfigMixin {
 
   // 开始播放
   Future<void> _initializePlayer() async {
-    if (_instance == null) return;
+    if (_playerCount == 0) return;
     // 设置倍速
     if (isLive) {
       await setPlaybackSpeed(1.0);
@@ -899,14 +953,54 @@ class PlPlayerController with BlockConfigMixin {
 
     // 自动播放
     if (_autoPlay) {
-      playIfExists();
-      // await play(duration: duration);
+      if (_isDetached) {
+        await play();
+      } else {
+        playIfExists();
+      }
     }
   }
 
   List<StreamSubscription>? _subscriptions;
   final Set<ValueChanged<Duration>> _positionListeners = {};
   final Set<ValueChanged<PlayerStatus>> _statusListeners = {};
+
+  void _retryInitialNetworkOpen() {
+    EasyThrottle.throttle(
+      'controllerStream.error.listen',
+      const Duration(milliseconds: 10000),
+      () {
+        Future.delayed(const Duration(milliseconds: 3000), () {
+          if (isBuffering.value && buffered.value == 0) {
+            SmartDialog.showToast(
+              '视频链接打开失败，重试中',
+              displayTime: const Duration(milliseconds: 500),
+            );
+            refreshPlayer();
+          }
+        });
+      },
+    );
+  }
+
+  void _retryInterruptedNetworkStream({required bool playAfterRefresh}) {
+    EasyThrottle.throttle(
+      'controllerStream.error.listen.interrupted',
+      const Duration(milliseconds: 10000),
+      () {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (_playerCount == 0 || dataSource is FileSource) {
+            return;
+          }
+          SmartDialog.showToast(
+            '视频流中断，重试中',
+            displayTime: const Duration(milliseconds: 500),
+          );
+          refreshPlayer(play: playAfterRefresh);
+        });
+      },
+    );
+  }
 
   /// 播放事件监听
   void _startListeners(NativePlayer player) {
@@ -915,6 +1009,7 @@ class PlPlayerController with BlockConfigMixin {
     _subscriptions = [
       /// playing
       stream.playing.listen((bool playing) {
+        _watchPlaybackActive = playing;
         WakelockPlus.toggle(enable: playing);
         if (playing) {
           if (_isAutoEnterPip) {
@@ -929,6 +1024,7 @@ class PlPlayerController with BlockConfigMixin {
           _disableAutoEnterPip();
           playerStatus.value = .paused;
         }
+        _handleWatchPlaybackState();
 
         videoPlayerServiceHandler?.onStatusChange(
           playerStatus.value,
@@ -949,6 +1045,7 @@ class PlPlayerController with BlockConfigMixin {
       ///completed
       stream.completed.listen((bool completed) {
         if (completed) {
+          _watchPlaybackActive = false;
           playerStatus.value = .completed;
 
           for (final element in _statusListeners) {
@@ -956,11 +1053,14 @@ class PlPlayerController with BlockConfigMixin {
           }
 
           makeHeartBeat(-1, type: .completed);
+          _finishWatchStatsSession();
+          _clearPipState();
         }
       }),
 
       /// position
       stream.position.listen((Duration position) {
+        _handleWatchPosition(position);
         final posInSeconds = position.inSeconds;
 
         if (posInSeconds != this.position.value) {
@@ -980,9 +1080,11 @@ class PlPlayerController with BlockConfigMixin {
       stream.duration.listen(updateDuration),
       stream.buffer.listen((Duration buffer) {
         buffered.value = buffer.inSeconds;
+        videoPlayerServiceHandler?.onBufferedChange(buffer);
       }),
       stream.buffering.listen((bool buffering) {
         isBuffering.value = buffering;
+        _handleWatchPlaybackState();
         videoPlayerServiceHandler?.onStatusChange(
           playerStatus.value,
           buffering,
@@ -1003,39 +1105,30 @@ class PlPlayerController with BlockConfigMixin {
           return;
         }
         if (isLive) {
-          if (event.startsWith('tcp: ffurl_read returned ') ||
-              event.startsWith("Failed to open https://") ||
-              event.startsWith("Can not open external file https://")) {
-            Future.delayed(const Duration(milliseconds: 3000), refreshPlayer);
+          if (PlPlayerStreamError.isNetworkOpenError(event) ||
+              PlPlayerStreamError.isInterruptedNetworkStream(event)) {
+            Future.delayed(
+              const Duration(milliseconds: 3000),
+              refreshPlayer,
+            );
           }
           return;
         }
-        if (event.startsWith("Failed to open https://") ||
-            event.startsWith("Can not open external file https://") ||
-            //tcp: ffurl_read returned 0xdfb9b0bb
-            //tcp: ffurl_read returned 0xffffff99
-            event.startsWith('tcp: ffurl_read returned ')) {
-          EasyThrottle.throttle(
-            'controllerStream.error.listen',
-            const Duration(milliseconds: 10000),
-            () {
-              Future.delayed(const Duration(milliseconds: 3000), () {
-                // if (kDebugMode) {
-                //   debugPrint("isBuffering.value: ${isBuffering.value}");
-                // }
-                // if (kDebugMode) {
-                //   debugPrint("_buffered.value: ${_buffered.value}");
-                // }
-                if (isBuffering.value && buffered.value == 0) {
-                  SmartDialog.showToast(
-                    '视频链接打开失败，重试中',
-                    displayTime: const Duration(milliseconds: 500),
-                  );
-                  refreshPlayer();
-                }
-              });
-            },
+        if (PlPlayerStreamError.isNetworkOpenError(event)) {
+          _retryInitialNetworkOpen();
+        } else if (PlPlayerStreamError.isInterruptedNetworkStream(event)) {
+          _retryInterruptedNetworkStream(
+            playAfterRefresh: playerStatus.isPlaying,
           );
+        } else if (event.contains('Invalid NAL unit size') ||
+            event.contains('Error splitting the input into NAL') ||
+            event.contains('Stream ends prematurely')) {
+          EasyThrottle.throttle(
+            'controllerStream.nal.error',
+            const Duration(milliseconds: 5000),
+            refreshPlayer,
+          );
+          Utils.reportError(event);
         } else if (event.startsWith('Could not open codec')) {
           SmartDialog.showToast('无法加载解码器, $event，可能会切换至软解');
         } else if (!onlyPlayAudio.value) {
@@ -1074,6 +1167,7 @@ class PlPlayerController with BlockConfigMixin {
     if (position < Duration.zero) {
       position = Duration.zero;
     }
+    _watchSessionTracker.markSeek(position: position, at: DateTime.now());
     _heartDuration = position.inSeconds;
 
     Future<void> seek() async {
@@ -1124,13 +1218,6 @@ class PlPlayerController with BlockConfigMixin {
         danmakuController!.updateOption(updatedOption);
       } catch (_) {}
     }
-  }
-
-  // 还原默认速度
-  double playSpeedDefault = Pref.playSpeedDefault;
-  Future<void> setDefaultSpeed() async {
-    await _videoPlayerController?.setRate(playSpeedDefault);
-    _playbackSpeed.value = playSpeedDefault;
   }
 
   /// 播放视频
@@ -1237,14 +1324,6 @@ class PlPlayerController with BlockConfigMixin {
     }
   }
 
-  /// 设置后台播放
-  void setBackgroundPlay(bool val) {
-    videoPlayerServiceHandler?.enableBackgroundPlay = val;
-    if (!tempPlayerConf) {
-      setting.put(SettingBoxKey.enableBackgroundPlay, val);
-    }
-  }
-
   set controls(bool visible) {
     showControls.value = visible;
     _timer?.cancel();
@@ -1257,6 +1336,25 @@ class PlPlayerController with BlockConfigMixin {
   void cancelLongPressTimer() {
     longPressTimer?.cancel();
     longPressTimer = null;
+  }
+
+  void refreshLongPressSpeedSettings() {
+    enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
+    _longPressSpeed.value = Pref.longPressSpeedDefault;
+    longPressSpeedGain = Pref.longPressSpeedGain;
+    longPressSpeedFormula = Pref.longPressSpeedFormula;
+    longPressSpeedCustomFormula = Pref.longPressSpeedCustomFormula;
+  }
+
+  double _resolveLongPressSpeed(double baseSpeed) {
+    if (!enableAutoLongPressSpeed) {
+      return longPressSpeed;
+    }
+    return longPressSpeedFormula.resolve(
+      playbackSpeed: baseSpeed,
+      gain: longPressSpeedGain,
+      customFormula: longPressSpeedCustomFormula,
+    );
   }
 
   /// 设置长按倍速状态 live模式下禁用
@@ -1272,11 +1370,11 @@ class PlPlayerController with BlockConfigMixin {
     }
     if (val) {
       if (playerStatus.isPlaying) {
+        refreshLongPressSpeedSettings();
+        _activeLongPressSpeed = _resolveLongPressSpeed(playbackSpeed);
         longPressStatus.value = val;
         HapticFeedback.lightImpact();
-        await setPlaybackSpeed(
-          enableAutoLongPressSpeed ? playbackSpeed * 2 : longPressSpeed,
-        );
+        await setPlaybackSpeed(_activeLongPressSpeed);
       }
     } else {
       // if (kDebugMode) debugPrint('$playbackSpeed');
@@ -1547,7 +1645,9 @@ class PlPlayerController with BlockConfigMixin {
 
   void dispose() {
     // 每次减1，最后销毁
-    resetScreenRotation();
+    if (!_isDetached) {
+      resetScreenRotation();
+    }
     cancelLongPressTimer();
     _cancelSubForSeek();
     if (!_isCloseAll && _playerCount > 1) {
@@ -1557,7 +1657,7 @@ class PlPlayerController with BlockConfigMixin {
     }
 
     _playerCount = 0;
-    if (removeSafeArea) {
+    if (!_isDetached && removeSafeArea) {
       showSystemBar();
     }
     danmakuController = null;
@@ -1568,11 +1668,14 @@ class PlPlayerController with BlockConfigMixin {
     if (showSeekPreview) {
       _clearPreview();
     }
-    if (Platform.isAndroid) {
+    if (!_isDetached && Platform.isAndroid) {
       AndroidHelper$ToDart.onUserLeaveHint?.release();
       AndroidHelper$ToDart.onUserLeaveHint = null;
     }
     _timer?.cancel();
+    _keyboardSpeedTimer?.cancel();
+    _finishWatchStatsSession();
+    _clearPipState();
     // _position.close();
     // _playerEventSubs?.cancel();
     // _sliderPosition.close();
@@ -1599,11 +1702,29 @@ class PlPlayerController with BlockConfigMixin {
     if (kDebugMode) {
       debugPrint('dispose player');
     }
-    _videoPlayerController?.dispose();
+    final player = _videoPlayerController;
     _videoPlayerController = null;
     _videoController = null;
-    _instance = null;
-    videoPlayerServiceHandler?.clear();
+    if (player != null) {
+      // Release the player off the hot path: media_kit's teardown can block on
+      // its event-loop join on desktop (native loop) — never let it freeze the
+      // UI isolate (black screen / ANR).
+      unawaited(_releasePlayer(player));
+    }
+    if (!_isDetached) {
+      _instance = null;
+      videoPlayerServiceHandler?.clear();
+    }
+  }
+
+  /// Stops & disposes a [Player] with a bound timeout so a wedged player can
+  /// never block the UI isolate indefinitely.
+  Future<void> _releasePlayer(Player player) async {
+    try {
+      await player.dispose().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // The player is unrecoverable; drop the reference and let GC reclaim it.
+    }
   }
 
   static void updatePlayCount() {
@@ -1627,6 +1748,13 @@ class PlPlayerController with BlockConfigMixin {
   void setOnlyPlayAudio() {
     onlyPlayAudio.toggle();
     videoPlayerController?.setVideoTrack(onlyPlayAudio.value ? .no() : .auto());
+  }
+
+  /// 原地开关视频轨道（不重开播放器），保留 demuxer 缓存，
+  /// 让前后台切换近零等待。[onlyAudio] 为 true 时仅保留音频。
+  void setOnlyPlayAudioEnabled(bool onlyAudio) {
+    onlyPlayAudio.value = onlyAudio;
+    videoPlayerController?.setVideoTrack(onlyAudio ? .no() : .auto());
   }
 
   late final Map<String, ui.Image?> previewCache = {};
@@ -1746,5 +1874,108 @@ class PlPlayerController with BlockConfigMixin {
       return;
     }
     Get.back();
+  }
+
+  WatchSessionMetadata _currentWatchMetadata() {
+    final currentBvid = _bvid ?? '';
+    final mediaItem = videoPlayerServiceHandler?.currentMediaItem;
+    final extras = mediaItem?.extras;
+    final metadataBvid = extras?['bvid'] as String?;
+    final metadataMatches = metadataBvid == null || metadataBvid == currentBvid;
+    return WatchSessionMetadata(
+      bvid: currentBvid,
+      title: metadataMatches ? mediaItem?.title ?? '' : '',
+      authorName: metadataMatches ? mediaItem?.artist ?? '' : '',
+      authorMid: metadataMatches
+          ? (extras?['authorMid'] as num?)?.toInt() ?? 0
+          : 0,
+    );
+  }
+
+  void _handleWatchPosition(Duration currentPosition) {
+    if (isLive || _bvid == null) return;
+    _watchSessionTracker.updateMetadata(_currentWatchMetadata());
+    final sessions = _watchSessionTracker.onPosition(
+      position: currentPosition,
+      at: DateTime.now(),
+      isPlaying: _watchPlaybackActive,
+      isBuffering: isBuffering.value,
+      isSeeking: isSeeking.value,
+      playbackSpeed: playbackSpeed,
+    );
+    _persistWatchSessions(sessions);
+    if (isPipMode) {
+      _persistPipState(position: currentPosition);
+    }
+  }
+
+  void _handleWatchPlaybackState() {
+    if (isLive || _bvid == null || videoPlayerController == null) return;
+    final now = DateTime.now();
+    _watchSessionTracker.updateMetadata(_currentWatchMetadata());
+    final sessions = <PendingWatchSession>[
+      ..._watchSessionTracker.onPosition(
+        position: videoPlayerController!.state.position,
+        at: now,
+        isPlaying: _watchPlaybackActive,
+        isBuffering: isBuffering.value,
+        isSeeking: isSeeking.value,
+        playbackSpeed: playbackSpeed,
+      ),
+      if (!_watchPlaybackActive || isBuffering.value)
+        ..._watchSessionTracker.flush(now),
+    ];
+    _persistWatchSessions(sessions);
+  }
+
+  void _finishWatchStatsSession() {
+    _persistWatchSessions(_watchSessionTracker.finish(DateTime.now()));
+  }
+
+  void _persistWatchSessions(List<PendingWatchSession> sessions) {
+    for (final session in sessions) {
+      Persistence.background(
+        WatchStatsService.instance.recordPendingSession(session),
+        label: 'watch statistics session',
+      );
+    }
+  }
+
+  void _persistPipState({Duration? position, bool force = false}) {
+    final currentBvid = _bvid;
+    final currentCid = cid;
+    if (isLive || currentBvid == null || currentCid == null) return;
+    final positionMs = position?.inMilliseconds ?? positionInMilliseconds;
+    if (!force &&
+        (positionMs - _lastPersistedPipPositionMs).abs() <
+            const Duration(seconds: 5).inMilliseconds) {
+      return;
+    }
+    _lastPersistedPipPositionMs = positionMs;
+    final mediaItem = videoPlayerServiceHandler?.currentMediaItem;
+    Persistence.background(
+      PipPersistentService.instance.savePipState(
+        bvid: currentBvid,
+        cid: currentCid,
+        positionMs: positionMs,
+        title: mediaItem?.title,
+        cover: mediaItem?.artUri?.toString(),
+      ),
+      label: 'PiP playback state',
+    );
+  }
+
+  void _clearPipState() {
+    final currentBvid = _bvid;
+    final currentCid = cid;
+    _lastPersistedPipPositionMs = -1;
+    if (currentBvid == null || currentCid == null) return;
+    Persistence.background(
+      PipPersistentService.instance.clearIfMatches(
+        bvid: currentBvid,
+        cid: currentCid,
+      ),
+      label: 'PiP playback state cleanup',
+    );
   }
 }

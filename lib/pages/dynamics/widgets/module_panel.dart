@@ -1,18 +1,18 @@
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/badge.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
-import 'package:PiliPlus/models/dynamics/result.dart';
-import 'package:PiliPlus/pages/audio/view.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/forward_panel.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/live_panel.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/live_panel_sub.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/live_rcmd_panel.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/video_panel.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
+import 'package:pili_plus/models/dynamics/result.dart';
+import 'package:pili_plus/pages/audio/view.dart';
+import 'package:pili_plus/pages/dynamics/widgets/forward_panel.dart';
+import 'package:pili_plus/pages/dynamics/widgets/live_panel.dart';
+import 'package:pili_plus/pages/dynamics/widgets/live_panel_sub.dart';
+import 'package:pili_plus/pages/dynamics/widgets/live_rcmd_panel.dart';
+import 'package:pili_plus/pages/dynamics/widgets/video_panel.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -242,62 +242,73 @@ Widget module(
         ),
       );
     case 'DYNAMIC_TYPE_MEDIALIST':
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (floor == 1) const SizedBox(width: 12),
-          if (major?.medialist?.cover?.isNotEmpty == true) ...[
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Hero(
-                  tag: major!.medialist!.cover!,
-                  child: NetworkImgLayer(
-                    width: 180,
-                    height: 110,
-                    src: major.medialist!.cover,
-                  ),
-                ),
-                PBadge(
-                  right: 6,
-                  top: 6,
-                  text: major.medialist!.badge?.text,
-                ),
-              ],
-            ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: SizedBox(
-              height: 110,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    major!.medialist!.title!,
-                    style: TextStyle(
-                      fontSize: theme.textTheme.titleMedium!.fontSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (major.medialist?.subTitle != null) ...[
-                    const Spacer(),
-                    Text(
-                      major.medialist!.subTitle!,
-                      style: TextStyle(
-                        fontSize: theme.textTheme.labelLarge!.fontSize,
-                        color: theme.colorScheme.outline,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Scale the cover with the available width (capped at the original
+          // 180x110) so the text column keeps a usable width on narrow screens.
+          final coverWidth = (constraints.maxWidth * 0.42)
+              .clamp(0.0, 180.0)
+              .toDouble();
+          final coverHeight = coverWidth * 110 / 180;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (floor == 1) const SizedBox(width: 12),
+              if (major?.medialist?.cover?.isNotEmpty == true) ...[
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Hero(
+                      tag: major!.medialist!.cover!,
+                      child: NetworkImgLayer(
+                        width: coverWidth,
+                        height: coverHeight,
+                        src: major.medialist!.cover,
                       ),
                     ),
+                    PBadge(
+                      right: 6,
+                      top: 6,
+                      text: major.medialist!.badge?.text,
+                    ),
                   ],
-                ],
+                ),
+                const SizedBox(width: 14),
+              ],
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      major!.medialist!.title!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: theme.textTheme.titleMedium!.fontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (major.medialist?.subTitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        major.medialist!.subTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: theme.textTheme.labelLarge!.fontSize,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ),
-          if (floor == 1) const SizedBox(width: 12),
-        ],
+              if (floor == 1) const SizedBox(width: 12),
+            ],
+          );
+        },
       );
 
     case 'DYNAMIC_TYPE_SUBSCRIPTION_NEW'

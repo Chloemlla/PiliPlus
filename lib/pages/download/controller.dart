@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/models_new/download/download_info.dart';
-import 'package:PiliPlus/pages/common/multi_select/base.dart'
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/models_new/download/download_info.dart';
+import 'package:pili_plus/pages/common/multi_select/base.dart'
     show BaseMultiSelectMixin;
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/utils/storage.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/utils/storage.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart' show Text;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -80,7 +80,7 @@ class DownloadPageController extends GetxController
       title: const Text('确定删除选中视频？'),
       onConfirm: () async {
         SmartDialog.showLoading();
-        final watchProgress = GStorage.watchProgress;
+        final watchProgress = GStorage.watchProgressStore;
         for (final page in allChecked) {
           await watchProgress.deleteAll(
             page.entries.map((e) => e.cid.toString()),
@@ -100,3 +100,4 @@ class DownloadPageController extends GetxController
     );
   }
 }
+

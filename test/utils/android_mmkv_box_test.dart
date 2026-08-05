@@ -1,0 +1,548 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:pili_plus/models/user/danmaku_rule.dart';
+import 'package:pili_plus/models/user/info.dart';
+import 'package:pili_plus/utils/android/android_mmkv_box.dart';
+import 'package:pili_plus/utils/android/android_mmkv_storage_codec.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
+
+void main() {
+  late Directory hiveDirectory;
+  late List<String> hiveBoxNames;
+
+  setUpAll(() async {
+    hiveDirectory = await Directory.systemTemp.createTemp('pili_mmkv_test_');
+    Hive.init(hiveDirectory.path);
+  });
+
+  setUp(() => hiveBoxNames = []);
+
+  tearDown(() async {
+    for (final name in hiveBoxNames) {
+      if (Hive.isBoxOpen(name)) {
+        await Hive.box<dynamic>(name).close();
+      }
+      await Hive.deleteBoxFromDisk(name);
+    }
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    await hiveDirectory.delete(recursive: true);
+  });
+
+  test('first Android open migrates Hive and records the marker', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final name = _newHiveBoxName(hiveBoxNames, 'first_open');
+    final hive = await Hive.openBox<dynamic>(name);
+    await hive.putAll(const {
+      'theme': 'dark',
+      'ids': <int>{1, 2, 3},
+    });
+
+    final box = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      openHive: () => Future.value(hive),
+    );
+
+    expect(box, isA<AndroidMmkvBackedBox<dynamic>>());
+    expect(box.get('theme'), 'dark');
+    expect(box.get('ids'), <int>{1, 2, 3});
+    expect(
+      store.getRaw(
+        AndroidMmkvStore.metaBox,
+        AndroidMmkvStore.migrationKey(name),
+      ),
+      '1',
+    );
+    expect(hive.isOpen, isFalse);
+    await box.close();
+  });
+
+  test('subsequent Android open reads MMKV without opening Hive', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final name = _newHiveBoxName(hiveBoxNames, 'subsequent_open');
+    final hive = await Hive.openBox<dynamic>(name);
+    await hive.put('value', 42);
+    final first = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      openHive: () => Future.value(hive),
+    );
+    await first.close();
+    var hiveOpenCount = 0;
+
+    final reopened = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      openHive: () {
+        hiveOpenCount++;
+        return Future.error(StateError('Hive should not be opened'));
+      },
+    );
+
+    expect(hiveOpenCount, 0);
+    expect(reopened.get('value'), 42);
+    await reopened.close();
+  });
+
+  test(
+    'completed migration never restores stale Hive after corruption',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final name = _newHiveBoxName(hiveBoxNames, 'corrupt_after_migration');
+      final hive = await Hive.openBox<dynamic>(name);
+      await hive.put('value', 'legacy');
+      final migrated = await openAndroidMmkvBackedBox<dynamic>(
+        name: name,
+        isAndroid: true,
+        store: store,
+        openHive: () => Future.value(hive),
+      );
+      await migrated.put('value', 'current');
+      await migrated.close();
+      store.putRaw(name, jsonEncode('broken'), 'not-json');
+      var hiveOpenCount = 0;
+
+      await expectLater(
+        openAndroidMmkvBackedBox<dynamic>(
+          name: name,
+          isAndroid: true,
+          store: store,
+          openHive: () {
+            hiveOpenCount++;
+            return Hive.openBox<dynamic>(name);
+          },
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(hiveOpenCount, 0);
+      expect(store.getRaw(name, jsonEncode('value')), isNotNull);
+    },
+  );
+
+  test(
+    'failed batch putAll leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_batch', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
+      events.clear();
+      final before = store.exportBox('atomic_batch');
+      store.failPutAllAfter = 1;
+
+      await expectLater(
+        box.putAll(const {'first': 10, 'third': 3}),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_batch'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
+
+  test('watch listeners can write another key during event delivery', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('nested_watch', store: store);
+    final events = <BoxEvent>[];
+    final secondEvent = Completer<void>();
+    final subscription = box.watch().listen((event) {
+      events.add(event);
+      if (event.key == 'first') {
+        unawaited(box.put('second', 2));
+      } else if (event.key == 'second' && !secondEvent.isCompleted) {
+        secondEvent.complete();
+      }
+    });
+
+    await box.put('first', 1);
+    await secondEvent.future.timeout(const Duration(seconds: 1));
+
+    expect(events.map((event) => event.key), ['first', 'second']);
+    expect(box.get('second'), 2);
+    await subscription.cancel();
+    await box.close();
+  });
+
+  test(
+    'failed batch deleteAll leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_delete', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
+      events.clear();
+      final before = store.exportBox('atomic_delete');
+      store.failRemoveAllAfter = 1;
+
+      await expectLater(
+        box.deleteAll(const ['first', 'second']),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_delete'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
+
+  test(
+    'failed whole-box replacement leaves cache, backend, and events unchanged',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final box = AndroidMmkvBackedBox<dynamic>('atomic_replace', store: store);
+      final events = <BoxEvent>[];
+      box.watch().listen(events.add);
+      await box.putAll(const {'first': 1, 'second': 2});
+      await Future<void>.delayed(Duration.zero);
+      events.clear();
+      final before = store.exportBox('atomic_replace');
+      store.failNextReplace = true;
+
+      expect(
+        box.replaceAllFrom(const {'replacement': 3}),
+        isFalse,
+      );
+
+      expect(box.toMap(), const {'first': 1, 'second': 2});
+      expect(store.exportBox('atomic_replace'), before);
+      expect(events, isEmpty);
+      await box.close();
+    },
+  );
+
+  test('putAll and deleteAll use incremental batch ops', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('batch_ops', store: store);
+    await box.putAll(const {'a': 1, 'b': 2, 'c': 3});
+    expect(store.putAllCount, 1);
+    expect(store.replaceCount, 0);
+
+    await box.deleteAll(const ['a', 'c']);
+    expect(store.removeAllCount, 1);
+    expect(box.toMap(), const {'b': 2});
+    expect(store.replaceCount, 0);
+    await box.close();
+  });
+
+  test('single-key getRaw does not require full export', () {
+    final store = _MemoryAndroidMmkvStore()..putRaw('meta', 'k', 'v');
+    expect(store.getRaw('meta', 'k'), 'v');
+    expect(store.exportCount, 0);
+  });
+
+  test('model and typed values survive MMKV round trips', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final userInfo = UserInfoData(
+      isLogin: true,
+      face: 'https://example.com/avatar.png',
+      levelInfo: LevelInfo(
+        currentLevel: 6,
+        currentMin: 0,
+        currentExp: 123,
+        nextExp: 123,
+      ),
+      mid: 12345,
+      money: 6.5,
+      uname: 'Pili',
+      vipStatus: 1,
+      official: {'role': 1},
+    );
+    final userInfoBox = AndroidMmkvBackedBox<UserInfoData>(
+      'userInfo',
+      store: store,
+      valueEncoder: AndroidMmkvStorageCodec.encodeUserInfoData,
+      valueDecoder: AndroidMmkvStorageCodec.decodeUserInfoData,
+    );
+    await userInfoBox.put('userInfoCache', userInfo);
+
+    final reopenedUserInfo = AndroidMmkvBackedBox<UserInfoData>(
+      'userInfo',
+      store: store,
+      valueEncoder: AndroidMmkvStorageCodec.encodeUserInfoData,
+      valueDecoder: AndroidMmkvStorageCodec.decodeUserInfoData,
+    );
+    expect(reopenedUserInfo.tryLoadFromMmkv(), isTrue);
+    expect(reopenedUserInfo.get('userInfoCache'), userInfo);
+
+    final rule = RuleFilter(
+      ['spoiler'],
+      [RegExp('^blocked', caseSensitive: false)],
+      {'deadbeef'},
+    );
+    final localCache = AndroidMmkvBackedBox<dynamic>(
+      'localCache',
+      store: store,
+      valueEncoder: AndroidMmkvStorageCodec.encodeLocalCacheValue,
+      valueDecoder: AndroidMmkvStorageCodec.decodeLocalCacheValue,
+    );
+    await localCache.put('rule', rule);
+    await localCache.put('ids', <int>{3, 2, 1});
+    await localCache.put('bytes', Uint8List.fromList([0, 1, 2, 255]));
+
+    final reopenedLocalCache = AndroidMmkvBackedBox<dynamic>(
+      'localCache',
+      store: store,
+      valueEncoder: AndroidMmkvStorageCodec.encodeLocalCacheValue,
+      valueDecoder: AndroidMmkvStorageCodec.decodeLocalCacheValue,
+    );
+    expect(reopenedLocalCache.tryLoadFromMmkv(), isTrue);
+    final decodedRule = reopenedLocalCache.get('rule') as RuleFilter;
+    expect(decodedRule.dmFilterString, rule.dmFilterString);
+    expect(decodedRule.dmRegExp.single.pattern, rule.dmRegExp.single.pattern);
+    expect(decodedRule.dmUid, rule.dmUid);
+    expect(reopenedLocalCache.get('ids'), <int>{1, 2, 3});
+    expect(
+      reopenedLocalCache.get('bytes'),
+      Uint8List.fromList([0, 1, 2, 255]),
+    );
+
+    await userInfoBox.close();
+    await reopenedUserInfo.close();
+    await localCache.close();
+    await reopenedLocalCache.close();
+  });
+
+  test(
+    'unsupported values fall back during migration and fail on writes',
+    () async {
+      final store = _MemoryAndroidMmkvStore();
+      final name = _newHiveBoxName(hiveBoxNames, 'unsupported');
+      final hive = await Hive.openBox<dynamic>(name);
+      final unsupported = DateTime.utc(2026, 7, 10);
+      await hive.put('date', unsupported);
+
+      final box = await openAndroidMmkvBackedBox<dynamic>(
+        name: name,
+        isAndroid: true,
+        store: store,
+        openHive: () => Future.value(hive),
+      );
+
+      expect(identical(box, hive), isTrue);
+      expect(
+        store.getRaw(
+          AndroidMmkvStore.metaBox,
+          AndroidMmkvStore.migrationKey(name),
+        ),
+        isNull,
+      );
+
+      final mmkvBox = AndroidMmkvBackedBox<dynamic>('runtime', store: store);
+      await expectLater(
+        mmkvBox.put('date', unsupported),
+        throwsA(isA<UnsupportedError>()),
+      );
+      await mmkvBox.close();
+    },
+  );
+
+  test('lazy open loads keys without decoding all values', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final name = _newHiveBoxName(hiveBoxNames, 'lazy_open');
+    final hive = await Hive.openBox<dynamic>(name);
+    await hive.putAll({'a': 1, 'b': 2, 'c': 3});
+    final migrated = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      openHive: () => Future.value(hive),
+    );
+    await migrated.close();
+
+    final exportBefore = store.exportCount;
+    final lazy = await openAndroidMmkvBackedBox<dynamic>(
+      name: name,
+      isAndroid: true,
+      store: store,
+      loadMode: AndroidMmkvLoadMode.lazy,
+      openHive: () => Future.error(StateError('Hive should not open')),
+    );
+
+    // Keys-only open should not fully export values.
+    expect(store.exportCount, exportBefore);
+    expect(store.exportKeysCount, greaterThan(0));
+    expect(lazy.length, 3);
+    expect(lazy.get('b'), 2); // materialize one key
+    expect(lazy.get('a'), 1);
+    await lazy.close();
+  });
+
+  test('lazy access surfaces corrupt migrated values', () async {
+    final store = _MemoryAndroidMmkvStore()
+      ..putRaw('lazy_corrupt', jsonEncode('broken'), 'not-json');
+    final box = AndroidMmkvBackedBox<dynamic>(
+      'lazy_corrupt',
+      store: store,
+      loadMode: AndroidMmkvLoadMode.lazy,
+    );
+
+    expect(box.tryLoadFromMmkv(), isTrue);
+    expect(() => box.get('broken'), throwsA(isA<StateError>()));
+    await box.close();
+  });
+
+  test('close does not require sync and clears memory', () async {
+    final store = _MemoryAndroidMmkvStore();
+    final box = AndroidMmkvBackedBox<dynamic>('close_soft', store: store);
+    await box.put('k', 1);
+    final syncBefore = store.syncCount;
+    await box.close();
+    expect(store.syncCount, syncBefore);
+    expect(box.isOpen, isFalse);
+  });
+
+  test('native clear failures remain visible after a box is closed', () async {
+    final box = AndroidMmkvBackedBox<dynamic>(
+      'clearFailure',
+      store: _MemoryAndroidMmkvStore(clearSucceeds: false),
+    );
+    await box.close();
+
+    await expectLater(
+      box.deleteFromDisk(),
+      throwsA(isA<StateError>()),
+    );
+  });
+}
+
+String _newHiveBoxName(List<String> names, String suffix) {
+  final name = 'mmkv_${suffix}_${DateTime.now().microsecondsSinceEpoch}';
+  names.add(name);
+  return name;
+}
+
+final class _MemoryAndroidMmkvStore implements AndroidMmkvStoreBackend {
+  _MemoryAndroidMmkvStore({this.clearSucceeds = true});
+
+  final bool clearSucceeds;
+  bool failNextReplace = false;
+  int? failPutAllAfter;
+  int? failRemoveAllAfter;
+  int exportCount = 0;
+  int exportKeysCount = 0;
+  int replaceCount = 0;
+  int putAllCount = 0;
+  int removeAllCount = 0;
+  int syncCount = 0;
+  final Map<String, Map<String, String>> _boxes = {};
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  bool clearBox(String name) {
+    if (!clearSucceeds) return false;
+    _boxes[name] = {};
+    return true;
+  }
+
+  @override
+  String? exportBox(String name) {
+    exportCount++;
+    return jsonEncode(_boxes[name] ?? const {});
+  }
+
+  @override
+  String? exportKeys(String name) {
+    exportKeysCount++;
+    final keys = (_boxes[name] ?? const {}).keys.toList();
+    return jsonEncode(keys);
+  }
+
+  @override
+  String? getRaw(String name, String key) => _boxes[name]?[key];
+
+  @override
+  bool containsKey(String name, String key) =>
+      _boxes[name]?.containsKey(key) ?? false;
+
+  @override
+  bool putRaw(String name, String key, String value) {
+    (_boxes[name] ??= {})[key] = value;
+    return true;
+  }
+
+  @override
+  bool putAllRaw(String name, Map<String, String> entries) {
+    final failAfter = failPutAllAfter;
+    if (failAfter != null) {
+      failPutAllAfter = null;
+      final box = _boxes[name] ??= {};
+      var written = 0;
+      for (final entry in entries.entries) {
+        if (written++ == failAfter) return false;
+        box[entry.key] = entry.value;
+      }
+    }
+    putAllCount++;
+    (_boxes[name] ??= {}).addAll(entries);
+    return true;
+  }
+
+  @override
+  bool removeRaw(String name, String key) {
+    _boxes[name]?.remove(key);
+    return true;
+  }
+
+  @override
+  bool removeAllRaw(String name, Iterable<String> keys) {
+    final failAfter = failRemoveAllAfter;
+    if (failAfter != null) {
+      failRemoveAllAfter = null;
+      final box = _boxes[name];
+      if (box != null) {
+        var removed = 0;
+        for (final key in keys) {
+          if (removed++ == failAfter) return false;
+          box.remove(key);
+        }
+      }
+    }
+    removeAllCount++;
+    final box = _boxes[name];
+    if (box == null) return true;
+    for (final key in keys) {
+      box.remove(key);
+    }
+    return true;
+  }
+
+  @override
+  bool replaceBox(String name, String json) {
+    if (failNextReplace) {
+      failNextReplace = false;
+      return false;
+    }
+    replaceCount++;
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    _boxes[name] = decoded.map(
+      (key, value) => MapEntry(key, value as String),
+    );
+    return true;
+  }
+
+  @override
+  bool sync(String name) {
+    syncCount++;
+    return true;
+  }
+}

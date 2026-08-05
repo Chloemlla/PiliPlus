@@ -18,6 +18,7 @@
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: only_throw_errors
 // ignore_for_file: overridden_fields
+// ignore_for_file: prefer_initializing_formals
 // ignore_for_file: prefer_double_quotes
 // ignore_for_file: unintended_html_in_doc_comment
 // ignore_for_file: unnecessary_cast
@@ -185,10 +186,10 @@ final class $Runnable$Type$ extends jni$_.JType<Runnable> {
   String get signature => r'Ljava/lang/Runnable;';
 }
 
-/// from: `com.example.piliplus.AndroidHelper`
+/// from: `com.chloemlla.piliplus.AndroidHelper`
 extension type AndroidHelper._(jni$_.JObject _$this) implements jni$_.JObject {
   static final _class = jni$_.JClass.forName(
-    r'com/example/piliplus/AndroidHelper',
+    r'com/chloemlla/piliplus/AndroidHelper',
   );
 
   /// The type which includes information such as the signature of this class.
@@ -674,14 +675,14 @@ final class $AndroidHelper$Type$ extends jni$_.JType<AndroidHelper> {
 
   @jni$_.internal
   @core$_.override
-  String get signature => r'Lcom/example/piliplus/AndroidHelper;';
+  String get signature => r'Lcom/chloemlla/piliplus/AndroidHelper;';
 }
 
-/// from: `com.example.piliplus.AndroidHelper$ToDart`
+/// from: `com.chloemlla.piliplus.AndroidHelper$ToDart`
 extension type AndroidHelper$ToDart._(jni$_.JObject _$this)
     implements jni$_.JObject {
   static final _class = jni$_.JClass.forName(
-    r'com/example/piliplus/AndroidHelper$ToDart',
+    r'com/chloemlla/piliplus/AndroidHelper$ToDart',
   );
 
   /// The type which includes information such as the signature of this class.
@@ -726,5 +727,5 @@ final class $AndroidHelper$ToDart$Type$
 
   @jni$_.internal
   @core$_.override
-  String get signature => r'Lcom/example/piliplus/AndroidHelper$ToDart;';
+  String get signature => r'Lcom/chloemlla/piliplus/AndroidHelper$ToDart;';
 }

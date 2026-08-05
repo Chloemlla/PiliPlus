@@ -1,9 +1,30 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+val targetAndroidSdk = 37
+extra["targetAndroidSdk"] = targetAndroidSdk
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+        // Huawei HMS public Maven (Scan Kit scanplus SDK).
+        maven {
+            name = "HuaweiMaven"
+            url = uri("https://developer.huawei.com/repo/")
+        }
+        maven {
+            name = "GitHubPackagesProjectLumen"
+            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
+            credentials {
+                username = providers.gradleProperty("gpr.user").orNull
+                    ?: System.getenv("GITHUB_ACTOR")
+                    ?: ""
+                password = providers.gradleProperty("gpr.key").orNull
+                    ?: System.getenv("GITHUB_TOKEN")
+                    ?: System.getenv("GH_TOKEN")
+                    ?: ""
+            }
+        }
     }
 }
 
@@ -43,14 +64,12 @@ subprojects {
             val pluginCompileSdk = pluginCompileSdkStr
                 ?.removePrefix("android-")
                 ?.toIntOrNull()
-            if (pluginCompileSdk != null && pluginCompileSdk < 36) {
-                project.logger.error(
-                    "Warning: Overriding compileSdk version in Flutter plugin: ${project.name} " +
-                            "from $pluginCompileSdk to 36 (to work around https://issuetracker.google.com/issues/199180389).\n" +
-                            "If there is not a new version of ${project.name}, consider filing an issue against ${project.name} " +
-                            "to increase their compileSdk to the latest (otherwise try updating to the latest version)."
+            if (pluginCompileSdk != null && pluginCompileSdk < targetAndroidSdk) {
+                project.logger.info(
+                    "Overriding compileSdk version in Flutter plugin: ${project.name} " +
+                            "from $pluginCompileSdk to $targetAndroidSdk"
                 )
-                androidExtension.setCompileSdkVersion(36)
+                androidExtension.setCompileSdkVersion(targetAndroidSdk)
             }
         }
 

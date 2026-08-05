@@ -1,4 +1,4 @@
-import 'package:PiliPlus/pages/later/child_view.dart';
+import 'package:pili_plus/pages/later/child_view.dart';
 import 'package:flutter/material.dart';
 
 enum LaterViewType {

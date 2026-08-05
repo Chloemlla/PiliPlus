@@ -1,46 +1,46 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show ReloadMixin;
-import 'package:PiliPlus/http/api.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/member.dart';
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/http/user.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/video/source_type.dart';
-import 'package:PiliPlus/models_new/member_card_info/data.dart';
-import 'package:PiliPlus/models_new/relation/data.dart';
-import 'package:PiliPlus/models_new/video/video_ai_conclusion/model_result.dart';
-import 'package:PiliPlus/models_new/video/video_detail/dimension.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart';
-import 'package:PiliPlus/models_new/video/video_detail/page.dart';
-import 'package:PiliPlus/models_new/video/video_detail/section.dart';
-import 'package:PiliPlus/models_new/video/video_detail/staff.dart';
-import 'package:PiliPlus/models_new/video/video_detail/stat_detail.dart';
-import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
-import 'package:PiliPlus/pages/common/common_intro_controller.dart';
-import 'package:PiliPlus/pages/dynamics_repost/view.dart';
-import 'package:PiliPlus/pages/video/related/controller.dart';
-import 'package:PiliPlus/pages/video/reply/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/device_utils.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:PiliPlus/utils/share_utils.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart';
+import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/member.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/http/user.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/common/video/source_type.dart';
+import 'package:pili_plus/models_new/member_card_info/data.dart';
+import 'package:pili_plus/models_new/relation/data.dart';
+import 'package:pili_plus/models_new/video/video_ai_conclusion/model_result.dart';
+import 'package:pili_plus/models_new/video/video_detail/dimension.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart';
+import 'package:pili_plus/models_new/video/video_detail/page.dart';
+import 'package:pili_plus/models_new/video/video_detail/section.dart';
+import 'package:pili_plus/models_new/video/video_detail/staff.dart';
+import 'package:pili_plus/models_new/video/video_detail/stat_detail.dart';
+import 'package:pili_plus/models_new/video/video_detail/ugc_season.dart';
+import 'package:pili_plus/pages/common/common_intro_controller.dart';
+import 'package:pili_plus/pages/dynamics_repost/view.dart';
+import 'package:pili_plus/pages/video/related/controller.dart';
+import 'package:pili_plus/pages/video/reply/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/share_utils.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -620,7 +620,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
   /// 列表循环或者顺序播放时，自动播放下一个
   @override
-  bool nextPlay([bool skipPart = false]) {
+  bool nextPlay({bool skipPart = false, bool skipCharging = false}) {
     try {
       final List<BaseEpisodeItem> episodes = <BaseEpisodeItem>[];
       bool isPart = false;
@@ -644,7 +644,6 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
       final PlayRepeat playRepeat =
           videoDetailCtr.plPlayerController.playRepeat;
-
       if (episodes.isEmpty) {
         if (playRepeat == PlayRepeat.listCycle) {
           videoDetailCtr.plPlayerController.play(repeat: true);
@@ -679,7 +678,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
       if (nextIndex >= episodes.length) {
         if (isPart &&
             (videoDetailCtr.isPlayAll || videoDetail.ugcSeason != null)) {
-          return nextPlay(true);
+          return nextPlay(skipPart: true, skipCharging: skipCharging);
         }
 
         if (playRepeat == PlayRepeat.listCycle) {
@@ -692,21 +691,31 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
         }
       }
 
-      int? cid = episodes[nextIndex].cid;
-      while (cid == null) {
+      for (int checked = 0; checked < episodes.length; checked++) {
+        final episode = episodes[nextIndex];
+        final int? cid = episode.cid;
+        if (cid != null &&
+            cid != this.cid.value &&
+            (!skipCharging || !episode.shouldSkipForAutoPlay)) {
+          onChangeEpisode(episode);
+          return true;
+        }
+
         nextIndex++;
         if (nextIndex >= episodes.length) {
-          return false;
+          if (playRepeat == PlayRepeat.listCycle) {
+            nextIndex = 0;
+          } else {
+            break;
+          }
         }
-        cid = episodes[nextIndex].cid;
       }
 
-      if (cid != this.cid.value) {
-        onChangeEpisode(episodes[nextIndex]);
-        return true;
-      } else {
-        return false;
+      if (playRepeat == PlayRepeat.autoPlayRelated &&
+          videoDetailCtr.plPlayerController.showRelatedVideo) {
+        return playRelated();
       }
+      return false;
     } catch (_) {
       return false;
     }

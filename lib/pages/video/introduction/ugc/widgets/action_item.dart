@@ -1,6 +1,6 @@
-import 'package:PiliPlus/common/widgets/custom_arc.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:pili_plus/common/widgets/custom_arc.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart';
 
 class ActionItem extends StatelessWidget {

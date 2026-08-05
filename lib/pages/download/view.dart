@@ -1,31 +1,32 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
-import 'package:PiliPlus/common/widgets/badge.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/select_mask.dart';
-import 'package:PiliPlus/models/common/badge_type.dart';
-import 'package:PiliPlus/models_new/download/download_info.dart';
-import 'package:PiliPlus/pages/download/controller.dart';
-import 'package:PiliPlus/pages/download/detail/view.dart';
-import 'package:PiliPlus/pages/download/detail/widgets/item.dart';
-import 'package:PiliPlus/pages/download/search/view.dart';
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/grid.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/appbar/appbar.dart';
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
+import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/illustration/dynamic_color_illustration.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/select_mask.dart';
+import 'package:pili_plus/models/common/badge_type.dart';
+import 'package:pili_plus/models_new/download/download_info.dart';
+import 'package:pili_plus/pages/download/controller.dart';
+import 'package:pili_plus/pages/download/detail/view.dart';
+import 'package:pili_plus/pages/download/detail/widgets/item.dart';
+import 'package:pili_plus/pages/download/search/view.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/grid.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class DownloadPage extends StatefulWidget {
   const DownloadPage({super.key});
@@ -187,7 +188,7 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                                     entry: entry,
                                     removeList: true,
                                   );
-                                  GStorage.watchProgress.delete(
+                                  GStorage.watchProgressStore.delete(
                                     entry.cid.toString(),
                                   );
                                 },
@@ -206,7 +207,10 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                   if (_downloadService.waitDownloadQueue.isNotEmpty) {
                     return const SliverToBoxAdapter();
                   }
-                  return const HttpError();
+                  return const HttpError(
+                    errMsg: '暂无离线缓存',
+                    illustration: DynamicColorIllustrationType.download,
+                  );
                 }),
                 SliverToBoxAdapter(
                   child: SizedBox(height: padding.bottom + 100),
@@ -239,7 +243,7 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
                       context: context,
                       title: const Text('确定删除？'),
                       onConfirm: () async {
-                        await GStorage.watchProgress.deleteAll(
+                        await GStorage.watchProgressStore.deleteAll(
                           pageInfo.entries.map((e) => e.cid.toString()),
                         );
                         _downloadService.deletePage(
@@ -382,3 +386,4 @@ class _DownloadPageState extends State<DownloadPage> with GridMixin {
     );
   }
 }
+

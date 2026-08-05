@@ -1,22 +1,23 @@
 import 'dart:io' show Platform;
 
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/models/common/super_chat_type.dart';
-import 'package:PiliPlus/models/common/video/subtitle_pref_type.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/pages/setting/models/model.dart';
-import 'package:PiliPlus/pages/setting/pages/fullscreen_sc_size.dart';
-import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
-import 'package:PiliPlus/pages/setting/widgets/slider_dialog.dart';
-import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
-import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/models/common/super_chat_type.dart';
+import 'package:pili_plus/models/common/video/subtitle_pref_type.dart';
+import 'package:pili_plus/pages/main/controller.dart';
+import 'package:pili_plus/pages/setting/models/model.dart';
+import 'package:pili_plus/pages/setting/pages/fullscreen_sc_size.dart';
+import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
+import 'package:pili_plus/pages/setting/widgets/slider_dialog.dart';
+import 'package:pili_plus/plugin/pl_player/models/bottom_progress_behavior.dart';
+import 'package:pili_plus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -279,9 +280,8 @@ List<SettingsModel> get playSettings => [
     leading: const Icon(Icons.repeat),
     value: () => Pref.playRepeat,
     items: PlayRepeat.values,
-    onSelected: (value, setState) => GStorage.video
-        .put(VideoBoxKey.playRepeat, value.index)
-        .whenComplete(setState),
+    onSelected: (value, setState) =>
+        GStorage.settingsStore.setVideoPlayRepeat(value).whenComplete(setState),
   ),
   const SwitchModel(
     title: '播放器设置仅对当前生效',
@@ -420,12 +420,10 @@ Future<void> _showMaxVolumeDialog(
     value: Pref.maxVolume * 100,
     onChanged: (rawValue) {
       final maxVolume = (rawValue / 100).toPrecision(2);
-      if (Pref.desktopVolume > maxVolume) {
-        GStorage.setting.put(SettingBoxKey.desktopVolume, maxVolume);
-      }
-      GStorage.setting
-          .put(SettingBoxKey.maxVolume, maxVolume)
-          .whenComplete(setState);
+      Persistence.background(
+        GStorage.settingsStore.setMaxVolume(maxVolume).whenComplete(setState),
+        label: 'maximum player volume',
+      );
     },
   );
 }

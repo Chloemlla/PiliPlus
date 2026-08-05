@@ -1,34 +1,37 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:PiliPlus/build_config.dart';
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/export_import.dart';
-import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/pages/mine/controller.dart';
-import 'package:PiliPlus/services/logger.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/android/android_helper.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/device_utils.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/login_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/update.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/build_config.dart';
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/common/widgets/dialog/export_import.dart';
+import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
+import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
+import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/services/app_data_reset_service.dart';
+import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
+import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
+import 'package:pili_plus/services/whats_new_guide_service.dart';
+import 'package:pili_plus/services/logger.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/update.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key, this.showAppBar = true});
@@ -145,10 +148,7 @@ class _AboutPageState extends State<AboutPage> {
                 : () => Utils.copyText(currentVersion),
             title: const Text('当前版本'),
             leading: const Icon(Icons.commit_outlined),
-            trailing: Text(
-              currentVersion,
-              style: subTitleStyle,
-            ),
+            trailing: Text(currentVersion, style: subTitleStyle),
           ),
           ListTile(
             title: Text(
@@ -176,6 +176,36 @@ Commit Hash: ${BuildConfig.commitHash}''',
             leading: const Icon(Icons.code),
             title: const Text('Source Code'),
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
+          ),
+          ListTile(
+            onTap: FirstLaunchOssNoticeService.openManual,
+            leading: const Icon(Icons.balance_outlined),
+            title: const Text('开源声明与第三方鸣谢'),
+            subtitle: Text(
+              '源码地址、永久免费提示、协议与依赖鸣谢',
+              style: subTitleStyle,
+            ),
+            trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
+          ),
+          ListTile(
+            onTap: FirstLaunchImprovementsGuideService.openManual,
+            leading: const Icon(Icons.auto_stories_outlined),
+            title: const Text('本分支改进说明'),
+            subtitle: Text(
+              '查看 Chloemlla/main 相对上游的主要改进',
+              style: subTitleStyle,
+            ),
+            trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
+          ),
+          ListTile(
+            onTap: WhatsNewGuideService.openManual,
+            leading: const Icon(Icons.new_releases_outlined),
+            title: const Text('本次更新说明'),
+            subtitle: Text(
+              '基于 Commit Hash / Build Time 的本构建有意变更',
+              style: subTitleStyle,
+            ),
+            trailing: Icon(Icons.arrow_forward, size: 16, color: outline),
           ),
           if (Platform.isAndroid)
             ListTile(
@@ -227,10 +257,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
             leading: const Icon(Icons.delete_outline),
             title: const Text('清除缓存'),
             subtitle: Obx(
-              () => Text(
-                '图片及网络缓存 ${cacheSize.value}',
-                style: subTitleStyle,
-              ),
+              () => Text('图片及网络缓存 ${cacheSize.value}', style: subTitleStyle),
             ),
           ),
           ListTile(
@@ -243,11 +270,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
               onExport: () =>
                   Utils.jsonEncoder.convert(Accounts.account.toMap()),
               onImport: (json) async {
-                final res = json.map(
-                  (key, value) => MapEntry(key, LoginAccount.fromJson(value)),
-                );
-                await Accounts.account.putAll(res);
-                await Accounts.refresh();
+                await Accounts.importAccounts(json);
                 MineController.anonymity.value = !Accounts.heartbeat.isLogin;
                 if (Accounts.main.isLogin) {
                   await LoginUtils.onLoginMain();
@@ -291,7 +314,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
                     DialogOption(
                       onPressed: () async {
                         Get.back();
-                        await GStorage.clear();
+                        await AppDataResetService.clearAll();
                         SmartDialog.showToast('重置成功');
                       },
                       child: const Text('重置所有数据（含登录信息）', style: style),

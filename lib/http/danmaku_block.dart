@@ -1,8 +1,8 @@
-import 'package:PiliPlus/http/api.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/user/danmaku_block.dart';
-import 'package:PiliPlus/utils/accounts.dart';
+import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/user/danmaku_block.dart';
+import 'package:pili_plus/utils/accounts.dart';
 import 'package:dio/dio.dart';
 
 abstract final class DanmakuFilterHttp {

@@ -1,17 +1,22 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/models/search/suggest.dart';
-import 'package:PiliPlus/models_new/search/search_rcmd/data.dart';
-import 'package:PiliPlus/models_new/search/search_trending/data.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/models/search/suggest.dart';
+import 'package:pili_plus/models_new/search/search_rcmd/data.dart';
+import 'package:pili_plus/models_new/search/search_trending/data.dart';
+import 'package:pili_plus/utils/extension/get_ext.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/storage/search_history_store.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:stream_transform/stream_transform.dart';
 
@@ -34,7 +39,6 @@ mixin DebounceStreamMixin<T> {
     ctr = null;
   }
 }
-
 abstract class DebounceStreamState<T extends StatefulWidget, S> extends State<T>
     with DebounceStreamMixin<S> {
   @override
@@ -51,9 +55,20 @@ abstract class DebounceStreamState<T extends StatefulWidget, S> extends State<T>
 }
 
 class BaseSearchController extends GetxController {
+  static const int maxSearchHistory = 100;
+
   final historyList = List<String>.from(
-    GStorage.historyWord.get('cacheList') ?? const <String>[],
+    _trimHistory(
+      (GStorage.historyWord.get('cacheList') as List?) ??
+          SearchHistoryStore.visible().map((entry) => entry.keyword).toList(),
+    ),
   ).obs;
+
+  static List<String> _trimHistory(List<dynamic> raw) {
+    final list = raw.map((item) => item.toString()).toList();
+    if (list.length <= maxSearchHistory) return list;
+    return list.sublist(0, maxSearchHistory);
+  }
 
   late final Rx<LoadingState<SearchTrendingData>> trendingState;
 
@@ -174,7 +189,20 @@ class SSearchController extends GetxController
       historyList
         ..remove(controller.text)
         ..insert(0, controller.text);
-      GStorage.historyWord.put('cacheList', historyList);
+      if (historyList.length > BaseSearchController.maxSearchHistory) {
+        historyList.removeRange(
+          BaseSearchController.maxSearchHistory,
+          historyList.length,
+        );
+      }
+      Persistence.background(
+        Future.wait([
+          GStorage.historyWord.put('cacheList', historyList.toList()),
+          SearchHistoryStore.upsert(controller.text),
+        ]),
+        label: 'search history add',
+      );
+      SynapseSyncService.scheduleSync();
     }
 
     searchFocusNode.unfocus();
@@ -190,6 +218,13 @@ class SSearchController extends GetxController
       },
     );
     searchFocusNode.requestFocus();
+    if (PlatformUtils.isDesktop) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        controller.selection = TextSelection.collapsed(
+          offset: controller.text.length,
+        );
+      });
+    }
   }
 
   Future<void> queryRecommendList() async {
@@ -216,7 +251,14 @@ class SSearchController extends GetxController
 
   void onLongSelect(String word) {
     historyList.remove(word);
-    GStorage.historyWord.put('cacheList', historyList);
+    Persistence.background(
+      Future.wait([
+        GStorage.historyWord.put('cacheList', historyList),
+        SearchHistoryStore.tombstone(word),
+      ]),
+      label: 'search history remove',
+    );
+    SynapseSyncService.scheduleSync();
   }
 
   void onClearHistory() {
@@ -225,7 +267,14 @@ class SSearchController extends GetxController
       title: const Text('确定清空搜索历史？'),
       onConfirm: () {
         historyList.clear();
-        GStorage.historyWord.delete('cacheList');
+        Persistence.background(
+          Future.wait([
+            GStorage.historyWord.delete('cacheList'),
+            SearchHistoryStore.tombstoneAll(),
+          ]),
+          label: 'search history clear',
+        );
+        SynapseSyncService.scheduleSync();
       },
     );
   }

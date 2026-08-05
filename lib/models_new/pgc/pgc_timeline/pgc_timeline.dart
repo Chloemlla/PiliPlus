@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/pgc/pgc_timeline/result.dart';
+import 'package:pili_plus/models_new/pgc/pgc_timeline/result.dart';
 
 class PgcTimeline {
   List<TimelineResult>? result;

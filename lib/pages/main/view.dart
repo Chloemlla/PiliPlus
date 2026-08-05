@@ -1,27 +1,28 @@
 import 'dart:io';
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/floating_navigation_bar.dart';
-import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/main_layout.dart';
-import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
-import 'package:PiliPlus/models/common/nav_bar_config.dart';
-import 'package:PiliPlus/pages/home/view.dart';
-import 'package:PiliPlus/pages/main/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/utils/android/android_helper.dart';
-import 'package:PiliPlus/utils/app_scheme.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/mobile_observer.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/floating_navigation_bar.dart';
+import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/main_layout.dart';
+import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
+import 'package:pili_plus/models/common/nav_bar_config.dart';
+import 'package:pili_plus/pages/home/view.dart';
+import 'package:pili_plus/pages/main/controller.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/clipboard_video_link_handler.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/mobile_observer.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -44,13 +45,15 @@ class _MainAppState extends PopScopeState<MainApp>
         WindowListener,
         TrayListener {
   final _mainController = Get.put(MainController());
-  late final _setting = GStorage.setting;
-  late EdgeInsets _padding;
+  late final _settings = GStorage.settingsStore;
   late ColorScheme _colorScheme;
   Brightness? _brightness;
 
   @override
   bool get initCanPop => false;
+
+  bool get _shouldUseBottomNav =>
+      !_mainController.useSideBar && MediaQuery.sizeOf(context).isPortrait;
 
   @override
   void initState() {
@@ -68,12 +71,15 @@ class _MainAppState extends PopScopeState<MainApp>
       // FlutterSmartDialog throws
       PiliScheme.init();
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ClipboardVideoLinkHandler.init();
+      ClipboardVideoLinkHandler.checkAndOpen();
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _padding = MediaQuery.viewPaddingOf(context);
     _colorScheme = ColorScheme.of(context);
     final brightness = _colorScheme.brightness;
     NetworkImgLayer.reduce =
@@ -84,14 +90,20 @@ class _MainAppState extends PopScopeState<MainApp>
         windowManager.setBrightness(brightness);
       }
     }
-    if (!_mainController.useSideBar) {
-      _mainController.useBottomNav = MediaQuery.sizeOf(context).isPortrait;
-    }
+    _mainController.useBottomNav = _shouldUseBottomNav;
   }
 
   @override
   void didPopNext() {
     addObserverMobile(this);
+    _mainController.useBottomNav = _shouldUseBottomNav;
+    // Orientation and system-bar restoration may settle after the route pops.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _mainController.useBottomNav = _shouldUseBottomNav;
+      });
+    });
     _mainController
       ..checkUnreadDynamic()
       ..checkDefaultSearch(true)
@@ -122,6 +134,7 @@ class _MainAppState extends PopScopeState<MainApp>
       windowManager.removeListener(this);
     }
     removeObserverMobile(this);
+    ClipboardVideoLinkHandler.dispose();
     PiliScheme.listener?.cancel();
     GStorage.close();
     super.dispose();
@@ -129,12 +142,18 @@ class _MainAppState extends PopScopeState<MainApp>
 
   @override
   void onWindowMaximize() {
-    _setting.put(SettingBoxKey.isWindowMaximized, true);
+    Persistence.background(
+      _settings.setWindowMaximized(true),
+      label: 'window maximized state',
+    );
   }
 
   @override
   void onWindowUnmaximize() {
-    _setting.put(SettingBoxKey.isWindowMaximized, false);
+    Persistence.background(
+      _settings.setWindowMaximized(false),
+      label: 'window restored state',
+    );
   }
 
   @override
@@ -143,7 +162,7 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Offset offset = await windowManager.getPosition();
-    _setting.put(SettingBoxKey.windowPosition, [offset.dx, offset.dy]);
+    await _settings.setWindowPosition(left: offset.dx, top: offset.dy);
   }
 
   @override
@@ -152,10 +171,12 @@ class _MainAppState extends PopScopeState<MainApp>
       return;
     }
     final Rect bounds = await windowManager.getBounds();
-    _setting.putAll({
-      SettingBoxKey.windowSize: [bounds.width, bounds.height],
-      SettingBoxKey.windowPosition: [bounds.left, bounds.top],
-    });
+    await _settings.setWindowBounds(
+      width: bounds.width,
+      height: bounds.height,
+      left: bounds.left,
+      top: bounds.top,
+    );
   }
 
   @override
@@ -368,7 +389,7 @@ class _MainAppState extends PopScopeState<MainApp>
     return bottomNav;
   }
 
-  Widget _sideBar() {
+  Widget _sideBar(EdgeInsets viewPadding) {
     if (_mainController.navigationBars.length > 1) {
       if (context.isTablet && _mainController.optTabletNav) {
         return Padding(
@@ -377,7 +398,7 @@ class _MainAppState extends PopScopeState<MainApp>
             context: context,
             removeRight: true,
             child: DrawerTheme(
-              data: DrawerThemeData(width: 130 + _padding.left),
+              data: DrawerThemeData(width: 130 + viewPadding.left),
               child: Obx(
                 () => NavigationDrawer(
                   /// apply `lib/scripts/navigation_drawer.patch`
@@ -430,19 +451,28 @@ class _MainAppState extends PopScopeState<MainApp>
     }
     return Container(
       width: 80,
-      margin: .only(top: 12 + _padding.top, left: _padding.left),
+      margin: .only(
+        top: 12 + viewPadding.top,
+        left: viewPadding.left,
+      ),
       child: userAndSearchVertical(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final useBottomNav = _shouldUseBottomNav;
+    _mainController.useBottomNav = useBottomNav;
+
     Widget child;
     if (_mainController.mainTabBarView) {
       child = TabBarView(
         controller: _mainController.controller,
         physics: const NeverScrollableScrollPhysics(),
-        scrollDirection: _mainController.useBottomNav ? .horizontal : .vertical,
+
+        /// apply `lib/scripts/tabs.patch`
+        scrollDirection: useBottomNav ? .horizontal : .vertical,
         children: _mainController.navigationBars.map((i) => i.page).toList(),
       );
     } else {
@@ -456,7 +486,7 @@ class _MainAppState extends PopScopeState<MainApp>
     Widget? sideBar;
     Widget? bottomNav;
     final EdgeInsets padding;
-    if (_mainController.useBottomNav) {
+    if (useBottomNav) {
       bottomNav = _bottomNav;
       if (bottomNav != null) {
         bottomNav = MediaQuery.removePadding(
@@ -465,11 +495,8 @@ class _MainAppState extends PopScopeState<MainApp>
           child: bottomNav,
         );
       }
-      padding = .only(
-        top: _padding.top,
-        left: _padding.left,
-        right: _padding.right,
-      );
+      // A stale landscape inset here becomes a full-height blank side strip.
+      padding = .only(top: viewPadding.top);
     } else {
       sideBar = DecoratedBox(
         decoration: BoxDecoration(
@@ -479,9 +506,9 @@ class _MainAppState extends PopScopeState<MainApp>
             ),
           ),
         ),
-        child: _sideBar(),
+        child: _sideBar(viewPadding),
       );
-      padding = .only(top: _padding.top, right: _padding.right);
+      padding = .only(top: viewPadding.top, right: viewPadding.right);
     }
 
     child = Material(
@@ -497,7 +524,7 @@ class _MainAppState extends PopScopeState<MainApp>
         value: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarBrightness: _colorScheme.brightness,
-          statusBarIconBrightness: _colorScheme.brightness.reverse,
+          statusBarIconBrightness: _colorScheme.brightness,
           systemStatusBarContrastEnforced: false,
           systemNavigationBarColor: Colors.transparent,
           systemNavigationBarIconBrightness: _colorScheme.brightness.reverse,

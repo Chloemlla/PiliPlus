@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import 'package:PiliPlus/utils/android/bindings.g.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:jni/jni.dart';
 
 abstract final class PiliAndroidHelper {
@@ -45,8 +45,13 @@ abstract final class PiliAndroidHelper {
         uid,
         jCookie,
       );
-    } catch (e) {
-      Utils.reportError(e);
+    } catch (e, stackTrace) {
+      Utils.reportErrorWithContext(
+        e,
+        stack: stackTrace,
+        module: 'android/jni',
+        operation: 'biliSendCommAntifraud',
+      );
     } finally {
       jCommentText.release();
       jSourceId.release();

@@ -1,16 +1,16 @@
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart' show tabBarView;
-import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/models/common/search/search_type.dart';
-import 'package:PiliPlus/pages/search/controller.dart';
-import 'package:PiliPlus/pages/search_panel/article/view.dart';
-import 'package:PiliPlus/pages/search_panel/live/view.dart';
-import 'package:PiliPlus/pages/search_panel/pgc/view.dart';
-import 'package:PiliPlus/pages/search_panel/user/view.dart';
-import 'package:PiliPlus/pages/search_panel/video/view.dart';
-import 'package:PiliPlus/pages/search_result/controller.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart';
+import 'package:pili_plus/common/widgets/view_safe_area.dart';
+import 'package:pili_plus/models/common/search/search_type.dart';
+import 'package:pili_plus/pages/search/controller.dart';
+import 'package:pili_plus/pages/search_panel/article/view.dart';
+import 'package:pili_plus/pages/search_panel/live/view.dart';
+import 'package:pili_plus/pages/search_panel/pgc/view.dart';
+import 'package:pili_plus/pages/search_panel/user/view.dart';
+import 'package:pili_plus/pages/search_panel/video/view.dart';
+import 'package:pili_plus/pages/search_result/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class SearchResultPage extends StatefulWidget {
   const SearchResultPage({super.key});

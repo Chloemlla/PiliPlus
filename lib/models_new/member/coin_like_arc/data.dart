@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/member/coin_like_arc/item.dart';
+import 'package:pili_plus/models_new/member/coin_like_arc/item.dart';
 
 class CoinLikeArcData {
   int? count;

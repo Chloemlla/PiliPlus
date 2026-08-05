@@ -2,16 +2,16 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:PiliPlus/http/api.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/accounts/api_type.dart';
-import 'package:PiliPlus/utils/app_sign.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/accounts/api_type.dart';
+import 'package:pili_plus/utils/app_sign.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -21,9 +21,10 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 final _setCookieReg = RegExp('(?<=)(,)(?=[^;]+?=)');
 
 class AccountManager extends Interceptor {
-  AccountManager();
+  AccountManager({String? blockServer})
+    : blockServer = blockServer ?? Pref.blockServer;
 
-  String blockServer = Pref.blockServer;
+  String blockServer;
 
   static String getCookies(List<Cookie> cookies) {
     // Sort cookies by path (longer path first).
@@ -42,25 +43,44 @@ class AccountManager extends Interceptor {
   }
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     final path = options.path;
 
     late final Account account = options.extra['account'] ?? _findAccount(path);
 
-    if (account is NoAccount || _skipCookie(path)) return handler.next(options);
+    if (account is NoAccount || _skipCookie(path)) {
+      handler.next(options);
+      return;
+    }
 
     if (!account.isLogin && path == Api.heartBeat) {
-      return handler.reject(
+      handler.reject(
         DioException.requestCancelled(requestOptions: options, reason: null),
         false,
       );
+      return;
     }
 
     final isApp = path.startsWith(HttpString.appBaseUrl);
 
     if (isApp && options.responseType == ResponseType.bytes) {
       options.headers.addAll(account.grpcHeaders);
-      return handler.next(options);
+      // 同时携带 Cookie 以支持 cookie-only 登录的 gRPC 鉴权
+      await account.cookieJar.loadForRequest(options.uri).then<void>(
+        (cookies) {
+          if (cookies.isNotEmpty) {
+            options.headers['Cookie'] = getCookies(cookies);
+          }
+          handler.next(options);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          handler.next(options);
+        },
+      );
+      return;
     }
 
     options.headers
@@ -80,83 +100,90 @@ class AccountManager extends Interceptor {
         AppSign.appSign(dataPtr..remove('sign'));
         // if (kDebugMode) debugPrint(dataPtr.toString());
       }
-      return handler.next(options);
+      handler.next(options);
+      return;
     } else {
-      account.cookieJar
+      await account.cookieJar
           .loadForRequest(options.uri)
-          .then((cookies) {
-            final previousCookies =
-                options.headers[HttpHeaders.cookieHeader] as String?;
-            final newCookies = getCookies([
-              ...?previousCookies
-                  ?.split(';')
-                  .where((e) => e.isNotEmpty)
-                  .map(Cookie.fromSetCookieValue),
-              ...cookies,
-            ]);
-            options.headers[HttpHeaders.cookieHeader] = newCookies.isNotEmpty
-                ? newCookies
-                : '';
-            handler.next(options);
-          })
-          .catchError((dynamic e, StackTrace s) {
-            final err = DioException(
-              requestOptions: options,
-              error: e,
-              stackTrace: s,
-            );
-            handler.reject(err, true);
-          });
+          .then<void>(
+            (cookies) {
+              final previousCookies =
+                  options.headers[HttpHeaders.cookieHeader] as String?;
+              final newCookies = getCookies([
+                ...?previousCookies
+                    ?.split(';')
+                    .where((e) => e.isNotEmpty)
+                    .map(Cookie.fromSetCookieValue),
+                ...cookies,
+              ]);
+              options.headers[HttpHeaders.cookieHeader] = newCookies.isNotEmpty
+                  ? newCookies
+                  : '';
+              handler.next(options);
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              handler.reject(
+                DioException(
+                  requestOptions: options,
+                  error: error,
+                  stackTrace: stackTrace,
+                ),
+                true,
+              );
+            },
+          );
     }
   }
 
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  Future<void> onResponse(
+    Response response,
+    ResponseInterceptorHandler handler,
+  ) async {
     final options = response.requestOptions;
     final path = options.path;
     if (options.extra['account'] is NoAccount ||
         path.startsWith(HttpString.appBaseUrl) ||
         _skipCookie(path)) {
-      return handler.next(response);
+      handler.next(response);
+      return;
     } else {
-      final future = _saveCookies(
-        response,
-      ).whenComplete(() => handler.next(response));
-      assert(() {
-        future.catchError(
-          (Object e, StackTrace s) {
-            throw DioException(
-              requestOptions: response.requestOptions,
-              error: e,
-              stackTrace: s,
-            );
-          },
-        );
-        return true;
-      }());
+      await _saveCookies(response).then<void>(
+        (_) => handler.next(response),
+        onError: (Object error, StackTrace stackTrace) {
+          if (kDebugMode) {
+            debugPrint('Cookie persistence failed: $error\n$stackTrace');
+          }
+          handler.next(response);
+        },
+      );
     }
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     if (err.requestOptions.responseType == ResponseType.stream) {
-      return handler.next(err);
+      handler.next(err);
+      return;
     }
     if (err.requestOptions.method != 'POST') {
       toast(err);
     }
     if (err.response != null &&
         !err.response!.requestOptions.path.startsWith(HttpString.appBaseUrl)) {
-      _saveCookies(
-        err.response!,
-      ).whenComplete(() => handler.next(err)).catchError(
-        (dynamic e, StackTrace s) {
-          final error = DioException(
-            requestOptions: err.response!.requestOptions,
-            error: e,
-            stackTrace: s,
+      await _saveCookies(err.response!).then<void>(
+        (_) => handler.next(err),
+        onError: (Object error, StackTrace stackTrace) {
+          handler.next(
+            DioException(
+              requestOptions: err.response!.requestOptions,
+              error: error,
+              stackTrace: stackTrace,
+            ),
           );
-          handler.next(error);
         },
       );
     } else {

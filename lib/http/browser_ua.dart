@@ -1,4 +1,4 @@
-import 'package:PiliPlus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
 
 abstract final class BrowserUa {
   static String get platform => PlatformUtils.isMobile ? mob : pc;

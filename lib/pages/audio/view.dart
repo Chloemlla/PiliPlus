@@ -1,48 +1,48 @@
 import 'dart:math' show min;
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/image_viewer/hero.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
+import 'package:pili_plus/common/widgets/progress_bar/audio_video_progress_bar.dart';
+import 'package:pili_plus/common/widgets/progress_bar/segment_progress_bar.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
     show platformClampingPhysics;
-import 'package:PiliPlus/common/widgets/selection_text.dart';
-import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pb.dart';
-import 'package:PiliPlus/models/common/image_preview_type.dart';
-import 'package:PiliPlus/models/common/image_type.dart';
-import 'package:PiliPlus/pages/audio/controller.dart';
-import 'package:PiliPlus/pages/audio/volume_button.dart';
-import 'package:PiliPlus/pages/setting/models/play_settings.dart'
+import 'package:pili_plus/common/widgets/selection_text.dart';
+import 'package:pili_plus/grpc/bilibili/app/listener/v1.pb.dart';
+import 'package:pili_plus/models/common/image_preview_type.dart';
+import 'package:pili_plus/models/common/image_type.dart';
+import 'package:pili_plus/pages/audio/controller.dart';
+import 'package:pili_plus/pages/audio/volume_button.dart';
+import 'package:pili_plus/pages/setting/models/play_settings.dart'
     show showPlayerVolumeDialog;
-import 'package:PiliPlus/pages/video/introduction/ugc/widgets/action_item.dart';
-import 'package:PiliPlus/pages/video/widgets/header_control.dart'
+import 'package:pili_plus/pages/video/introduction/ugc/widgets/action_item.dart';
+import 'package:pili_plus/pages/video/widgets/header_control.dart'
     show HeaderControlState;
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/services/shutdown_timer_service.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/num_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/services/shutdown_timer_service.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/num_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide DraggableScrollableSheet;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class AudioPage extends StatefulWidget {
   const AudioPage({super.key});
@@ -159,6 +159,7 @@ class _AudioPageState extends State<AudioPage> {
                 children: [
                   Expanded(child: _buildInfo(colorScheme, isPortrait)),
                   const SizedBox(height: 25),
+                  _buildShutdownCountdown(colorScheme),
                   _buildProgressBar(colorScheme),
                   _buildDuration(colorScheme),
                   _buildControls(),
@@ -183,6 +184,7 @@ class _AudioPageState extends State<AudioPage> {
                           return const SizedBox.shrink();
                         }),
                         const SizedBox(height: 25),
+                        _buildShutdownCountdown(colorScheme),
                         _buildProgressBar(colorScheme),
                         _buildDuration(colorScheme),
                         _buildControls(),
@@ -192,6 +194,45 @@ class _AudioPageState extends State<AudioPage> {
                 ],
               ),
       ),
+    );
+  }
+
+  Widget _buildShutdownCountdown(ColorScheme colorScheme) {
+    return ValueListenableBuilder<String?>(
+      valueListenable: shutdownTimerService.countdownText,
+      builder: (context, countdownText, child) {
+        if (countdownText == null) {
+          return const SizedBox(height: 8);
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: colorScheme.secondaryContainer.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.av_timer_outlined,
+                  size: 18,
+                  color: colorScheme.onSecondaryContainer,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '定时关闭剩余 $countdownText',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -554,7 +595,10 @@ class _AudioPageState extends State<AudioPage> {
         Get.back();
         if (!isCurr) {
           _controller.playMode.value = playMode;
-          GStorage.setting.put(SettingBoxKey.audioPlayMode, playMode.index);
+          Persistence.background(
+            GStorage.settingsStore.setAudioPlayMode(playMode),
+            label: 'audio play mode',
+          );
         }
       },
       child: Column(

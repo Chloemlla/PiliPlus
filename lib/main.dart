@@ -1,34 +1,50 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:PiliPlus/build_config.dart';
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/widgets/back_detector.dart';
-import 'package:PiliPlus/common/widgets/custom_toast.dart';
-import 'package:PiliPlus/common/widgets/route_aware_mixin.dart';
-import 'package:PiliPlus/common/widgets/scale_app.dart';
-import 'package:PiliPlus/common/widgets/scroll_behavior.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/models/common/theme/theme_color_type.dart';
-import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
-import 'package:PiliPlus/router/app_pages.dart';
-import 'package:PiliPlus/services/account_service.dart';
-import 'package:PiliPlus/services/download/download_service.dart';
-import 'package:PiliPlus/services/logger.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/calc_window_position.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/json_file_handler.dart';
-import 'package:PiliPlus/utils/max_screen_size.dart';
-import 'package:PiliPlus/utils/path_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/build_config.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/widgets/back_detector.dart';
+import 'package:pili_plus/common/widgets/custom_toast.dart';
+import 'package:pili_plus/common/widgets/in_app_mini_player.dart';
+import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
+import 'package:pili_plus/common/widgets/scale_app.dart';
+import 'package:pili_plus/common/widgets/scroll_behavior.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/models/common/theme/theme_color_type.dart';
+import 'package:pili_plus/pages/setting/pages/crash_report.dart';
+import 'package:pili_plus/pages/video/seal_download_utils.dart';
+import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:pili_plus/router/app_pages.dart';
+import 'package:pili_plus/services/account_service.dart';
+import 'package:pili_plus/services/android_first_launch_permission_service.dart';
+import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
+import 'package:pili_plus/services/crash/crash_context.dart';
+import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_handler.dart';
+import 'package:pili_plus/services/crash/crash_reporter.dart';
+import 'package:pili_plus/services/download/download_service.dart';
+import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
+import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
+import 'package:pili_plus/services/live_alert_lifecycle_observer.dart';
+import 'package:pili_plus/services/logger.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/services/whats_new_guide_service.dart';
+import 'package:pili_plus/services/synapse_sync_service.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/calc_window_position.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/json_file_handler.dart';
+import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/max_screen_size.dart';
+import 'package:pili_plus/utils/path_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/theme_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:catcher_2/catcher_2.dart';
 import 'package:collection/collection.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -88,13 +104,96 @@ Future<void> _initAppPath() async {
   appSupportDirPath = (await getApplicationSupportDirectory()).path;
 }
 
-void main() async {
+/// Post-first-frame startup: media/audio service (foreground service), account
+/// session restore & history sync. Kept off the pre-`runApp` path so a slow
+/// network or Synapse server cannot delay the first frame (black screen) or
+/// trip the Android launch/foreground-service timeouts.
+Future<void> _initDeferredStartup() async {
+  if (PlatformUtils.isMobile || Platform.isMacOS) {
+    try {
+      await setupServiceLocator();
+    } catch (e, s) {
+      CrashReporter.recordErrorSync(
+        e,
+        s,
+        severity: CrashSeverity.handled,
+        module: 'startup',
+        operation: 'setupServiceLocator',
+        reason: 'deferred_audio_service_init_failed',
+      );
+    }
+  }
+  try {
+    await LoginUtils.initializeSession();
+  } catch (e, s) {
+    CrashReporter.recordErrorSync(
+      e,
+      s,
+      severity: CrashSeverity.handled,
+      module: 'startup',
+      operation: 'LoginUtils.initializeSession',
+      reason: 'deferred_session_init_failed',
+    );
+  }
+  try {
+    await RequestUtils.syncHistoryStatus();
+  } catch (e, s) {
+    CrashReporter.recordErrorSync(
+      e,
+      s,
+      severity: CrashSeverity.handled,
+      module: 'startup',
+      operation: 'RequestUtils.syncHistoryStatus',
+      reason: 'deferred_history_status_sync_failed',
+    );
+  }
+}
+
+void main() {
+  var startupCompleted = false;
+  runZonedGuarded(
+    () async {
+      CrashReporter.install();
+      await _main();
+      startupCompleted = true;
+    },
+    (error, stackTrace) {
+      if (CrashReporter.shouldIgnore(error, stackTrace)) return;
+      final severity = startupCompleted
+          ? CrashSeverity.unhandled
+          : CrashSeverity.fatal;
+      CrashReporter.recordErrorSync(
+        error,
+        stackTrace,
+        source: CrashSource.platformDispatcher,
+        severity: severity,
+        operation: 'mainZone',
+        reason: 'uncaught_zone_error',
+      );
+      if (!startupCompleted) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+    },
+  );
+}
+
+Future<void> _main() async {
   ScaledWidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   await _initAppPath();
+  CrashBreadcrumbs.record('main.start');
+  final startupCrashReport = await CrashReporter.ensureInitialized();
   try {
     await GStorage.init();
-  } catch (e) {
+    CrashBreadcrumbs.record('GStorage initialized');
+  } catch (e, stackTrace) {
+    CrashReporter.recordErrorSync(
+      e,
+      stackTrace,
+      severity: CrashSeverity.fatal,
+      operation: 'GStorage.init',
+      reason: 'startup_storage_initialization_failed',
+    );
     await Utils.copyText(e.toString());
     if (kDebugMode) debugPrint('GStorage init error: $e');
     exit(0);
@@ -108,13 +207,16 @@ void main() async {
   Get
     ..lazyPut(AccountService.new)
     ..lazyPut(DownloadService.new);
+  await registerFeatureServices();
   HttpOverrides.global = _CustomHttpOverrides();
 
   if (PlatformUtils.isMobile) {
-    if (Platform.isAndroid) MaxScreenSize.init();
+    if (Platform.isAndroid) {
+      MaxScreenSize.init();
+      SealDownloadUtils.ensureListening();
+    }
     await Future.wait([
       if (Pref.horizontalScreen) ?fullMode() else ?portraitUpMode(),
-      setupServiceLocator(),
     ]);
   } else if (Platform.isWindows) {
     if (await WebViewEnvironment.getAvailableVersion() != null) {
@@ -124,13 +226,39 @@ void main() async {
         ),
       );
     }
-  } else if (Platform.isMacOS) {
-    await setupServiceLocator();
   }
 
   Request();
-  Request.setCookie();
-  RequestUtils.syncHistoryStatus();
+  // The account manager must be installed before any request; it is local &
+  // cheap, unlike the rest of the session restore below.
+  Request.installAccountManager();
+
+  // Defer everything that needs the network or a foreground service until the
+  // first frame has rendered. Restoring the session performs Synapse discovery
+  // & coin sync against the network (10s+ HTTP timeouts with retry) and starting
+  // the audio service spins up a foreground service; doing either before
+  // runApp() leaves a black screen on slow/loaded devices until the system
+  // declares the app unresponsive (ANR / launch timeout).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(_initDeferredStartup());
+  });
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(
+      LiveAlertLifecycleObserver.instance.init().catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        CrashReporter.recordErrorSync(
+          error,
+          stackTrace,
+          severity: CrashSeverity.handled,
+          module: 'live_alert',
+          operation: 'LiveAlertLifecycleObserver.init',
+          reason: 'live_alert_startup_failed',
+        );
+      }),
+    );
+  });
 
   SmartDialog.config.toast = SmartConfigToast(displayType: .onlyRefresh);
 
@@ -141,6 +269,7 @@ void main() async {
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
         statusBarColor: Colors.transparent,
+        systemStatusBarContrastEnforced: false,
         systemNavigationBarContrastEnforced: false,
       ),
     );
@@ -200,18 +329,21 @@ void main() async {
     final fileHandler = await JsonFileHandler.init();
 
     Catcher2(
-      [?fileHandler, const ConsoleHandler()],
-      const MyApp(),
+      [?fileHandler, CrashReportHandler(), const ConsoleHandler()],
+      MyApp(startupCrashReport: startupCrashReport),
       logger: logger,
       customParameters: customParameters,
     );
+    CrashReporter.install(force: true);
   } else {
-    runApp(const MyApp());
+    runApp(MyApp(startupCrashReport: startupCrashReport));
   }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final CrashReport? startupCrashReport;
+
+  const MyApp({this.startupCrashReport, super.key});
 
   static ColorScheme? _light, _dark;
 
@@ -281,10 +413,12 @@ class MyApp extends StatelessWidget {
         notifyStyle: const FlutterSmartNotifyStyle(
           warningBuilder: NotifyWarning.new,
         ),
-        builder: _builder,
+        builder: (context, child) =>
+            _builder(context, child, startupCrashReport),
       ),
       navigatorObservers: [
         routeObserver,
+        CrashBreadcrumbNavigatorObserver(),
         FlutterSmartDialog.observer,
       ],
       scrollBehavior: PlatformUtils.isDesktop
@@ -293,7 +427,11 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  static Widget _builder(BuildContext context, Widget? child) {
+  static Widget _builder(
+    BuildContext context,
+    Widget? child,
+    CrashReport? startupCrashReport,
+  ) {
     final uiScale = Pref.uiScale;
     final mediaQuery = MediaQuery.of(context);
     final textScaler = TextScaler.linear(Pref.defaultTextScale);
@@ -319,13 +457,31 @@ class MyApp extends StatelessWidget {
         child: child!,
       );
     }
+    child = InAppMiniPlayerLayer(child: child);
+    child = FirstLaunchOssNoticeGate(child: child);
+    child = FirstLaunchImprovementsGuideGate(child: child);
+    child = WhatsNewGuideGate(child: child);
+    child = SynapseSyncGate(child: child);
+    if (Platform.isAndroid) {
+      child = AndroidFirstLaunchPermissionGate(child: child);
+    }
     if (PlatformUtils.isDesktop) {
-      return BackDetector(
-        onBack: _onBack,
+      child = BackDetector(onBack: _onBack, child: child);
+    }
+    if (Platform.isAndroid) {
+      child = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemStatusBarContrastEnforced: false,
+          statusBarIconBrightness: Theme.of(context).brightness,
+        ),
         child: child,
       );
     }
-    return child;
+    return CrashReportStartupGate(
+      initialReport: startupCrashReport,
+      child: child,
+    );
   }
 
   /// from [DynamicColorBuilderState.initPlatformState]

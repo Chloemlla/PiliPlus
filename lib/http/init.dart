@@ -2,25 +2,26 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:PiliPlus/http/api.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/retry_interceptor.dart';
-import 'package:PiliPlus/http/user.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/accounts/account_manager/account_mgr.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/login_utils.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/http/adapter_lifecycle.dart';
+import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/connection_failover_interceptor.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/http/network_security_policy.dart';
+import 'package:pili_plus/http/retry_interceptor.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/accounts/account_manager/account_mgr.dart';
+import 'package:pili_plus/utils/log_redactor.dart';
+import 'package:pili_plus/utils/clash_compat.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:archive/archive.dart';
 import 'package:brotli/brotli.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, listEquals;
+import 'package:flutter/foundation.dart'
+    show debugPrint, kDebugMode, listEquals;
 
 class Request {
   static const _gzipDecoder = GZipDecoder();
@@ -28,6 +29,7 @@ class Request {
 
   static final Request _instance = Request._internal();
   static late AccountManager accountManager;
+  static bool _accountManagerInstalled = false;
   static final _enableHttp2 = Pref.enableHttp2;
   static late final Dio dio;
   static Dio? _http11Dio;
@@ -35,28 +37,11 @@ class Request {
       _http11Dio ??= _enableHttp2 ? _cloneHttp11Dio() : dio;
   factory Request() => _instance;
 
-  /// 设置cookie
-  static void setCookie() {
+  static void installAccountManager() {
+    if (_accountManagerInstalled) return;
     accountManager = AccountManager();
     dio.interceptors.add(accountManager);
-    Accounts.refresh();
-    LoginUtils.setWebCookie();
-
-    if (Accounts.main.isLogin) {
-      final coin = Pref.userInfoCache?.money;
-      if (coin == null) {
-        setCoin();
-      } else {
-        GlobalData().coins = coin;
-      }
-    }
-  }
-
-  static Future<void> setCoin() async {
-    final res = await UserHttp.getCoin();
-    if (res case Success(:final response)) {
-      GlobalData().coins = response;
-    }
+    _accountManagerInstalled = true;
   }
 
   static Future<void> buvidActive(Account account) async {
@@ -137,7 +122,12 @@ class Request {
     final bool enableSystemProxy;
     late final String systemProxyHost;
     late final int? systemProxyPort;
-    if (Pref.enableSystemProxy) {
+    // Clash VPN auto-adapt: traffic already goes through TUN — do not stack HTTP proxy.
+    final skipManualProxy =
+        Pref.clashAutoAdapt &&
+        Platform.isAndroid &&
+        ClashCompat.isClashVpnRouting;
+    if (Pref.enableSystemProxy && !skipManualProxy) {
       systemProxyHost = Pref.systemProxyHost;
       systemProxyPort = int.tryParse(Pref.systemProxyPort);
       enableSystemProxy = systemProxyPort != null && systemProxyHost.isNotEmpty;
@@ -145,31 +135,43 @@ class Request {
       enableSystemProxy = false;
     }
 
+    HttpClient createHttpClient() {
+      final client = HttpClient()
+        ..idleTimeout = const Duration(seconds: 15)
+        ..autoUncompress = false; // Http2Adapter没有自动解压, 统一行为
+      if (enableSystemProxy) {
+        client.findProxy = (_) => 'PROXY $systemProxyHost:$systemProxyPort';
+      }
+      if (NetworkSecurityPolicy.shouldBypassCertificateValidation(
+        explicitBadCertificateBypass: Pref.badCertificateCallback,
+      )) {
+        client.badCertificateCallback = (cert, host, port) => true;
+      }
+      return client;
+    }
+
     final http11Adapter = IOHttpClientAdapter(
-      createHttpClient: enableSystemProxy
-          ? () => HttpClient()
-              ..idleTimeout = const Duration(seconds: 15)
-              ..autoUncompress = false
-              ..findProxy = ((_) => 'PROXY $systemProxyHost:$systemProxyPort')
-              ..badCertificateCallback = (cert, host, port) => true
-          : () => HttpClient()
-              ..idleTimeout = const Duration(seconds: 15)
-              ..autoUncompress = false, // Http2Adapter没有自动解压, 统一行为
+      createHttpClient: createHttpClient,
     );
 
     final connectionManager = _enableHttp2
         ? ConnectionManager(
             idleTimeout: const Duration(seconds: 15),
-            onClientCreate: enableSystemProxy
-                ? (_, config) => config
-                    ..proxy = Uri(
-                      scheme: 'http',
-                      host: systemProxyHost,
-                      port: systemProxyPort,
-                    )
-                    ..onBadCertificate = (_) => true
-                : Pref.badCertificateCallback
-                ? (_, config) => config.onBadCertificate = (_) => true
+            onClientCreate: enableSystemProxy || Pref.badCertificateCallback
+                ? (_, config) {
+                    if (enableSystemProxy) {
+                      config.proxy = Uri(
+                        scheme: 'http',
+                        host: systemProxyHost,
+                        port: systemProxyPort,
+                      );
+                    }
+                    if (NetworkSecurityPolicy.shouldBypassCertificateValidation(
+                      explicitBadCertificateBypass: Pref.badCertificateCallback,
+                    )) {
+                      config.onBadCertificate = (_) => true;
+                    }
+                  }
                 : null,
           )
         : null;
@@ -177,20 +179,35 @@ class Request {
   }
 
   @pragma('vm:notify-debugger-on-exception')
+  /// Public entry for settings toggle / VPN adapt refresh.
+  static void resetAdaptersForClashAdapt() {
+    if (Platform.isAndroid) {
+      unawaited(() async {
+        await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
+        await ClashCompat.refresh();
+        _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+        _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
+        _resetAdaptersForNetworkChange();
+      }());
+      return;
+    }
+    _resetAdaptersForNetworkChange();
+  }
+
   static void _resetAdaptersForNetworkChange() {
     try {
       final (h11, connectionManager) = _createPool();
       if (connectionManager != null) {
-        (dio.httpClientAdapter as Http2Adapter)
-          ..connectionManager.close(force: true)
-          ..connectionManager = connectionManager
-          ..fallbackAdapter.close(force: true)
-          ..fallbackAdapter = h11;
-        _http11Dio?.httpClientAdapter = h11;
+        replaceHttp2AdapterPool(
+          adapter: dio.httpClientAdapter as Http2Adapter,
+          connectionManager: connectionManager,
+          fallbackAdapter: h11,
+          installHttp11Adapter: (adapter) {
+            _http11Dio?.httpClientAdapter = adapter;
+          },
+        );
       } else {
-        dio
-          ..httpClientAdapter.close(force: true)
-          ..httpClientAdapter = h11;
+        replaceHttpClientAdapter(dio: dio, adapter: h11);
       }
     } catch (_) {}
   }
@@ -238,9 +255,15 @@ class Request {
           request: false,
           requestHeader: false,
           responseHeader: false,
+          logPrint: (value) => debugPrint(
+            LogRedactor.redactText(value.toString()),
+          ),
         ),
       );
     }
+
+    // 连接失败检测 Clash VPN 死锁，主动回退默认网络
+    dio.interceptors.add(ConnectionFailoverInterceptor());
 
     dio
       ..transformer = BackgroundTransformer()
@@ -248,7 +271,52 @@ class Request {
         return status != null && status >= 200 && status < 300;
       };
 
-    if (Platform.isIOS) _watchConnectivity();
+    if (Platform.isIOS) {
+      _watchConnectivity();
+    } else if (Platform.isAndroid) {
+      _startClashAutoAdapt();
+    }
+  }
+
+  // ignore: cancel_subscriptions
+  static StreamSubscription<void>? _clashStatusSub;
+  static bool? _lastClashVpnRouting;
+  static bool? _lastClashAutoAdaptPref;
+
+  static void _startClashAutoAdapt() {
+    if (!Platform.isAndroid) return;
+    unawaited(
+      ClashCompat.ensureStarted().then((_) async {
+        // Keep native process-binding flag in sync with Pref.
+        await ClashCompat.setAutoAdaptEnabled(Pref.clashAutoAdapt);
+        _lastClashVpnRouting = ClashCompat.isClashVpnRouting;
+        _lastClashAutoAdaptPref = Pref.clashAutoAdapt;
+        if (Pref.clashAutoAdapt) {
+          _resetAdaptersForNetworkChange();
+        }
+      }),
+    );
+    if (_clashStatusSub != null) return;
+    _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
+      final prefEnabled = Pref.clashAutoAdapt;
+      // Pref can change outside the status stream; push to native when needed.
+      if (_lastClashAutoAdaptPref != prefEnabled) {
+        _lastClashAutoAdaptPref = prefEnabled;
+        unawaited(ClashCompat.setAutoAdaptEnabled(prefEnabled));
+      }
+      if (!prefEnabled) {
+        // Ensure adapters leave the "skip proxy" path when adapt is off.
+        if (_lastClashVpnRouting != false) {
+          _lastClashVpnRouting = false;
+          _resetAdaptersForNetworkChange();
+        }
+        return;
+      }
+      final routing = ClashCompat.isClashVpnRouting;
+      if (_lastClashVpnRouting == routing) return;
+      _lastClashVpnRouting = routing;
+      _resetAdaptersForNetworkChange();
+    });
   }
 
   /*
@@ -331,9 +399,7 @@ class Request {
     } on DioException catch (e) {
       // if (kDebugMode) debugPrint('downloadFile error: $e');
       return Response(
-        data: {
-          'message': await AccountManager.dioError(e),
-        },
+        data: {'message': await AccountManager.dioError(e)},
         statusCode: e.response?.statusCode ?? -1,
         requestOptions: e.requestOptions,
       );

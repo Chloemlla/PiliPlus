@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models/model_owner.dart';
+import 'package:pili_plus/models/model_owner.dart';
 
 class FollowingsFollowedUpper {
   List<Owner>? items;

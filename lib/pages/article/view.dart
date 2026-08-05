@@ -1,38 +1,38 @@
 import 'dart:math';
 
-import 'package:PiliPlus/common/widgets/badge.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart'
-    show tabBarScrollPhysics;
-import 'package:PiliPlus/common/widgets/sliver/sliver_to_box_adapter.dart';
-import 'package:PiliPlus/models/common/image_preview_type.dart';
-import 'package:PiliPlus/models/dynamics/article_content_model.dart' show Pic;
-import 'package:PiliPlus/models/dynamics/result.dart' show DynamicStat;
-import 'package:PiliPlus/pages/article/controller.dart';
-import 'package:PiliPlus/pages/article/widgets/article_ops.dart';
-import 'package:PiliPlus/pages/article/widgets/html_render.dart';
-import 'package:PiliPlus/pages/article/widgets/opus_content.dart';
-import 'package:PiliPlus/pages/common/dyn/common_dyn_page.dart';
-import 'package:PiliPlus/pages/dynamics_repost/view.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/grid.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/num_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/share_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+// PageView is from package:flutter/widgets.dart
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart';
+import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
+import 'package:pili_plus/models/common/image_preview_type.dart';
+import 'package:pili_plus/models/dynamics/article_content_model.dart' show Pic;
+import 'package:pili_plus/models/dynamics/result.dart' show DynamicStat;
+import 'package:pili_plus/pages/article/controller.dart';
+import 'package:pili_plus/pages/article/widgets/article_ops.dart';
+import 'package:pili_plus/pages/article/widgets/html_render.dart';
+import 'package:pili_plus/pages/article/widgets/opus_content.dart';
+import 'package:pili_plus/pages/common/dyn/common_dyn_page.dart';
+import 'package:pili_plus/pages/dynamics_repost/view.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/extension/get_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/grid.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/num_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/share_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:html/parser.dart' as parser;
 
 class ArticlePage extends StatefulWidget {
@@ -216,7 +216,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
               if (controller.type != 'read')
                 if (controller.opusData?.modules.moduleTop?.display?.album?.pics
                     case final pics? when pics.isNotEmpty)
-                  SliverToBoxAdapter(child: _buildImageGallery(pics)),
+                  SliverToBoxAdapter(child: _buildImageGallery(pics, maxWidth)),
               if (controller.summary.title != null)
                 SliverToBoxWithVisibilityAdapter(
                   onVisibilityChanged: controller.showTitle.call,
@@ -340,7 +340,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
     late final outline = theme.colorScheme.outline;
     late final btnStyle = TextButton.styleFrom(
       tapTargetSize: .padded,
-      padding: const .symmetric(horizontal: 15),
+      padding: const .symmetric(horizontal: 4),
       foregroundColor: outline,
     );
 
@@ -361,9 +361,13 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
           color: color,
         ),
         style: btnStyle,
-        label: Text(
-          stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
-          style: TextStyle(color: color),
+        label: Flexible(
+          child: Text(
+            stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color),
+          ),
         ),
       );
     }
@@ -483,13 +487,13 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
     );
   }
 
-  Widget? _buildImageGallery(List<Pic> pics) {
+  Widget? _buildImageGallery(List<Pic> pics, double contentWidth) {
     final length = pics.length;
     final first = pics.first;
     double height;
     if (first.height != null && first.width != null) {
       final ratio = first.height! / first.width!;
-      height = min(maxWidth * ratio, maxHeight * 0.55);
+      height = min(contentWidth * ratio, maxHeight * 0.55);
     } else {
       height = maxHeight * 0.55;
     }
@@ -498,7 +502,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
       children: [
         Container(
           height: height,
-          width: maxWidth,
+          width: contentWidth,
           margin: const .only(bottom: 10),
           child: PageView.builder(
             physics: tabBarScrollPhysics,
@@ -510,10 +514,10 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
               final pic = pics[index];
               int? memCacheWidth, memCacheHeight;
               if (pic.isLongPic ?? false) {
-                memCacheWidth = maxWidth.cacheSize(context);
+                memCacheWidth = contentWidth.cacheSize(context);
               } else if (pic.width != null && pic.height != null) {
                 if (pic.width! > pic.height!) {
-                  memCacheWidth = maxWidth.cacheSize(
+                  memCacheWidth = contentWidth.cacheSize(
                     context,
                   );
                 } else {
@@ -537,7 +541,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                     children: [
                       CachedNetworkImage(
                         height: height,
-                        width: maxWidth,
+                        width: contentWidth,
                         memCacheWidth: memCacheWidth,
                         memCacheHeight: memCacheHeight,
                         fit: pic.isLongPic == true ? BoxFit.cover : null,

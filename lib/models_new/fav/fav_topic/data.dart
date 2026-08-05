@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/fav/fav_topic/topic_list.dart';
+import 'package:pili_plus/models_new/fav/fav_topic/topic_list.dart';
 
 class FavTopicData {
   TopicList? topicList;

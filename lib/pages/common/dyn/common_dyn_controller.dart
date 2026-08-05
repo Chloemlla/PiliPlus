@@ -1,9 +1,9 @@
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart';
-import 'package:PiliPlus/grpc/reply.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/pages/common/reply_controller.dart';
-import 'package:PiliPlus/pages/video/reply/vote/reply_vote_mixin.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart';
+import 'package:pili_plus/grpc/reply.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/pages/common/reply_controller.dart';
+import 'package:pili_plus/pages/video/reply/vote/reply_vote_mixin.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:get/get.dart';
 
 abstract class CommonDynController extends ReplyController<MainListReply>

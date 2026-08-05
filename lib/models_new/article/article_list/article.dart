@@ -1,5 +1,5 @@
-import 'package:PiliPlus/models_new/article/article_list/stats.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/models_new/article/article_list/stats.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
 
 class ArticleListItemModel {
   int? id;

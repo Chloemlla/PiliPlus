@@ -1,7 +1,7 @@
 import 'dart:math' show max;
 
-import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/gestures.dart' show HorizontalDragGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

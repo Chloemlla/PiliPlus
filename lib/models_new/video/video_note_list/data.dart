@@ -1,5 +1,5 @@
-import 'package:PiliPlus/models_new/video/video_note_list/list.dart';
-import 'package:PiliPlus/models_new/video/video_note_list/page.dart';
+import 'package:pili_plus/models_new/video/video_note_list/list.dart';
+import 'package:pili_plus/models_new/video/video_note_list/page.dart';
 
 class VideoNoteData {
   List<VideoNoteItemModel>? list;

@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/bubble/sort_item.dart';
+import 'package:pili_plus/models_new/bubble/sort_item.dart';
 
 class SortInfo {
   bool? showSort;

@@ -1,52 +1,53 @@
+import 'dart:async' show FutureOr;
 import 'dart:math';
 
-import 'package:PiliPlus/common/assets.dart';
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/badge.dart';
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/dialog/report.dart';
-import 'package:PiliPlus/common/widgets/flutter/text/text.dart' as custom_text;
-import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
-import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/image_grid/image_grid_view.dart';
-import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
-import 'package:PiliPlus/common/widgets/translucent_row.dart';
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
+import 'package:pili_plus/common/assets.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/style.dart';
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/dialog/dialog.dart';
+import 'package:pili_plus/common/widgets/dialog/report.dart';
+import 'package:pili_plus/common/widgets/flutter/text/text.dart' as custom_text;
+import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart';
+import 'package:pili_plus/common/widgets/pendant_avatar.dart';
+import 'package:pili_plus/common/widgets/translucent_row.dart';
+import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, ReplyControl, Content, Url, ReplyControl_VoteOption, Emote;
-import 'package:PiliPlus/grpc/reply.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/reply.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/image_type.dart';
-import 'package:PiliPlus/pages/dynamics/widgets/vote.dart';
-import 'package:PiliPlus/pages/member/widget/medal_widget.dart';
-import 'package:PiliPlus/pages/save_panel/view.dart';
-import 'package:PiliPlus/pages/video/controller.dart';
-import 'package:PiliPlus/pages/video/reply/widgets/zan_grpc.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/app_scheme.dart';
-import 'package:PiliPlus/utils/bili_utils.dart';
-import 'package:PiliPlus/utils/color_utils.dart';
-import 'package:PiliPlus/utils/danmaku_utils.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:PiliPlus/utils/extension/selectable_region_ext.dart';
-import 'package:PiliPlus/utils/extension/theme_ext.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/image_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/url_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/grpc/reply.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/reply.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/common/image_type.dart';
+import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
+import 'package:pili_plus/pages/member/widget/medal_widget.dart';
+import 'package:pili_plus/pages/save_panel/view.dart';
+import 'package:pili_plus/pages/video/controller.dart';
+import 'package:pili_plus/pages/video/reply/widgets/zan_grpc.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/bili_utils.dart';
+import 'package:pili_plus/utils/color_utils.dart';
+import 'package:pili_plus/utils/danmaku_utils.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/selectable_region_ext.dart';
+import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/url_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:fixnum/fixnum.dart';
@@ -56,7 +57,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:protobuf/protobuf.dart';
 
-part 'package:PiliPlus/common/widgets/context_menu/reply_menu_helper.dart';
+part 'package:pili_plus/common/widgets/context_menu/reply_menu_helper.dart';
 
 class ReplyItemGrpc extends StatelessWidget {
   const ReplyItemGrpc({
@@ -986,7 +987,7 @@ class ReplyItemGrpc extends StatelessWidget {
   Widget morePanel({
     required BuildContext context,
     required ReplyInfo item,
-    required VoidCallback onDelete,
+    required FutureOr<void> Function() onDelete,
     required bool isSubReply,
   }) {
     late String message = item.content.message;
@@ -1020,35 +1021,7 @@ class ReplyItemGrpc extends StatelessWidget {
               ),
             ),
           ),
-          if (kDebugMode && GStorage.reply != null) ...[
-            ListTile(
-              onTap: () {
-                Get.back();
-                GStorage.reply!.put(
-                  item.id.toString(),
-                  (item.deepCopy()
-                        ..unknownFields.clear()
-                        ..replies.clear()
-                        ..clearTrackInfo())
-                      .writeToBuffer(),
-                );
-              },
-              title: Text(
-                'save to local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
-            ListTile(
-              onTap: () {
-                Get.back();
-                onDelete();
-                GStorage.reply!.delete(item.id.toString());
-              },
-              title: Text(
-                'remove from local',
-                style: style.copyWith(color: colorScheme.primary),
-              ),
-            ),
+          if (kDebugMode && GStorage.replyCacheStore.isEnabled)
             ListTile(
               onTap: () {
                 Get.back();
@@ -1059,16 +1032,20 @@ class ReplyItemGrpc extends StatelessWidget {
                           ..replies.clear()
                           ..clearTrackInfo())
                         .writeToBuffer();
-                GStorage.reply!.putAll({
-                  for (var i = oid; i < oid + 1000; i++) i.toString(): data,
-                });
+                Persistence.background(
+                  GStorage.replyCacheStore.putAll({
+                    for (var i = oid; i < oid + 1000; i++) i.toString(): data,
+                  }),
+                  label: 'debug reply cache fill',
+                );
               },
+              minLeadingWidth: 0,
+              leading: const Icon(Icons.bug_report_outlined, size: 19),
               title: Text(
                 'save to local (x1000)',
                 style: style.copyWith(color: colorScheme.primary),
               ),
             ),
-          ],
           if (ownerMid == upMid || ownerMid == item.member.mid)
             ListTile(
               onTap: () async {
@@ -1126,7 +1103,7 @@ class ReplyItemGrpc extends StatelessWidget {
                 SmartDialog.dismiss();
                 if (res.isSuccess) {
                   SmartDialog.showToast('删除成功');
-                  onDelete();
+                  await onDelete();
                 } else {
                   SmartDialog.showToast('删除失败, $res');
                 }
@@ -1151,7 +1128,7 @@ class ReplyItemGrpc extends StatelessWidget {
                       banUid: banUid,
                     );
                     if (res.isSuccess) {
-                      onDelete();
+                      await onDelete();
                     }
                     return res;
                   },
@@ -1201,16 +1178,46 @@ class ReplyItemGrpc extends StatelessWidget {
             leading: const Icon(Icons.save_alt, size: 19),
             title: Text('保存评论', style: style),
           ),
-          if (kDebugMode || item.mid == ownerMid)
-            ListTile(
-              onTap: () {
-                Get.back();
-                onCheckReply?.call(item);
-              },
-              minLeadingWidth: 0,
-              leading: const Icon(CustomIcons.shield_reply, size: 19),
-              title: Text('检查评论', style: style),
+          ListTile(
+            onTap: () async {
+              Get.back();
+              final key = item.id.toString();
+              if (GStorage.favoriteReplyStore.containsKey(key)) {
+                // MyReply owns an async controller callback that removes the
+                // store entry and refreshes its list. Other level-0 consumers
+                // (for example SavePanel) do not, so delete through the store.
+                if (replyLevel == 0 && this.onDelete != null) {
+                  await onDelete();
+                } else {
+                  await GStorage.favoriteReplyStore.delete(key);
+                }
+                SmartDialog.showToast('已取消收藏');
+              } else {
+                await GStorage.favoriteReplyStore.put(
+                  key,
+                  (item.deepCopy()
+                        ..unknownFields.clear()
+                        ..replies.clear()
+                        ..clearTrackInfo())
+                      .writeToBuffer(),
+                );
+                SmartDialog.showToast('已收藏');
+              }
+            },
+            minLeadingWidth: 0,
+            leading: Icon(
+              GStorage.favoriteReplyStore.containsKey(item.id.toString())
+                  ? Icons.star
+                  : Icons.star_outline,
+              size: 19,
             ),
+            title: Text(
+              GStorage.favoriteReplyStore.containsKey(item.id.toString())
+                  ? '取消收藏'
+                  : '收藏评论',
+              style: style,
+            ),
+          ),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/fav/fav_detail/cnt_info.dart';
+import 'package:pili_plus/models_new/fav/fav_detail/cnt_info.dart';
 
 class SubDetailItemModel {
   int? id;

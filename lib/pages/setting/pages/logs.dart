@@ -1,23 +1,27 @@
-import 'dart:async' show Timer;
-import 'dart:convert' show jsonDecode;
+import 'dart:async';
+import 'dart:convert';
 
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/widgets/button/icon_button.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/loading_widget.dart';
-import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:PiliPlus/common/widgets/selection_text.dart';
-import 'package:PiliPlus/services/logger.dart';
-import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/widgets/button/icon_button.dart';
+import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
+import 'package:pili_plus/common/widgets/selection_text.dart';
+import 'package:pili_plus/pages/setting/pages/crash_report_history.dart';
+import 'package:pili_plus/services/crash/crash_report.dart';
+import 'package:pili_plus/services/crash/crash_report_store.dart';
+import 'package:pili_plus/services/logger.dart';
+import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/log_redactor.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:catcher_2/catcher_2.dart';
 import 'package:catcher_2/utils/log_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 const _snackBarDisplayDuration = Duration(seconds: 1);
 
@@ -31,11 +35,13 @@ class LogsPage extends StatefulWidget {
 class _LogsPageState extends State<LogsPage> {
   List<_ExpandedItem<Report>> logsContent = [];
   _ExpandedItem<_DeviceInfo>? _deviceInfo;
+  List<CrashReport> _storedCrashReports = const [];
   late bool enableLog = Pref.enableLog;
 
   @override
   void initState() {
     _initDeviceInfo();
+    _initCrashReports();
     getLog();
     super.initState();
   }
@@ -48,6 +54,10 @@ class _LogsPageState extends State<LogsPage> {
         c.customParameters,
       ));
     }
+  }
+
+  void _initCrashReports() {
+    _storedCrashReports = CrashReportStore.loadAll();
   }
 
   Future<void> getLog() async {
@@ -77,7 +87,7 @@ class _LogsPageState extends State<LogsPage> {
 
   void copyLogs() {
     Utils.copyText(
-      '```\n${logsContent.join('\n\n')}```',
+      LogRedactor.redactText('```\n${logsContent.join('\n\n')}```'),
       needToast: false,
     );
     if (mounted) {
@@ -122,7 +132,10 @@ class _LogsPageState extends State<LogsPage> {
                       Utils.reportError('Manual', StackTrace.current);
                       if (timer.tick > 3) {
                         timer.cancel();
-                        if (mounted) getLog();
+                        if (mounted) {
+                          _initCrashReports();
+                          getLog();
+                        }
                       }
                     },
                   ),
@@ -136,25 +149,22 @@ class _LogsPageState extends State<LogsPage> {
                 },
                 child: Text('${enableLog ? '关闭' : '开启'}日志'),
               ),
-              PopupMenuItem(
-                onTap: copyLogs,
-                child: const Text('复制日志'),
-              ),
+              PopupMenuItem(onTap: copyLogs, child: const Text('复制日志')),
               PopupMenuItem(
                 onTap: () =>
                     PageUtils.launchURL('${Constants.sourceCodeUrl}/issues'),
                 child: const Text('错误反馈'),
               ),
-              PopupMenuItem(
-                onTap: clearLogs,
-                child: const Text('清空日志'),
-              ),
+              PopupMenuItem(onTap: clearLogs, child: const Text('清空日志')),
             ],
           ),
           const SizedBox(width: 6),
         ],
       ),
-      body: logsContent.isNotEmpty || _deviceInfo != null
+      body:
+          logsContent.isNotEmpty ||
+              _deviceInfo != null ||
+              _storedCrashReports.isNotEmpty
           ? Padding(
               padding: EdgeInsets.only(
                 left: padding.left + 12,
@@ -162,6 +172,19 @@ class _LogsPageState extends State<LogsPage> {
               ),
               child: CustomScrollView(
                 slivers: [
+                  if (_storedCrashReports.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const .only(bottom: 12),
+                        child: _CrashReportCard(
+                          reports: _storedCrashReports,
+                          onChanged: () {
+                            _initCrashReports();
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ),
                   if (_deviceInfo != null)
                     SliverToBoxAdapter(
                       child: Padding(
@@ -192,16 +215,58 @@ typedef _DeviceInfo = (
   Map<String, dynamic>,
 );
 
+class _CrashReportCard extends StatelessWidget {
+  final List<CrashReport> reports;
+  final VoidCallback onChanged;
+
+  const _CrashReportCard({required this.reports, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.of(context);
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.warning_amber_rounded, color: colorScheme.error),
+        title: const Text('异常报告历史'),
+        subtitle: Text(
+          '共 ${reports.length} 条 · 最近 ${reports.first.crashedAtText}',
+        ),
+        trailing: Icon(
+          Icons.arrow_forward,
+          size: 16,
+          color: colorScheme.outline,
+        ),
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const CrashReportHistoryPage(),
+            ),
+          );
+          onChanged();
+        },
+        onLongPress: () async {
+          await CrashReportStore.clear();
+          onChanged();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('异常报告历史已清空'),
+                duration: _snackBarDisplayDuration,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
 class _InfoCard extends StatelessWidget {
   final _ExpandedItem<_DeviceInfo> info;
 
   const _InfoCard({required this.info});
 
-  Widget _buildMapSection(
-    Color color,
-    String title,
-    Map<String, dynamic> map,
-  ) {
+  Widget _buildMapSection(Color color, String title, Map<String, dynamic> map) {
     if (map.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -223,9 +288,7 @@ class _InfoCard extends StatelessWidget {
                   text: '• ${entry.key}: ',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
-                TextSpan(
-                  text: entry.value.toString(),
-                ),
+                TextSpan(text: entry.value.toString()),
               ],
             ),
           ),
@@ -241,11 +304,7 @@ class _InfoCard extends StatelessWidget {
       Row(
         spacing: 8,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 22,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.info_outline, size: 22, color: colorScheme.primary),
           const Expanded(
             child: Text(
               '相关信息',
@@ -258,9 +317,7 @@ class _InfoCard extends StatelessWidget {
             size: 34,
             iconSize: 22,
             tooltip: info.isExpanded ? '收起' : '展开',
-            icon: Icon(
-              info.isExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
+            icon: Icon(info.isExpanded ? Icons.expand_less : Icons.expand_more),
             onPressed: () {
               info.isExpanded = !info.isExpanded;
               (context as Element).markNeedsBuild();
@@ -321,7 +378,10 @@ class _ReportCard extends StatelessWidget {
             iconSize: 22,
             tooltip: '复制',
             onPressed: () {
-              Utils.copyText('```\n$report```', needToast: false);
+              Utils.copyText(
+                LogRedactor.redactText('```\n$report```'),
+                needToast: false,
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('已将 $dateTime 复制至剪贴板'),
@@ -419,10 +479,7 @@ Widget _card(List<Widget> contents) {
   return Card(
     child: Padding(
       padding: const .all(12),
-      child: Column(
-        crossAxisAlignment: .stretch,
-        children: contents,
-      ),
+      child: Column(crossAxisAlignment: .stretch, children: contents),
     ),
   );
 }

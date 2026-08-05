@@ -1,7 +1,7 @@
-import 'package:PiliPlus/models/model_owner.dart';
-import 'package:PiliPlus/models_new/fav/fav_detail/cnt_info.dart';
-import 'package:PiliPlus/models_new/media_list/page.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart';
+import 'package:pili_plus/models/model_owner.dart';
+import 'package:pili_plus/models_new/fav/fav_detail/cnt_info.dart';
+import 'package:pili_plus/models_new/media_list/page.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart';
 
 class MediaListItemModel extends BaseEpisodeItem {
   @override
@@ -31,6 +31,7 @@ class MediaListItemModel extends BaseEpisodeItem {
   });
 
   MediaListItemModel.fromJson(Map<String, dynamic> json) {
+    final flags = EpisodePlaybackFlags.fromJson(json);
     aid = json['id'] as int?;
     intro = json['intro'] as String?;
     cntInfo = json['cnt_info'] == null
@@ -43,6 +44,8 @@ class MediaListItemModel extends BaseEpisodeItem {
     type = json['type'] as int?;
     upper = json['upper'] == null ? null : Owner.fromJson(json['upper']);
     bvid = json['bv_id'] as String?;
-    badge = json['badge']?['text'];
+    badge = flags.badge;
+    isCharging = flags.isCharging;
+    isChargingPurchased = flags.isChargingPurchased;
   }
 }

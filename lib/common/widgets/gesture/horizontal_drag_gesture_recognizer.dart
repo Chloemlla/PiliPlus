@@ -1,4 +1,4 @@
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/gestures.dart';
 

@@ -1,12 +1,13 @@
 import 'dart:convert';
 
-import 'package:PiliPlus/grpc/bilibili/community/service/dm/v1.pb.dart';
-import 'package:PiliPlus/pages/danmaku/controller.dart';
-import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
-import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
-import 'package:PiliPlus/utils/danmaku_utils.dart';
+import 'package:pili_plus/grpc/bilibili/community/service/dm/v1.pb.dart';
+import 'package:pili_plus/pages/danmaku/controller.dart';
+import 'package:pili_plus/pages/danmaku/danmaku_model.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
+import 'package:pili_plus/plugin/pl_player/utils/danmaku_options.dart';
+import 'package:pili_plus/services/danmaku_highlight_service.dart';
+import 'package:pili_plus/utils/danmaku_utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -40,12 +41,14 @@ class _PlDanmakuState extends State<PlDanmaku> {
   PlPlayerController get playerController => widget.playerController;
 
   late final PlDanmakuController _plDanmakuController;
+  late final DanmakuHighlightService _highlightService;
   DanmakuController<DanmakuExtra>? _controller;
   int latestAddedPosition = -1;
 
   @override
   void initState() {
     super.initState();
+    _highlightService = Get.find<DanmakuHighlightService>();
     _plDanmakuController = PlDanmakuController(
       widget.cid,
       playerController,
@@ -119,11 +122,22 @@ class _PlDanmakuState extends State<PlDanmaku> {
         if (e.weight < danmakuWeight) return;
         if (e.mode == 7) {
           try {
+            final specialData =
+                jsonDecode(
+                      e.content.replaceAll('\n', '\\n'),
+                    )
+                    as List<dynamic>;
+            final displayedColor = DmUtils.decimalToColor(e.color);
+            final highlightStyle = _highlightService.resolveStyle(
+              text: (specialData[4] as String).trimRight(),
+              displayedColor: displayedColor,
+            );
             _controller!.addDanmaku(
               SpecialDanmakuContentItem.fromList(
-                DmUtils.decimalToColor(e.color),
+                highlightStyle.fillColor,
                 e.fontsize.toDouble(),
-                jsonDecode(e.content.replaceAll('\n', '\\n')),
+                specialData,
+                strokeColor: highlightStyle.strokeColor,
                 extra: VideoDanmaku(
                   id: e.id.toInt(),
                   mid: e.midHash,
@@ -133,12 +147,19 @@ class _PlDanmakuState extends State<PlDanmaku> {
             );
           } catch (_) {}
         } else {
+          final displayedColor = blockColorful
+              ? Colors.white
+              : DmUtils.decimalToColor(e.color);
+          final highlightStyle = _highlightService.resolveStyle(
+            text: e.content,
+            displayedColor: displayedColor,
+          );
+
           _controller!.addDanmaku(
             DanmakuContentItem(
               e.content,
-              color: blockColorful
-                  ? Colors.white
-                  : DmUtils.decimalToColor(e.color),
+              color: highlightStyle.fillColor,
+              strokeColor: highlightStyle.strokeColor,
               type: DmUtils.getPosition(e.mode),
               isColorful:
                   playerController.showVipDanmaku &&

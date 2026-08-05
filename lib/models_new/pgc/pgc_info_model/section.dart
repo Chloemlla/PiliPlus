@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/episode.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/episode.dart';
 
 class Section {
   List<EpisodeItem>? episodes;

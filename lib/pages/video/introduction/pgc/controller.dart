@@ -1,32 +1,32 @@
 import 'dart:async';
 import 'dart:math' show max;
 
-import 'package:PiliPlus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:PiliPlus/http/constants.dart';
-import 'package:PiliPlus/http/fav.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/pgc.dart';
-import 'package:PiliPlus/http/search.dart';
-import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/video/source_type.dart';
-import 'package:PiliPlus/models/common/video/video_type.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/episode.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart'
+import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
+import 'package:pili_plus/http/constants.dart';
+import 'package:pili_plus/http/fav.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/pgc.dart';
+import 'package:pili_plus/http/search.dart';
+import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/models/common/video/source_type.dart';
+import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/episode.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart'
     hide EpisodeItem;
-import 'package:PiliPlus/models_new/video/video_detail/stat_detail.dart';
-import 'package:PiliPlus/pages/common/common_intro_controller.dart';
-import 'package:PiliPlus/pages/dynamics_repost/view.dart';
-import 'package:PiliPlus/pages/video/reply/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/services/service_locator.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/share_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
+import 'package:pili_plus/models_new/video/video_detail/stat_detail.dart';
+import 'package:pili_plus/pages/common/common_intro_controller.dart';
+import 'package:pili_plus/pages/dynamics_repost/view.dart';
+import 'package:pili_plus/pages/video/reply/controller.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/utils/feed_back.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/page_utils.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/share_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -354,12 +354,11 @@ class PgcIntroController extends CommonIntroController {
 
   /// 列表循环或者顺序播放时，自动播放下一个；自动连播时，播放相关视频
   @override
-  bool nextPlay() {
+  bool nextPlay({bool skipCharging = false}) {
     try {
       final episodes = pgcItem.episodes!;
 
       PlayRepeat playRepeat = videoDetailCtr.plPlayerController.playRepeat;
-
       int currentIndex = episodes.indexWhere(
         (e) => e.cid == videoDetailCtr.cid.value,
       );
@@ -374,8 +373,23 @@ class PgcIntroController extends CommonIntroController {
           return false;
         }
       }
-      onChangeEpisode(episodes[nextIndex]);
-      return true;
+      for (int checked = 0; checked < episodes.length; checked++) {
+        final episode = episodes[nextIndex];
+        if (!skipCharging || !episode.shouldSkipForAutoPlay) {
+          onChangeEpisode(episode);
+          return true;
+        }
+
+        nextIndex++;
+        if (nextIndex >= episodes.length) {
+          if (playRepeat == PlayRepeat.listCycle) {
+            nextIndex = 0;
+          } else {
+            break;
+          }
+        }
+      }
+      return false;
     } catch (_) {
       return false;
     }

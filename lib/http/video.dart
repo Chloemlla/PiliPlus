@@ -1,45 +1,46 @@
 import 'dart:convert';
 
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
-import 'package:PiliPlus/http/api.dart';
-import 'package:PiliPlus/http/browser_ua.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/login.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/models/common/video/video_type.dart';
-import 'package:PiliPlus/models/home/rcmd/result.dart';
-import 'package:PiliPlus/models/model_hot_video_item.dart';
-import 'package:PiliPlus/models/model_rec_video_item.dart';
-import 'package:PiliPlus/models/pgc_lcf.dart';
-import 'package:PiliPlus/models/video/play/url.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_rank/pgc_rank_item_model.dart';
-import 'package:PiliPlus/models_new/popular/popular_precious/data.dart';
-import 'package:PiliPlus/models_new/popular/popular_series_list/list.dart';
-import 'package:PiliPlus/models_new/popular/popular_series_one/data.dart';
-import 'package:PiliPlus/models_new/triple/pgc_triple.dart';
-import 'package:PiliPlus/models_new/triple/ugc_triple.dart';
-import 'package:PiliPlus/models_new/video/video_ai_conclusion/data.dart';
-import 'package:PiliPlus/models_new/video/video_detail/data.dart';
-import 'package:PiliPlus/models_new/video/video_detail/video_detail_response.dart';
-import 'package:PiliPlus/models_new/video/video_note_list/data.dart';
-import 'package:PiliPlus/models_new/video/video_play_info/data.dart';
-import 'package:PiliPlus/models_new/video/video_relation/data.dart';
-import 'package:PiliPlus/models_new/video/video_shot/data.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/app_sign.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/global_data.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/recommend_filter.dart';
-import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/subtitle_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
-import 'package:PiliPlus/utils/wbi_sign.dart';
+import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/browser_ua.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/login.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/models/home/rcmd/result.dart';
+import 'package:pili_plus/models/model_hot_video_item.dart';
+import 'package:pili_plus/models/model_rec_video_item.dart';
+import 'package:pili_plus/models/pgc_lcf.dart';
+import 'package:pili_plus/models/video/play/url.dart';
+import 'package:pili_plus/models_new/pgc/pgc_rank/pgc_rank_item_model.dart';
+import 'package:pili_plus/models_new/popular/popular_precious/data.dart';
+import 'package:pili_plus/models_new/popular/popular_series_list/list.dart';
+import 'package:pili_plus/models_new/popular/popular_series_one/data.dart';
+import 'package:pili_plus/models_new/triple/pgc_triple.dart';
+import 'package:pili_plus/models_new/triple/ugc_triple.dart';
+import 'package:pili_plus/models_new/video/video_ai_conclusion/data.dart';
+import 'package:pili_plus/models_new/video/video_detail/data.dart';
+import 'package:pili_plus/models_new/video/video_detail/video_detail_response.dart';
+import 'package:pili_plus/models_new/video/video_note_list/data.dart';
+import 'package:pili_plus/models_new/video/video_play_info/data.dart';
+import 'package:pili_plus/models_new/video/video_relation/data.dart';
+import 'package:pili_plus/models_new/video/video_shot/data.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/app_sign.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/global_data.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/persistence.dart';
+import 'package:pili_plus/utils/recommend_filter.dart';
+import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/subtitle_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/utils/wbi_sign.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:protobuf/protobuf.dart';
@@ -210,6 +211,7 @@ abstract final class VideoHttp {
     required VideoType videoType,
     String? language,
     bool voiceBalance = false,
+    int fnval = 4048,
   }) async {
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
@@ -220,8 +222,8 @@ abstract final class VideoHttp {
       'season_id': ?seasonId,
       'cid': cid,
       'qn': qn ?? 80,
-      // 获取所有格式的视频
-      'fnval': 4048,
+      // 默认4048 获取所有格式的视频；1 获取MP4直链
+      'fnval': fnval,
       'fourk': 1,
       'fnver': 0,
       'voice_balance': voiceBalance ? 1 : 0,
@@ -269,6 +271,7 @@ abstract final class VideoHttp {
           seasonId: seasonId,
           tryLook: tryLook,
           videoType: .pgc,
+          fnval: fnval,
         );
       }
       return Error(_parseVideoErr(res.data['code'], res.data['message']));
@@ -567,12 +570,15 @@ abstract final class VideoHttp {
     if (res.data['code'] == 0) {
       try {
         final replyInfo = RequestUtils.replyCast(res.data['data']['reply']);
-        GStorage.reply?.put(
-          replyInfo.id.toString(),
-          (replyInfo.deepCopy()
-                ..unknownFields.clear()
-                ..clearTrackInfo())
-              .writeToBuffer(),
+        Persistence.background(
+          GStorage.replyCacheStore.put(
+            replyInfo.id.toString(),
+            (replyInfo.deepCopy()
+                  ..unknownFields.clear()
+                  ..clearTrackInfo())
+                .writeToBuffer(),
+          ),
+          label: 'reply cache add',
         );
         return Success(replyInfo);
       } catch (e, s) {
@@ -600,7 +606,10 @@ abstract final class VideoHttp {
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
-      GStorage.reply?.delete(rpid.toString());
+      Persistence.background(
+        GStorage.replyCacheStore.delete(rpid.toString()),
+        label: 'reply cache delete',
+      );
       return const Success(null);
     } else {
       return const Error('请退出账号后重新登录');

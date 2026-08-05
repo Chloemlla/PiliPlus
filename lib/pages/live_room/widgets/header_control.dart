@@ -1,25 +1,25 @@
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'package:PiliPlus/common/style.dart';
-import 'package:PiliPlus/common/widgets/draggable_sheet/dyn.dart';
-import 'package:PiliPlus/common/widgets/marquee.dart';
-import 'package:PiliPlus/models/common/video/live_quality.dart';
-import 'package:PiliPlus/pages/live_room/controller.dart';
-import 'package:PiliPlus/pages/setting/models/play_settings.dart'
+import 'package:pili_plus/common/style.dart';
+// DraggableScrollableSheet is from package:flutter/widgets.dart
+import 'package:pili_plus/common/widgets/marquee.dart';
+import 'package:pili_plus/models/common/video/live_quality.dart';
+import 'package:pili_plus/pages/live_room/controller.dart';
+import 'package:pili_plus/pages/setting/models/play_settings.dart'
     show showPlayerVolumeDialog;
-import 'package:PiliPlus/pages/video/widgets/header_control.dart';
-import 'package:PiliPlus/plugin/pl_player/controller.dart';
-import 'package:PiliPlus/plugin/pl_player/widgets/common_btn.dart';
-import 'package:PiliPlus/services/shutdown_timer_service.dart'
+import 'package:pili_plus/pages/video/widgets/header_control.dart';
+import 'package:pili_plus/plugin/pl_player/controller.dart';
+import 'package:pili_plus/plugin/pl_player/widgets/common_btn.dart';
+import 'package:pili_plus/services/shutdown_timer_service.dart'
     show shutdownTimerService;
-import 'package:PiliPlus/utils/android/bindings.g.dart';
-import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/size_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -78,7 +78,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
         liveController.title.value,
         spacing: 30,
         velocity: 30,
-        strutStyle: const StrutStyle(fontSize: 15, leading: 0),
+strutStyle: const StrutStyle(fontSize: 15, leading: 0),
         style: const TextStyle(fontSize: 15, height: 1, color: Colors.white),
       ),
     );
@@ -95,10 +95,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
               if (widget.upName case final upName?)
                 Text(
                   upName,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
               liveController.watchedWidget,
               widget.onlineWidget,
@@ -143,11 +140,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 height: btnHeight,
                 tooltip: '${isAlwaysOnTop ? '取消' : ''}置顶',
                 icon: isAlwaysOnTop
-                    ? const Icon(
-                        size: 18,
-                        Icons.push_pin,
-                        color: Colors.white,
-                      )
+                    ? const Icon(size: 18, Icons.push_pin, color: Colors.white)
                     : const Icon(
                         size: 18,
                         Icons.push_pin_outlined,
@@ -166,6 +159,17 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 color: Colors.white,
               ),
               onTap: widget.onSendDanmaku,
+            ),
+          if (!plPlayerController.isDesktopPip)
+            ComBtn(
+              height: 30,
+              tooltip: '应用内小窗',
+              onTap: liveController.openInAppMiniPlayer,
+              icon: const Icon(
+                size: 18,
+                Icons.picture_in_picture_alt_outlined,
+                color: Colors.white,
+              ),
             ),
           if (Platform.isAndroid || (PlatformUtils.isDesktop && !isFullScreen))
             ComBtn(
@@ -186,7 +190,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
                 color: Colors.white,
               ),
             ),
-          Obx(
+Obx(
             () => ComBtn(
               height: btnHeight,
               tooltip: '仅播放音频',
@@ -236,11 +240,22 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
               isFullScreen: isFullScreen,
               isLive: true,
             ),
-            icon: const Icon(
-              size: 18,
-              Icons.schedule,
-              color: Colors.white,
-            ),
+            icon: const Icon(size: 18, Icons.schedule, color: Colors.white),
+          ),
+          ValueListenableBuilder<String?>(
+            valueListenable: shutdownTimerService.countdownText,
+            builder: (context, countdownText, child) {
+              if (countdownText == null || !isFullScreen) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Text(
+                  countdownText,
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
+                ),
+              );
+            },
           ),
           if (plPlayerController.videoPlayerController case final player?)
             SizedBox.square(
@@ -316,7 +331,7 @@ class _LiveHeaderControlState extends State<LiveHeaderControl>
             PlatformUtils.isMobile && !context.mediaQuerySize.isPortrait
             ? 1.0
             : 0.7;
-        return DynDraggableScrollableSheet(
+        return DraggableScrollableSheet(
           minChildSize: 0,
           maxChildSize: maxChildSize,
           snap: true,

@@ -1,8 +1,9 @@
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/grpc_headers.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account_secret_store.dart';
+import 'package:pili_plus/utils/accounts/grpc_headers.dart';
+import 'package:pili_plus/utils/id_utils.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -41,7 +42,7 @@ sealed class Account {
 @HiveType(typeId: 9)
 class LoginAccount extends Account {
   @override
-  final bool isLogin = true;
+  bool get isLogin => hasRequiredCookies;
   @override
   @HiveField(0)
   final DefaultCookieJar cookieJar;
@@ -59,13 +60,13 @@ class LoginAccount extends Account {
   bool activated = false;
 
   @override
-  late final int mid = int.parse(_midStr);
+  late final int mid = int.tryParse(_midStr) ?? 0;
 
   @override
   late final Map<String, String> headers = {
     ...Constants.baseHeaders,
     'x-bili-mid': _midStr,
-    'x-bili-aurora-eid': IdUtils.genAuroraEid(mid),
+    if (mid != 0) 'x-bili-aurora-eid': IdUtils.genAuroraEid(mid),
   };
 
   @override
@@ -74,21 +75,38 @@ class LoginAccount extends Account {
   );
 
   @override
-  late final String csrf =
-      cookieJar.domainCookies['bilibili.com']!['/']!['bili_jct']!.cookie.value;
+  late final String csrf = _cookieValue('bili_jct') ?? '';
+
+  bool get hasRequiredCookies =>
+      _midStr.isNotEmpty && csrf.isNotEmpty && mid != 0;
+
+  String get secretKey => _midStr;
 
   bool _hasDelete = false;
 
   @override
-  Future<void> delete() {
+  Future<void> delete() async {
     assert(_hasDelete = true);
-    return Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
+    await Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
+    AccountSecretStore.delete(secretKey);
   }
 
   @override
-  Future<void> onChange() {
+  Future<void> onChange() async {
     assert(!_hasDelete);
-    return _box.put(_midStr, this);
+    persistSecret();
+    await _box.put(secretKey, this);
+  }
+
+  void persistSecret() {
+    AccountSecretStore.write(
+      secretKey,
+      AccountSecret(
+        cookies: cookieJar.toJson(),
+        accessKey: accessKey,
+        refresh: refresh,
+      ),
+    );
   }
 
   @override
@@ -99,10 +117,7 @@ class LoginAccount extends Account {
     'type': type.map((i) => i.index).toList(),
   };
 
-  late final String _midStr = cookieJar
-      .domainCookies['bilibili.com']!['/']!['DedeUserID']!
-      .cookie
-      .value;
+  late final String _midStr = _cookieValue('DedeUserID') ?? '';
 
   late final Box<LoginAccount> _box = Accounts.account;
 
@@ -113,6 +128,12 @@ class LoginAccount extends Account {
     Set<AccountType>? type,
   ]) : type = type ?? {} {
     cookieJar.setBuvid3();
+  }
+
+  String? _cookieValue(String name) {
+    final value =
+        cookieJar.domainCookies['bilibili.com']?['/']?[name]?.cookie.value;
+    return value == null || value.isEmpty ? null : value;
   }
 
   factory LoginAccount.fromJson(Map json) => LoginAccount(
@@ -208,9 +229,10 @@ extension BiliCookieJar on DefaultCookieJar {
         ..domainCookies['bilibili.com'] = {
           '/': {
             for (final i in json.entries)
-              i.key: SerializableCookie(
-                Cookie(i.key, i.value)..setBiliDomain(),
-              ),
+              if (i.value != null)
+                i.key.toString(): SerializableCookie(
+                  Cookie(i.key.toString(), i.value.toString())..setBiliDomain(),
+                ),
           },
         };
 
@@ -219,13 +241,23 @@ extension BiliCookieJar on DefaultCookieJar {
         ..domainCookies['bilibili.com'] = {
           '/': {
             for (final i in cookies)
-              i['name']!: SerializableCookie(
-                Cookie(i['name']!, i['value']!)..setBiliDomain(),
-              ),
+              if (i is Map && i['name'] is String && i['value'] != null)
+                i['name'] as String: SerializableCookie(
+                  Cookie(i['name'] as String, i['value'].toString())
+                    ..setBiliDomain(),
+                ),
           },
         };
 }
 
+extension LoginAccountValidation on LoginAccount {
+  bool get shouldKeep => hasRequiredCookies;
+}
+
+/*
+  Keep the no-op account class in this file so callers can depend on the sealed
+  Account hierarchy without importing additional implementation details.
+ */
 final class NoAccount extends Account {
   const NoAccount();
 }

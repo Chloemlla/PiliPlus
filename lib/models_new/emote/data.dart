@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/emote/package.dart';
+import 'package:pili_plus/models_new/emote/package.dart';
 
 class EmoteModelData {
   List<Package>? packages;

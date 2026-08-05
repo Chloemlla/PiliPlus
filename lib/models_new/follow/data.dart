@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/follow/list.dart';
+import 'package:pili_plus/models_new/follow/list.dart';
 
 class FollowData {
   List<FollowItemModel>? list;

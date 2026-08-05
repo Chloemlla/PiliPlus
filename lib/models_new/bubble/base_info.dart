@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/bubble/tribee_info.dart';
+import 'package:pili_plus/models_new/bubble/tribee_info.dart';
 
 class BaseInfo {
   TribeInfo? tribeInfo;

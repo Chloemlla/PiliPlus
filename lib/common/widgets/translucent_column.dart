@@ -15,7 +15,7 @@
  * along with PiliPlus.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:PiliPlus/common/widgets/animated_height.dart'
+import 'package:pili_plus/common/widgets/animated_height.dart'
     show RenderAnimatedHeight;
 import 'package:flutter/rendering.dart'
     show RenderProxyBox, BoxHitTestResult, RenderFlex, FlexParentData;

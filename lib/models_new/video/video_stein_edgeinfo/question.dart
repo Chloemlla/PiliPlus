@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/video/video_stein_edgeinfo/choice.dart';
+import 'package:pili_plus/models_new/video/video_stein_edgeinfo/choice.dart';
 
 class Question {
   List<Choice>? choices;

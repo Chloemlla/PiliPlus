@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/bubble/meta.dart';
+import 'package:pili_plus/models_new/bubble/meta.dart';
 
 class DynList {
   String? dynId;

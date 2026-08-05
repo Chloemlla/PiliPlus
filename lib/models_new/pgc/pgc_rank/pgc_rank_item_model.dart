@@ -1,5 +1,5 @@
-import 'package:PiliPlus/models_new/pgc/pgc_rank/new_ep.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_rank/stat.dart';
+import 'package:pili_plus/models_new/pgc/pgc_rank/new_ep.dart';
+import 'package:pili_plus/models_new/pgc/pgc_rank/stat.dart';
 
 class PgcRankItemModel {
   String? cover;

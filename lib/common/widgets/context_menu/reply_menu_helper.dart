@@ -1,4 +1,4 @@
-part of 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
+part of 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
 
 void showReplyCopyDialog(
   BuildContext context,
@@ -33,7 +33,11 @@ void showReplyCopyDialog(
               buttonItems.add(
                 ContextMenuButtonItem(
                   onPressed: () {
-                    String text = RegExp.escape(state.selectedText!);
+                    final selected = state.selectedText;
+                    if (selected == null || selected.isEmpty) {
+                      return;
+                    }
+                    String text = RegExp.escape(selected);
                     if (ReplyGrpc.enableFilter) text = '|$text';
 
                     showConfirmDialog(

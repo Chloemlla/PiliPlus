@@ -2,25 +2,26 @@ import 'dart:async';
 import 'dart:convert' show jsonDecode, jsonEncode;
 import 'dart:io' show Directory, File;
 
-import 'package:PiliPlus/grpc/dm.dart';
-import 'package:PiliPlus/http/download.dart';
-import 'package:PiliPlus/http/init.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/video/video_quality.dart';
-import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
-import 'package:PiliPlus/models_new/download/bili_download_media_file_info.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/episode.dart' as pgc;
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
-import 'package:PiliPlus/models_new/video/video_detail/data.dart';
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/page.dart';
-import 'package:PiliPlus/pages/danmaku/controller.dart';
-import 'package:PiliPlus/services/download/download_manager.dart';
-import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/extension/file_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
-import 'package:PiliPlus/utils/path_utils.dart';
+import 'package:pili_plus/grpc/bilibili/community/service/dm/v1.pb.dart';
+import 'package:pili_plus/grpc/dm.dart';
+import 'package:pili_plus/http/download.dart';
+import 'package:pili_plus/http/init.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
+import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
+import 'package:pili_plus/models_new/download/bili_download_media_file_info.dart';
+import 'package:pili_plus/models_new/pgc/pgc_info_model/episode.dart' as pgc;
+import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
+import 'package:pili_plus/models_new/video/video_detail/data.dart';
+import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
+import 'package:pili_plus/models_new/video/video_detail/page.dart';
+import 'package:pili_plus/pages/danmaku/controller.dart';
+import 'package:pili_plus/services/download/bounded_task_queue.dart';
+import 'package:pili_plus/services/download/download_manager.dart';
+import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/extension/file_ext.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/path_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -30,6 +31,9 @@ import 'package:synchronized/synchronized.dart';
 // ref https://github.com/10miaomiao/bilimiao2/blob/master/bilimiao-download/src/main/java/cn/a10miaomiao/bilimiao/download/DownloadService.kt
 
 class DownloadService extends GetxService {
+  static const int _maxDanmakuSegmentConcurrency = 4;
+  static const String _danmakuSegmentDir = 'danmaku_segments';
+
   static const _entryFile = 'entry.json';
   static const _indexFile = 'index.json';
 
@@ -182,10 +186,7 @@ class DownloadService extends GetxService {
       return;
     }
     final currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final source = SourceInfo(
-      avId: episode.aid!,
-      cid: cid,
-    );
+    final source = SourceInfo(avId: episode.aid!, cid: cid);
     final ep = EpInfo(
       avId: source.avId,
       page: index,
@@ -308,27 +309,35 @@ class DownloadService extends GetxService {
     final danmakuFile = File(
       path.join(entry.entryDirPath, PathUtils.danmakuName),
     );
+    final danmakuSegmentDir = Directory(
+      path.join(entry.entryDirPath, _danmakuSegmentDir),
+    );
     if (isUpdate || !danmakuFile.existsSync()) {
       try {
         if (!isUpdate) {
           _updateCurStatus(DownloadStatus.getDanmaku);
         }
+        if (isUpdate && danmakuSegmentDir.existsSync()) {
+          await danmakuSegmentDir.delete(recursive: true);
+        }
         final seg = (entry.totalTimeMilli / PlDanmakuController.segmentLength)
             .ceil();
-
-        final res = await Future.wait([
-          for (var i = 1; i <= seg; i++)
-            DmGrpc.dmSegMobile(cid: cid, segmentIndex: i),
-        ]);
-
-        final danmaku = res.removeAt(0).data;
-        for (final i in res) {
-          if (i case Success(:final response)) {
-            danmaku.elems.addAll(response.elems);
-          }
+        if (seg <= 0) {
+          return true;
         }
-        res.clear();
+
+        final segments = await _downloadDanmakuSegments(
+          cid: cid,
+          count: seg,
+          segmentDir: danmakuSegmentDir,
+        );
+
+        final danmaku = DmSegMobileReply();
+        for (final segment in segments) {
+          danmaku.elems.addAll(segment.elems);
+        }
         await danmakuFile.writeAsBytes(danmaku.writeToBuffer());
+        await danmakuSegmentDir.delete(recursive: true);
 
         return true;
       } catch (e) {
@@ -342,9 +351,48 @@ class DownloadService extends GetxService {
     return true;
   }
 
-  Future<bool> _downloadCover({
-    required BiliDownloadEntryInfo entry,
+  Future<List<DmSegMobileReply>> _downloadDanmakuSegments({
+    required int cid,
+    required int count,
+    required Directory segmentDir,
   }) async {
+    if (!segmentDir.existsSync()) {
+      await segmentDir.create(recursive: true);
+    }
+    return runBoundedTasks<DmSegMobileReply>(
+      count,
+      (index) => _readOrDownloadDanmakuSegment(
+        cid: cid,
+        segmentIndex: index + 1,
+        segmentDir: segmentDir,
+      ),
+      concurrency: _maxDanmakuSegmentConcurrency,
+    );
+  }
+
+  Future<DmSegMobileReply> _readOrDownloadDanmakuSegment({
+    required int cid,
+    required int segmentIndex,
+    required Directory segmentDir,
+  }) async {
+    final segmentFile = File(path.join(segmentDir.path, '$segmentIndex.pb'));
+    if (segmentFile.existsSync()) {
+      try {
+        return DmSegMobileReply.fromBuffer(await segmentFile.readAsBytes());
+      } catch (_) {
+        await segmentFile.delete();
+      }
+    }
+
+    final response = (await DmGrpc.dmSegMobile(
+      cid: cid,
+      segmentIndex: segmentIndex,
+    )).data;
+    await segmentFile.writeAsBytes(response.writeToBuffer());
+    return response;
+  }
+
+  Future<bool> _downloadCover({required BiliDownloadEntryInfo entry}) async {
     try {
       final filePath = path.join(entry.entryDirPath, PathUtils.coverName);
       if (File(filePath).existsSync()) {
@@ -534,10 +582,7 @@ class DownloadService extends GetxService {
       waitDownloadQueue.remove(entry);
     }
     if (curDownload.value?.cid == entry.cid) {
-      await cancelDownload(
-        isDelete: true,
-        downloadNext: downloadNext,
-      );
+      await cancelDownload(isDelete: true, downloadNext: downloadNext);
     }
     final downloadDir = Directory(entry.pageDirPath);
     if (downloadDir.existsSync()) {

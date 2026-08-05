@@ -1,3 +1,6 @@
+// `rawText` stays public while its backing field remains private for patched SDK compatibility.
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:flutter/widgets.dart' show WidgetSpan;
 
 class EmoteSpan extends WidgetSpan {
@@ -6,10 +9,12 @@ class EmoteSpan extends WidgetSpan {
     super.alignment,
     super.baseline,
     super.style,
-    this.rawText,
-  });
+    String? rawText,
+  }) : _rawText = rawText;
+
+  final String? _rawText;
 
   @override
   // ignore: override_on_non_overriding_member
-  final String? rawText;
+  String? get rawText => _rawText;
 }

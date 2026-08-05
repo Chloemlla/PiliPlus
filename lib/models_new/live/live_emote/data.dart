@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/live/live_emote/datum.dart';
+import 'package:pili_plus/models_new/live/live_emote/datum.dart';
 
 class LiveEmoteData {
   List<LiveEmoteDatum>? data;

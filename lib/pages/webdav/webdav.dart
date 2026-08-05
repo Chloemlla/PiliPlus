@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/widgets/pair.dart';
-import 'package:PiliPlus/utils/device_utils.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/pages/webdav/webdav_backup_transaction.dart';
+import 'package:pili_plus/utils/device_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -66,10 +69,36 @@ class WebDav {
       String data = GStorage.exportAllSettings();
       _fileName ??= _getFileName();
       final path = '$_webdavDirectory/$_fileName';
-      try {
-        await _client!.remove(path);
-      } catch (_) {}
-      await _client!.write(path, utf8.encode(data));
+      final tempPath = '$path.tmp.${DateTime.now().millisecondsSinceEpoch}';
+      final backupPath = '$path.bak';
+      await replaceWebDavBackup(
+        officialPath: path,
+        temporaryPath: tempPath,
+        backupPath: backupPath,
+        data: utf8.encode(data),
+        write: (path, data) async {
+          await _client!.write(path, Uint8List.fromList(data));
+        },
+        read: _client!.read,
+        exists: (path) async {
+          try {
+            await _client!.readProps(path);
+            return true;
+          } on DioException catch (error) {
+            if (error.response?.statusCode == 404) return false;
+            rethrow;
+          }
+        },
+        copy: (source, destination, overwrite) async {
+          await _client!.copy(source, destination, overwrite);
+        },
+        rename: (source, destination, overwrite) async {
+          await _client!.rename(source, destination, overwrite);
+        },
+        remove: (path) async {
+          await _client!.remove(path);
+        },
+      );
       SmartDialog.showToast('备份成功');
     } catch (e) {
       SmartDialog.showToast('备份失败: $e');

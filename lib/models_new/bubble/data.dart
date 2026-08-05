@@ -1,7 +1,7 @@
-import 'package:PiliPlus/models_new/bubble/base_info.dart';
-import 'package:PiliPlus/models_new/bubble/category.dart';
-import 'package:PiliPlus/models_new/bubble/content.dart';
-import 'package:PiliPlus/models_new/bubble/sort_info.dart';
+import 'package:pili_plus/models_new/bubble/base_info.dart';
+import 'package:pili_plus/models_new/bubble/category.dart';
+import 'package:pili_plus/models_new/bubble/content.dart';
+import 'package:pili_plus/models_new/bubble/sort_info.dart';
 
 class BubbleData {
   BaseInfo? baseInfo;

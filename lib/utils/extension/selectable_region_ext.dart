@@ -1,6 +1,7 @@
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
-import 'package:PiliPlus/utils/page_utils.dart';
+import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SelectionStatus;
 
 extension SelectableRegionStateExt on SelectableRegionState {
   void addLaunchMenuIfNeeded(
@@ -23,11 +24,14 @@ extension SelectableRegionStateExt on SelectableRegionState {
     }
   }
 
-  /// apply `lib/scripts/selectable_region.patch`
-  String? get selectedText => selectable?.getSelectedContent()?.plainText;
+  // Patched getters from lib/scripts/selectable_region.patch; dynamic keeps analyzer green before patch applies.
+  String? get selectedText =>
+      (this as dynamic).selectable?.getSelectedContent()?.plainText as String?;
 
   /// apply `lib/scripts/selectable_region.patch`
-  bool get isUncollapsed => selectionDelegate.value.status == .uncollapsed;
+  bool get isUncollapsed =>
+      (this as dynamic).selectionDelegate.value.status ==
+      SelectionStatus.uncollapsed;
 
   void onMenuPressed(
     ValueChanged<String> callback, {

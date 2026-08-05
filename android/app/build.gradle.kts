@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.konan.properties.Properties
 
 plugins {
     id("com.android.application")
+    id("androidx.baselineprofile")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -16,21 +17,24 @@ val isBuiltInKotlinEnabled = agpMajorVersion >= 9 &&
 if (!isBuiltInKotlinEnabled) {
     apply(plugin = "org.jetbrains.kotlin.android")
 }
+val targetAndroidSdk = rootProject.extra["targetAndroidSdk"] as Int
 
 android {
-    namespace = "com.example.piliplus"
-    compileSdk = 37
+    namespace = "com.chloemlla.piliplus"
+    compileSdk = targetAndroidSdk
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
-        applicationId = "com.example.piliplus"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 37
+        applicationId = "com.chloemlla.piliplus"
+        // lumen-crash requires minSdk 26.
+        minSdk = maxOf(flutter.minSdkVersion, 26)
+        targetSdk = targetAndroidSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -73,10 +77,12 @@ android {
                     value = "PiliPlus dev",
                 )
             }
-//            proguardFiles(
-//                getDefaultProguardFile("proguard-android-optimize.txt"),
-//                "proguard-rules.pro"
-//            )
+            // Flutter release enables minify/R8 by default; keep Scan Kit / optional
+            // HMS network stubs from failing full-mode missing-class checks.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -99,4 +105,34 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+    val lumenCrashVersion =
+        providers.gradleProperty("lumenCrashVersion")
+            .orElse(providers.environmentVariable("LUMEN_CRASH_VERSION"))
+            .orElse("0.1.0")
+            .get()
+
+    // Huawei Scan Kit full SDK (scanplus): camera + bitmap decode without GMS.
+    // Independent SDK path — no agconnect-services.json / AGConnect plugin required.
+    // Artifact lives on https://developer.huawei.com/repo/ (see android/build.gradle.kts).
+    implementation("com.huawei.hms:scanplus:2.15.0.301")
+    implementation("com.tencent:mmkv-static:1.3.14")
+    // Capture-only host: Flutter owns crash product UI. Prefer lumen-crash-core
+    // so Compose crash UI / FileProvider share surface is not pulled in.
+    implementation("com.chloemlla.lumen:lumen-crash-core:$lumenCrashVersion")
+}
+
+baselineProfile {
+    mergeIntoMain = true
+    saveInSrc = true
+    automaticGenerationDuringBuild = false
+}
+
+dependencies {
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baselineprofile"))
 }

@@ -1,21 +1,21 @@
-import 'package:PiliPlus/common/widgets/custom_icon.dart';
-import 'package:PiliPlus/http/fav.dart';
-import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/http/user.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
-import 'package:PiliPlus/models/common/theme/theme_type.dart';
-import 'package:PiliPlus/models/user/info.dart';
-import 'package:PiliPlus/models/user/stat.dart';
-import 'package:PiliPlus/models_new/fav/fav_folder/data.dart';
-import 'package:PiliPlus/pages/common/common_data_controller.dart';
-import 'package:PiliPlus/services/account_service.dart';
-import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/accounts/account.dart';
-import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/theme_utils.dart';
+import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/http/fav.dart';
+import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/http/user.dart';
+import 'package:pili_plus/models/common/account_type.dart';
+import 'package:pili_plus/models/common/theme/theme_type.dart';
+import 'package:pili_plus/models/user/info.dart';
+import 'package:pili_plus/models/user/stat.dart';
+import 'package:pili_plus/models_new/fav/fav_folder/data.dart';
+import 'package:pili_plus/pages/common/common_data_controller.dart';
+import 'package:pili_plus/services/account_service.dart';
+import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
+import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -38,8 +38,14 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
   ThemeType get nextThemeType =>
       ThemeType.values[(themeType.value.index + 1) % ThemeType.values.length];
 
-  static RxBool anonymity =
-      (Accounts.account.isNotEmpty && !Accounts.heartbeat.isLogin).obs;
+  static RxBool _createAnonymityState() {
+    final state =
+        (Accounts.account.isNotEmpty && !Accounts.heartbeat.isLogin).obs;
+    Accounts.onHeartbeatLoginChanged = (isLogin) => state.value = !isLogin;
+    return state;
+  }
+
+  static final RxBool anonymity = _createAnonymityState();
 
   late final list = <({IconData icon, String title, VoidCallback onTap})>[
     (
@@ -55,6 +61,16 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
           Get.toNamed('/history');
         }
       },
+    ),
+    (
+      icon: Icons.insights_outlined,
+      title: '我的观看统计',
+      onTap: () => Get.toNamed('/watchStats'),
+    ),
+    (
+      icon: Icons.bookmark_border,
+      title: '我的视频标记',
+      onTap: () => Get.toNamed('/videoBookmarks'),
     ),
     (
       icon: CustomIcons.subscriptions_outlined,
@@ -73,6 +89,29 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
           Get.toNamed('/later');
         }
       },
+    ),
+    (
+      icon: Icons.playlist_add,
+      title: '导入播放列表',
+      onTap: () {
+        if (isLogin) {
+          Get.toNamed('/playlistImport');
+        }
+      },
+    ),
+    (
+      icon: Icons.playlist_play,
+      title: '导出播放列表',
+      onTap: () {
+        if (isLogin) {
+          Get.toNamed('/playlistExport');
+        }
+      },
+    ),
+    (
+      icon: Icons.star_outline,
+      title: '收藏的评论',
+      onTap: () => Get.toNamed('/myReply'),
     ),
   ];
 

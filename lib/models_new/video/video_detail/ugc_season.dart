@@ -1,4 +1,4 @@
-import 'package:PiliPlus/models_new/video/video_detail/section.dart';
+import 'package:pili_plus/models_new/video/video_detail/section.dart';
 
 class UgcSeason {
   int? id;
