@@ -797,6 +797,13 @@ class PlPlayerController with BlockConfigMixin {
           (PlatformUtils.isMobile ? Pref.playerVolume : volume.value * 100)
               .toString(),
       'volume-max': kMaxVolume.toString(),
+      // 音频输出驱动初始化失败时降级到 null 输出而非停止。
+      'audio-fallback-to-null': 'yes',
+      // 增加音频缓冲时长，降低网络抖动导致的音频中断概率。
+      // 注意：mpv 标注此选项仅用于测试，较大的值会降低变速响应速度。
+      'audio-buffer': '1',
+      // 增大解复用器缓存，减少 EDL 双流场景下单一流中断的影响。
+      'demuxer-max-bytes': '200M',
     };
     final autosync = Pref.autosync;
     if (autosync != '0') {
@@ -921,6 +928,7 @@ class PlPlayerController with BlockConfigMixin {
     if (dataSource is FileSource) {
       return null;
     }
+    if (_processing) return null;
     if (_videoPlayerController case final ctr? when (ctr.current.isNotEmpty)) {
       return ctr.open(
         ctr.current.last.copyWith(start: ctr.state.position),
@@ -1091,11 +1099,33 @@ class PlPlayerController with BlockConfigMixin {
           isLive,
         );
       }),
-      if (kDebugMode)
-        stream.log.listen(((PlayerLog log) {
+      stream.log.listen(((PlayerLog log) {
           if (log.level == 'error' || log.level == 'fatal') {
+            if (log.prefix == 'ao' || log.prefix == 'ad') {
+              // 音频解码器/输出出错时自动 seek 到当前位置以重置解码器状态，
+              // 等效于用户手动拖进度条恢复音频。
+              EasyThrottle.throttle(
+                'controllerStream.audio.error',
+                const Duration(milliseconds: 5000),
+                () {
+                  if (playerStatus.isPlaying &&
+                      _videoPlayerController != null &&
+                      _videoPlayerController!.state.position !=
+                          Duration.zero &&
+                      !isSeeking.value) {
+                    final pos = _videoPlayerController!.state.position;
+                    if (kDebugMode) {
+                      debugPrint(
+                        'audio decoder error, seeking to $pos to recover',
+                      );
+                    }
+                    unawaited(_videoPlayerController!.seek(pos));
+                  }
+                },
+              );
+            }
             Utils.reportError('${log.level}: ${log.prefix}: ${log.text}', null);
-          } else {
+          } else if (kDebugMode) {
             debugPrint(log.toString());
           }
         })),
@@ -1747,14 +1777,26 @@ class PlPlayerController with BlockConfigMixin {
 
   void setOnlyPlayAudio() {
     onlyPlayAudio.toggle();
-    videoPlayerController?.setVideoTrack(onlyPlayAudio.value ? .no() : .auto());
+    final player = videoPlayerController;
+    if (player == null) return;
+    if (onlyPlayAudio.value) {
+      player.setVideoTrack(.no());
+    } else {
+      player.setVideoTrack(.auto());
+    }
   }
 
   /// 原地开关视频轨道（不重开播放器），保留 demuxer 缓存，
   /// 让前后台切换近零等待。[onlyAudio] 为 true 时仅保留音频。
   void setOnlyPlayAudioEnabled(bool onlyAudio) {
     onlyPlayAudio.value = onlyAudio;
-    videoPlayerController?.setVideoTrack(onlyAudio ? .no() : .auto());
+    final player = videoPlayerController;
+    if (player == null) return;
+    if (onlyAudio) {
+      player.setVideoTrack(.no());
+    } else {
+      player.setVideoTrack(.auto());
+    }
   }
 
   late final Map<String, ui.Image?> previewCache = {};
