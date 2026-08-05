@@ -356,7 +356,7 @@ Obx(
                           height: 3,
                           decoration: BoxDecoration(
                             color: colorScheme.outline,
-                            borderRadius: BorderRadius.all(BorderRadius.circular(1.5)),
+                            borderRadius: BorderRadius.all(Radius.circular(1.5)),
                           ),
                         ),
                       ),
