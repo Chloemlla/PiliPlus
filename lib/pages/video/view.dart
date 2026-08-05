@@ -231,7 +231,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   void _startLiveUpdateOnBackground(PlPlayerController ctr) {
     if (!Platform.isAndroid) return;
     if (AndroidHelper.isPipMode) return;
-    if (!videoPlayerServiceHandler?.enableBackgroundPlay ?? true) return;
+    if (videoPlayerServiceHandler?.enableBackgroundPlay != true) return;
     if (!ctr.playerStatus.isPlaying) return;
 
     final handler = videoPlayerServiceHandler;
