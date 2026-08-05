@@ -117,10 +117,14 @@ class LiveUpdateService : Service() {
             )
             .addAction(playPauseAction)
 
-        // Live Update: promoted ongoing (API 36+ / Android 15+)
-        if (Build.VERSION.SDK_INT >= 36) {
-            @Suppress("NewApi", "InlinedApi")
+        // Live Update: promoted ongoing.
+        // Use try-catch instead of SDK version check because some OEMs (e.g. vivo)
+        // report API 35+ but do not include the method in the framework.
+        @Suppress("NewApi")
+        try {
             builder.setRequestPromotedOngoing(true)
+        } catch (_: NoSuchMethodError) {
+            // Method not available on this device — fall back to normal ongoing.
         }
         // Android 12+: show FGS notification immediately
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
