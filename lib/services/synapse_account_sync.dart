@@ -10,6 +10,15 @@ final class SynapseSyncedAccountState {
   final String cookieHash;
   final String at;
 
+  @override
+  bool operator ==(Object other) =>
+      other is SynapseSyncedAccountState &&
+      cookieHash == other.cookieHash &&
+      at == other.at;
+
+  @override
+  int get hashCode => Object.hash(cookieHash, at);
+
   Map<String, dynamic> toJson() => {'cookieHash': cookieHash, 'at': at};
 
   static SynapseSyncedAccountState? fromJson(Object? value) {
