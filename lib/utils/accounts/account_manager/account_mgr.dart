@@ -68,7 +68,18 @@ class AccountManager extends Interceptor {
 
     if (isApp && options.responseType == ResponseType.bytes) {
       options.headers.addAll(account.grpcHeaders);
-      handler.next(options);
+      // 同时携带 Cookie 以支持 cookie-only 登录的 gRPC 鉴权
+      await account.cookieJar.loadForRequest(options.uri).then<void>(
+        (cookies) {
+          if (cookies.isNotEmpty) {
+            options.headers['Cookie'] = getCookies(cookies);
+          }
+          handler.next(options);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          handler.next(options);
+        },
+      );
       return;
     }
 
