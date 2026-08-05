@@ -584,7 +584,7 @@ abstract final class SynapseSyncService {
   static List<LoginAccount> _loggedInAccounts() {
     final accounts = <LoginAccount>[
       for (final entry in Accounts.account.toMap().entries)
-        if (entry.value is LoginAccount && entry.value.shouldKeep) entry.value as LoginAccount,
+        if (entry.value.shouldKeep) entry.value,
     ];
     final main = Accounts.main;
     if (main is LoginAccount && main.shouldKeep) {
