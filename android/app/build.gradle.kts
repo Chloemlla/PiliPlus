@@ -110,7 +110,11 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
-    val lumenCrashVersion = "0.1.0"
+    val lumenCrashVersion =
+        providers.gradleProperty("lumenCrashVersion")
+            .orElse(providers.environmentVariable("LUMEN_CRASH_VERSION"))
+            .orElse("0.1.0")
+            .get()
 
     // Huawei Scan Kit full SDK (scanplus): camera + bitmap decode without GMS.
     // Independent SDK path — no agconnect-services.json / AGConnect plugin required.
