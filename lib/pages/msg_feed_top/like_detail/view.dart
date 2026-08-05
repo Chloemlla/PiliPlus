@@ -62,6 +62,7 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
           itemBuilder: (context, index) => const MsgFeedTopSkeleton(),
         );
       case Success(:final response):
+        final items = response ?? const <MsgLikeDetailItem>[];
         final divider = Divider(
           indent: 72,
           endIndent: 20,
@@ -80,12 +81,12 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
               ),
             ],
             SliverList.separated(
-              itemCount: response!.length,
+              itemCount: items.length,
               itemBuilder: (context, index) {
-                if (index == response.length - 1) {
+                if (index == items.length - 1) {
                   _controller.onLoadMore();
                 }
-                return _buildItem(theme, response[index]);
+                return _buildItem(theme, items[index]);
               },
               separatorBuilder: (context, index) => divider,
             ),
