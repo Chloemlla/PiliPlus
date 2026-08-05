@@ -476,7 +476,7 @@ class _ExpansionTile extends ExpansionTile {
     // ignore: unused_element_parameter
     super.dense = true,
     // ignore: unused_element_parameter
-    super.childrenPadding = const .only(left: 20),
+    super.childrenPadding = const EdgeInsets.only(left: 20),
     super.initiallyExpanded,
     super.iconColor,
     super.collapsedIconColor,
