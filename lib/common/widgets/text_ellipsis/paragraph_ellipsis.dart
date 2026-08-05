@@ -90,7 +90,7 @@ class RenderParagraphEllipsis extends RenderParagraph {
   void paint(PaintingContext context, Offset offset) {
     super.paint(context, offset);
     if (maxLines != null) {
-      final lineMetrics = textPainter.layoutCache?.lineMetrics;
+      final lineMetrics = textPainter.computeLineMetrics();
       if (lineMetrics != null && lineMetrics.length == maxLines) {
         if (lineMetrics.last.width == 0.0) {
           _initEllipsisPainterIfNeeded();

@@ -356,7 +356,7 @@ Obx(
                           height: 3,
                           decoration: BoxDecoration(
                             color: colorScheme.outline,
-                            borderRadius: const .all(.circular(1.5)),
+                            borderRadius: BorderRadius.all(BorderRadius.circular(1.5)),
                           ),
                         ),
                       ),
@@ -365,7 +365,7 @@ Obx(
                   Expanded(
                     child: ListView(
                       controller: scrollController,
-                      padding: .only(
+                      padding: EdgeInsets.only(
                         bottom: MediaQuery.viewPaddingOf(context).bottom + 100,
                       ),
                       children: controller.stream.mapIndexed((si, stream) {
