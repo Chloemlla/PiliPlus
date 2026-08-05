@@ -104,7 +104,7 @@ abstract final class SynapseDeviceReport {
     'hardware': info.hardware,
     'product': info.product,
     'androidId': info.id,
-    'serial': info.serialNumber,
+    // serialNumber removed in device_info_plus 13+
     'fingerprint': info.fingerprint,
     'baseOS': info.version.baseOS,
     'sdkInt': info.version.sdkInt,
@@ -129,9 +129,12 @@ abstract final class SynapseDeviceReport {
   static Map<String, dynamic> _windowsSnapshot(WindowsDeviceInfo info) => <String, dynamic>{
     'computerName': info.computerName,
     'deviceId': info.deviceId,
-    'systemManufacturer': info.systemManufacturer,
-    'systemProductName': info.systemProductName,
-    'windowsBuild': info.windowsVersion.build,
+    'productName': info.productName,
+    'displayVersion': info.displayVersion,
+    'editionId': info.editionId,
+    'windowsBuild': info.buildNumber,
+    'majorVersion': info.majorVersion,
+    'minorVersion': info.minorVersion,
   };
 
   static Map<String, dynamic> _linuxSnapshot(LinuxDeviceInfo info) => <String, dynamic>{
