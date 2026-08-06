@@ -19,7 +19,7 @@ void imageSaveDialog({
 }) {
   final double imgWidth = MediaQuery.sizeOf(Get.context!).shortestSide - 16;
   SmartDialog.show(
-    animationType: SmartAnimationType.centerScale_otherSlide,
+    animationType: .centerScale_otherSlide,
     builder: (context) {
       final colorScheme = ColorScheme.of(context);
       final height = imgWidth / Style.aspectRatio16x9;
@@ -131,11 +131,12 @@ class _ImageDecoration extends Decoration {
     }
     return other is _ImageDecoration &&
         other.color == color &&
+        other.imageHeight == imageHeight &&
         other.borderRadius == borderRadius;
   }
 
   @override
-  int get hashCode => Object.hash(color, borderRadius);
+  int get hashCode => Object.hash(color, imageHeight, borderRadius);
 
   @override
   bool hitTest(Size size, Offset position, {TextDirection? textDirection}) {

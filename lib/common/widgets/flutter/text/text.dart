@@ -428,6 +428,7 @@ abstract class BaseText extends StatelessWidget {
           DefaultSelectionStyle.of(context).selectionColor ??
           DefaultSelectionStyle.defaultColor,
       text: effectiveTextSpan,
+      selectionRegistrar: SelectionContainer.maybeOf(context),
     );
     if (semanticsLabel != null || semanticsIdentifier != null) {
       result = Semantics(
@@ -456,5 +457,6 @@ abstract class BaseText extends StatelessWidget {
     ui.TextHeightBehavior? textHeightBehavior,
     required Color selectionColor,
     required TextSpan text,
+    SelectionRegistrar? selectionRegistrar,
   });
 }

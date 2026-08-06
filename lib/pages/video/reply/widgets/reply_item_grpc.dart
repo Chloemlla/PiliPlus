@@ -341,9 +341,6 @@ class ReplyItemGrpc extends StatelessWidget {
         Padding(
           padding: padding,
           child: TextMore.rich(
-            primary: colorScheme.primary,
-            style: const TextStyle(height: 1.75, fontSize: 14),
-            maxLines: replyLevel == 1 ? replyLengthLimit : null,
             TextSpan(
               children: [
                 if (replyControl.isUpTop) ...[
@@ -370,6 +367,9 @@ class ReplyItemGrpc extends StatelessWidget {
                 ),
               ],
             ),
+            primary: colorScheme.primary,
+            style: const TextStyle(height: 1.75, fontSize: 14),
+            maxLines: replyLevel == 1 ? replyLengthLimit : null,
           ),
         ),
         if (replyItem.content.pictures.isNotEmpty) ...[
@@ -619,13 +619,6 @@ class ReplyItemGrpc extends StatelessWidget {
                   child: Padding(
                     padding: padding,
                     child: TextEllipsis.rich(
-                      style: TextStyle(
-                        height: 1.6,
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.85),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
                       TextSpan(
                         children: [
                           TextSpan(
@@ -668,6 +661,13 @@ class ReplyItemGrpc extends StatelessWidget {
                           ),
                         ],
                       ),
+                      style: TextStyle(
+                        height: 1.6,
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withValues(alpha: 0.85),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
                   ),
                 );

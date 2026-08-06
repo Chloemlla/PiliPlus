@@ -1,6 +1,7 @@
 import 'package:pili_plus/common/widgets/flutter/text/text.dart';
 import 'package:pili_plus/common/widgets/text_more/rich_text_more.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SelectionRegistrar;
 
 class TextMore extends BaseText {
   const TextMore(
@@ -65,6 +66,7 @@ class TextMore extends BaseText {
     TextHeightBehavior? textHeightBehavior,
     required Color selectionColor,
     required TextSpan text,
+    SelectionRegistrar? selectionRegistrar,
   }) {
     return RichTextMore(
       textAlign: textAlign,
@@ -79,6 +81,7 @@ class TextMore extends BaseText {
       textHeightBehavior: textHeightBehavior,
       selectionColor: selectionColor,
       text: text,
+      selectionRegistrar: selectionRegistrar,
       primary: primary,
       onShowMore: onShowMore,
     );

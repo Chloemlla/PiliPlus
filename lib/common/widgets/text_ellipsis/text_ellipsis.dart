@@ -1,6 +1,7 @@
 import 'package:pili_plus/common/widgets/flutter/text/text.dart';
 import 'package:pili_plus/common/widgets/text_ellipsis/rich_text_ellipsis.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SelectionRegistrar;
 
 class TextEllipsis extends BaseText {
   const TextEllipsis(
@@ -57,6 +58,7 @@ class TextEllipsis extends BaseText {
     TextHeightBehavior? textHeightBehavior,
     required Color selectionColor,
     required TextSpan text,
+    SelectionRegistrar? selectionRegistrar,
   }) {
     return RichTextEllipsis(
       textAlign: textAlign,
@@ -71,6 +73,7 @@ class TextEllipsis extends BaseText {
       textHeightBehavior: textHeightBehavior,
       selectionColor: selectionColor,
       text: text,
+      selectionRegistrar: selectionRegistrar,
     );
   }
 }
