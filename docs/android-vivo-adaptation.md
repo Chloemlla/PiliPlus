@@ -168,9 +168,31 @@ what still matters for this product and what changed on 2026-07-17.
   / stores View shaders, so it is not a proven fix; Impeller was disabled
   deliberately in `7ae92970e` and would need real-device QA before switching.
 
+### perfetto `TracingMuxer` SIGSEGV (MediaTek / Mali, Android 16)
+
+- Fingerprint: `ApplicationExitInfo` native crash (`reason = native_crash`),
+  crashing thread named `TracingMuxer`, stack inside system
+  `libperfetto_c.so` (`perfetto::base::UnixTaskRunner::Run()` poll loop) with a
+  `SIGSEGV` / `SEGV_MAPERR`. Frames are bionic/libc + system libperfetto_c only;
+  no app / libflutter / libmpv / plugin frames in the crashing thread. The
+  process's `perfetto_hprof_` thread shows ART heap profiling was active, and
+  the report captured the app at its Java heap ceiling (216/216 MiB, ~675 MiB
+  RSS), i.e. under memory pressure while tracing was being driven by the system.
+- First seen: 2026-08-07, build `2.1.0-b04912119` (5450), vivo V2426A
+  (MediaTek MT6991 / Mali), Android 16 (SDK 36), while playing video (mpv) with
+  a WebView open and the main thread idle in the Looper.
+- Verdict: system/firmware-level fault in Android's in-process perfetto tracing,
+  not an app-code bug. Perfetto is loaded from `/system/lib64/libperfetto_c.so`;
+  the app ships no perfetto code and enables no tracing, so there is no
+  product-side lever.
+- Handling: `CrashReportFilter.isKnownDeviceIssue` matches this fingerprint
+  (`libperfetto_c.so` + `tracingmuxer` + `sigsegv`) and persists matched reports
+  as history (`makePending:false`), same as the hwui `ShaderCache::store` fault.
+
 ## Refresh log
 
 - 2026-07-17: Mapped Lumen Android 11-17 Vivo notes onto PiliPlus; enabled predictive back; added network security config + intent matching flags; fixed UCrop exported; hardened Seal URI grants; documented N/A product differences.
 - 2026-07-24: Media notification API 11–17: FGS immediate behavior (S+), silent LOW channel, seekable MediaStyle duration write-back; documented POST_NOTIFICATIONS / mediaPlayback while-in-use expectations.
 - 2026-07-31: Recorded source/CI verification and kept physical-device OEM validation as an explicit release QA item rather than assuming it was executed.
 - 2026-08-04: Recorded the vivo V2426A / MediaTek hwui `ShaderCache::store` native crash as a known device fault; wired its fingerprint into the crash pipeline (history-only, not fatal).
+- 2026-08-07: Recorded the vivo V2426A perfetto `TracingMuxer` SIGSEGV (report `25ef6a3ff68a`) as a second known device fault; extended `CrashReportFilter.isKnownDeviceIssue` to match `libperfetto_c.so` + `tracingmuxer` + `sigsegv` (history-only, not fatal).

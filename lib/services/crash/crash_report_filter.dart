@@ -17,14 +17,21 @@ abstract final class CrashReportFilter {
   }
 
   /// System/device faults that stay in crash history but are not surfaced as
-  /// fatal. Matches a native crash whose stack is entirely inside Android's
-  /// hardware-UI shader disk cache writer (libhwui.so `ShaderCache::store`
-  /// deferred-save thread) — a firmware/driver-level SIGSEGV (seen on
-  /// MediaTek/Mali + Android 16, e.g. vivo V2426A), never an app frame.
+  /// fatal. Matches a native crash whose crashing thread is entirely inside an
+  /// Android system library — a firmware/driver-level SIGSEGV (seen on
+  /// MediaTek/Mali + Android 16, e.g. vivo V2426A), never an app frame:
+  ///  - libhwui.so `ShaderCache::store` deferred-save thread
+  ///  - libperfetto_c.so in-process tracing task runner ("TracingMuxer")
   static bool isKnownDeviceIssue(CrashReport report) {
     if (report.reason != 'native_crash') return false;
     final stack = report.stackTrace.toLowerCase();
-    return stack.contains('shadercache::store') && stack.contains('libhwui');
+    final hwuiShaderCache =
+        stack.contains('shadercache::store') && stack.contains('libhwui');
+    final perfettoTracing =
+        stack.contains('libperfetto_c.so') &&
+        stack.contains('tracingmuxer') &&
+        stack.contains('sigsegv');
+    return hwuiShaderCache || perfettoTracing;
   }
 
   static bool _hasUsefulStack(StackTrace? stackTrace) =>
