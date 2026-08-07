@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建新增应用声明与直播更新进度通知，恢复播放器「更多设置」的下载/书签/画质推荐入口，并合并上游 PR #23 的文本省略与选择增强。',
+      subtitle: '本构建新增应用声明与直播更新进度通知，恢复播放器「更多设置」的下载/书签/画质推荐/应用内小窗入口，并合并上游 PR #23 的文本省略与选择增强。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -85,9 +85,10 @@ abstract final class WhatsNewData {
     const ImprovementsGuidePageData(
       icon: Icons.menu_open_outlined,
       title: '恢复播放器「更多设置」入口',
-      subtitle: '视频播放页顶部「更多设置」重新提供下载视频、下载音频、去除空降助手标记、视频标记与画质推荐模式入口。',
+      subtitle: '视频播放页顶部「更多设置」重新提供应用内小窗、下载视频、下载音频、去除空降助手标记、视频标记与画质推荐模式入口。',
       platformHint: 'Android（下载相关）',
       bullets: [
+        '应用内小窗：播放中可转入悬浮小窗继续播放，点击「打开」回到原视频页；与系统画中画互补。',
         '下载视频 / 下载音频 / 下载并去除空降助手标记：Android 上优先委托 Seal（yt-dlp）处理队列与落盘。',
         '视频标记：可在播放位置新建标记，标记列表仍从「我的 → 我的视频标记」查看。',
         '画质推荐模式：与播放器「画质」菜单入口等价，此处更易直达。',

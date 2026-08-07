@@ -409,6 +409,21 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(Icons.watch_later_outlined, size: 20),
                   title: const Text('添加至「稍后再看」', style: titleStyle),
                 ),
+                if (!plPlayerController.isDesktopPip)
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      videoDetailCtr.openInAppMiniPlayer(
+                        title: introController.videoDetail.value.title,
+                      );
+                    },
+                    leading: const Icon(
+                      Icons.picture_in_picture_alt_outlined,
+                      size: 20,
+                    ),
+                    title: const Text('应用内小窗', style: titleStyle),
+                  ),
                 if (!isFileSource && !plPlayerController.isDesktopPip)
                   ListTile(
                     dense: true,
