@@ -49,7 +49,7 @@ abstract final class ImprovementsGuideData {
         '可按空降助手已标记片段去除广告并合成成品，并展示逐段报告。',
         '设置项「委托 Seal 时自动开始下载」默认关闭，需 Seal 同步开启 Allow external auto-start。',
       ],
-      tip: '路径：视频页三点菜单 → 下载视频 / 下载并去除空降助手标记 / 下载音频。包名 com.chloemlla.seal。',
+      tip: '路径：视频页三点菜单或播放页顶部「更多设置」→ 下载视频 / 下载并去除空降助手标记 / 下载音频。包名 com.chloemlla.seal。',
     ),
     ImprovementsGuidePageData(
       icon: Icons.playlist_add_check_outlined,
@@ -82,7 +82,7 @@ abstract final class ImprovementsGuideData {
         '支持从播放器菜单创建、编辑、删除和跳转书签。',
         '书签列表按视频聚合，适合整理课程、资料和长视频。',
       ],
-      tip: '入口：播放器更多菜单 → 视频书签。',
+      tip: '入口：播放页顶部「更多设置」→ 视频标记，或「我的 → 我的视频标记」。',
     ),
     ImprovementsGuidePageData(
       icon: Icons.bar_chart_outlined,

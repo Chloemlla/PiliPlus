@@ -1,4 +1,4 @@
-import 'dart:async' show Timer;
+import 'dart:async' show Timer, unawaited;
 import 'dart:convert' show jsonDecode, utf8;
 import 'dart:io' show Platform, File;
 import 'dart:typed_data' show Uint8List;
@@ -28,12 +28,15 @@ import 'package:pili_plus/pages/setting/models/play_settings.dart'
     show showPlayerVolumeDialog;
 import 'package:pili_plus/pages/setting/widgets/popup_item.dart';
 import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
+import 'package:pili_plus/pages/video/bookmark/video_bookmark_sheet.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/local/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/widgets/action_item.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/widgets/menu_row.dart';
+import 'package:pili_plus/pages/video/quality/quality_widgets.dart';
+import 'package:pili_plus/pages/video/seal_download_utils.dart';
 import 'package:pili_plus/pages/video/widgets/header_mixin.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/data_source.dart';
@@ -364,6 +367,25 @@ class HeaderControlState extends State<HeaderControl>
     }
   }
 
+  void _showBookmarkSheet() {
+    final detail = introController.videoDetail.value;
+    final fallbackTitle = videoDetailCtr.args['title'] as String?;
+    final title = (detail.title ?? fallbackTitle)?.trim();
+    PageUtils.showVideoBottomSheet(
+      context,
+      child: VideoBookmarkSheet(
+        bvid: videoDetailCtr.bvid,
+        videoTitle: title == null || title.isEmpty ? videoDetailCtr.bvid : title,
+        authorMid: detail.owner?.mid,
+        currentTimestamp: plPlayerController.position.value,
+        onBookmarkTap: (bookmark) => plPlayerController.seekTo(
+          Duration(seconds: bookmark.timestampSeconds),
+          isSeek: false,
+        ),
+      ),
+    );
+  }
+
   /// 设置面板
   void showSettingSheet() {
     showBottomSheet(
@@ -387,6 +409,45 @@ class HeaderControlState extends State<HeaderControl>
                   leading: const Icon(Icons.watch_later_outlined, size: 20),
                   title: const Text('添加至「稍后再看」', style: titleStyle),
                 ),
+                if (!isFileSource && !plPlayerController.isDesktopPip)
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      _showBookmarkSheet();
+                    },
+                    leading: const Icon(Icons.bookmark_add_outlined, size: 20),
+                    title: const Text('视频标记', style: titleStyle),
+                  ),
+                if (!isFileSource && Platform.isAndroid) ...[
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      SealDownloadUtils.downloadVideo(videoDetailCtr);
+                    },
+                    leading: const Icon(Icons.download_outlined, size: 20),
+                    title: const Text('下载视频', style: titleStyle),
+                  ),
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      SealDownloadUtils.downloadAudio(videoDetailCtr);
+                    },
+                    leading: const Icon(Icons.music_note_outlined, size: 20),
+                    title: const Text('下载音频', style: titleStyle),
+                  ),
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      SealDownloadUtils.downloadVideoStripMarked(videoDetailCtr);
+                    },
+                    leading: const Icon(Icons.content_cut_rounded, size: 20),
+                    title: const Text('下载并去除空降助手标记', style: titleStyle),
+                  ),
+                ],
                 if (videoDetailCtr.epId == null)
                   ListTile(
                     dense: true,
@@ -605,6 +666,20 @@ class HeaderControlState extends State<HeaderControl>
                   ),
                 ),
                 if (!isFileSource) ...[
+                  ListTile(
+                    dense: true,
+                    onTap: () {
+                      Get.back();
+                      unawaited(
+                        showQualityModeSelector(
+                          context,
+                          videoDetailCtr.qualityRecommendationController,
+                        ),
+                      );
+                    },
+                    leading: const Icon(Icons.auto_awesome_outlined, size: 20),
+                    title: const Text('画质推荐模式', style: titleStyle),
+                  ),
                   ListTile(
                     dense: true,
                     onTap: () {
