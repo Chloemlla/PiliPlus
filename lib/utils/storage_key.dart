@@ -18,6 +18,7 @@ abstract final class SettingBoxKey {
       firstLaunchOssNoticeSeen = 'firstLaunchOssNoticeSeen',
       whatsNewAckCommitHash = 'whatsNewAckCommitHash',
       whatsNewAckBuildTime = 'whatsNewAckBuildTime',
+      privacyPolicyAgreed = 'privacyPolicyAgreed',
       synapseBaseUrl = 'synapseBaseUrl',
       synapseSyncEnabled = 'synapseSyncEnabled',
       synapseSyncBoundMid = 'synapseSyncBoundMid',

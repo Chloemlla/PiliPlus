@@ -12,7 +12,6 @@ import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/services/app_data_reset_service.dart';
 import 'package:pili_plus/services/first_launch_improvements_guide_service.dart';
-import 'package:pili_plus/services/first_launch_oss_notice_service.dart';
 import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -178,11 +177,11 @@ Commit Hash: ${BuildConfig.commitHash}''',
             subtitle: Text(Constants.sourceCodeUrl, style: subTitleStyle),
           ),
           ListTile(
-            onTap: FirstLaunchOssNoticeService.openManual,
-            leading: const Icon(Icons.balance_outlined),
-            title: const Text('开源声明与第三方鸣谢'),
+            onTap: () => Get.toNamed('/declarations'),
+            leading: const Icon(Icons.fact_check_outlined),
+            title: const Text('应用声明'),
             subtitle: Text(
-              '源码地址、永久免费提示、协议与依赖鸣谢',
+              '法律信息、开源许可声明、应用权限',
               style: subTitleStyle,
             ),
             trailing: Icon(Icons.arrow_forward, size: 16, color: outline),

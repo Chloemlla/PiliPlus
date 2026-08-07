@@ -121,14 +121,14 @@ abstract final class ImprovementsGuideData {
     ),
     ImprovementsGuidePageData(
       icon: Icons.sync_alt_outlined,
-      title: 'B 站设置与搜索记录同步',
-      subtitle: '支持将部分 B 站设置和搜索历史在账号设备间同步。',
+      title: 'Synapse 设置与搜索记录同步',
+      subtitle: '通过 Synapse-Client 授权后，将通用设置、播放设置和搜索历史在账号设备间同步。',
       bullets: [
-        '同步前明确区分本地设置、账号设置和敏感字段。',
+        '同步前明确区分本地设置、账号设置和敏感字段；WebDAV 密码、Cookie 与 Token 保留本地。',
         '网络失败时保留本地状态，下一次同步可继续处理。',
-        '冲突处理遵循更新时间与字段范围，避免覆盖无关设置。',
+        '冲突时展示新增、修改、移除预览，可选择保留本地、使用远端或安全合并。',
       ],
-      tip: '入口：设置 → B 站设置同步。',
+      tip: '入口：设置 → 额外设置 → Synapse 云同步。',
     ),
     ImprovementsGuidePageData(
       icon: Icons.qr_code_scanner_outlined,
@@ -221,6 +221,29 @@ abstract final class ImprovementsGuideData {
         '检查更新与源码地址：github.com/Chloemlla/PiliPlus。',
       ],
       tip: '稍后若弹出权限说明，可按需授权；拒绝不会强制退出。',
+    ),
+    ImprovementsGuidePageData(
+      icon: Icons.notification_important_outlined,
+      title: '直播更新进度通知',
+      subtitle: '后台播放直播且未开启画中画时，用系统前台服务展示可交互的进度通知。',
+      platformHint: 'Android',
+      bullets: [
+        '退出应用且无 PiP 时，创建带进度条、标题与播放/暂停按钮的常驻通知。',
+        'Android 16 上以 Live Update（promoted ongoing）样式呈现；OEM 缺接口时自动降级，避免崩溃。',
+        '与媒体播放通知互补，覆盖直播后台场景。',
+      ],
+      tip: '后台直播时留意通知栏的进度通知。',
+    ),
+    ImprovementsGuidePageData(
+      icon: Icons.fact_check_outlined,
+      title: '应用声明与法律信息',
+      subtitle: '关于页新增「应用声明」，集中提供法律信息、开源许可声明与应用权限说明。',
+      bullets: [
+        '法律信息：用户协议、隐私政策、会员服务协议、个人信息收集清单等以内置网页查看。',
+        '撤回同意与撤回隐私政策同意：查看当前授权状态并一键清除同意标记。',
+        '开源许可声明并入应用声明；应用权限列出系统权限及用途。',
+      ],
+      tip: '路径：设置 → 关于 → 应用声明。',
     ),
     ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,

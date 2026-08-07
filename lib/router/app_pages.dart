@@ -5,6 +5,10 @@ import 'package:pili_plus/pages/blacklist/view.dart';
 import 'package:pili_plus/pages/bubble/view.dart';
 import 'package:pili_plus/pages/danmaku_block/view.dart';
 import 'package:pili_plus/pages/danmaku_highlight/view.dart';
+import 'package:pili_plus/pages/declarations/app_permissions_page.dart';
+import 'package:pili_plus/pages/declarations/declarations_page.dart';
+import 'package:pili_plus/pages/declarations/legal_info_page.dart';
+import 'package:pili_plus/pages/declarations/withdraw_consent_page.dart';
 import 'package:pili_plus/pages/dlna/view.dart';
 import 'package:pili_plus/pages/download/view.dart';
 import 'package:pili_plus/pages/download_manager/view.dart';
@@ -199,5 +203,10 @@ class Routes {
     ),
     GetPage(name: '/playlistImport', page: () => const PlaylistImportPage()),
     GetPage(name: '/playlistExport', page: () => const PlaylistExportPage()),
+    // 应用声明
+    GetPage(name: '/declarations', page: () => const DeclarationsPage()),
+    GetPage(name: '/legalInfo', page: () => const LegalInfoPage()),
+    GetPage(name: '/appPermissions', page: () => const AppPermissionsPage()),
+    GetPage(name: '/withdrawConsent', page: () => const WithdrawConsentPage()),
   ];
 }
