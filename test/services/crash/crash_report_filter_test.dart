@@ -186,6 +186,43 @@ __thread_proxy libhwui.so
       );
     });
 
+    test('matches perfetto TracingMuxer native crash', () {
+      const trace = r'''
+SIGSEGV SEGV_MAPERR
+null pointer dereference TracingMuxer
+__ppoll libc.so
+poll libc.so
+perfetto::base::UnixTaskRunner::Run() /system/lib64/libperfetto_c.so
+perfetto::base::ThreadTaskRunner::RunTaskThread /system/lib64/libperfetto_c.so
+__pthread_start libc.so
+''';
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(nativeReport(trace: trace)),
+        isTrue,
+      );
+    });
+
+    test('perfetto fingerprint requires the full signature', () {
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(
+          nativeReport(trace: 'SIGSEGV\nlibflutter.so unknown frame'),
+        ),
+        isFalse,
+      );
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(
+          nativeReport(trace: 'libperfetto_c.so unknown frame'),
+        ),
+        isFalse,
+      );
+      expect(
+        CrashReportFilter.isKnownDeviceIssue(
+          nativeReport(trace: 'SIGSEGV\nTracingMuxer'),
+        ),
+        isFalse,
+      );
+    });
+
     test('ignores non-native crash reasons', () {
       const trace = 'ShaderCache::store libhwui.so';
       expect(
