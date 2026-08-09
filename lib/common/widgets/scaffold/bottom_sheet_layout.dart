@@ -29,11 +29,11 @@ class BottomSheetLayout
   createRenderObject(
     BuildContext context,
   ) {
-    return _RenderScaffoldLayout();
+    return _RenderBottomSheetLayout();
   }
 }
 
-class _RenderScaffoldLayout extends RenderBox
+class _RenderBottomSheetLayout extends RenderBox
     with
         SlottedContainerRenderObjectMixin<BottomSheetType, RenderBox>,
         SlottedLayoutMixin {
@@ -48,14 +48,19 @@ class _RenderScaffoldLayout extends RenderBox
     final constraints = this.constraints;
     size = constraints.biggest;
 
-    final childConstraints = constraints.loosen();
-    final body = this.body..layout(childConstraints);
-    setOffset(body, .zero);
+    final body = this.body..layout(BoxConstraints.tight(size));
+    setSlotOffset(body, .zero);
 
     final bottomSheet = this.bottomSheet;
     if (bottomSheet != null) {
-      final size = ChildLayoutHelper.layoutChild(bottomSheet, childConstraints);
-      setOffset(bottomSheet, Offset(0, constraints.maxHeight - size.height));
+      final sheetSize = ChildLayoutHelper.layoutChild(
+        bottomSheet,
+        constraints.loosen(),
+      );
+      setSlotOffset(
+        bottomSheet,
+        Offset(0, constraints.maxHeight - sheetSize.height),
+      );
     }
   }
 
@@ -63,7 +68,7 @@ class _RenderScaffoldLayout extends RenderBox
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
       if (child != null) {
-        context.paintChild(child, getOffset(child) + offset);
+        context.paintChild(child, slotOffsetOf(child) + offset);
       }
     }
 

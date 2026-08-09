@@ -81,18 +81,28 @@ abstract final class PiliScheme {
     try {
       final exe = Platform.resolvedExecutable;
       Process.run('reg', [
-        'add', 'HKCU\\Software\\Classes\\piliplus',
-        '/ve', '/d', 'URL:PiliPlus Protocol',
+        'add',
+        'HKCU\\Software\\Classes\\piliplus',
+        '/ve',
+        '/d',
+        'URL:PiliPlus Protocol',
         '/f',
       ]);
       Process.run('reg', [
-        'add', 'HKCU\\Software\\Classes\\piliplus',
-        '/v', 'URL Protocol', '/d', '',
+        'add',
+        'HKCU\\Software\\Classes\\piliplus',
+        '/v',
+        'URL Protocol',
+        '/d',
+        '',
         '/f',
       ]);
       Process.run('reg', [
-        'add', 'HKCU\\Software\\Classes\\piliplus\\shell\\open\\command',
-        '/ve', '/d', '"$exe" "%1"',
+        'add',
+        'HKCU\\Software\\Classes\\piliplus\\shell\\open\\command',
+        '/ve',
+        '/d',
+        '"$exe" "%1"',
         '/f',
       ]);
     } on Object {
@@ -710,7 +720,7 @@ abstract final class PiliScheme {
                 bvid: bvid,
                 cid: cid,
                 dimension: res!.dimension,
-                title: res.title,
+                title: res!.title,
                 extraArguments: {
                   'sourceType': SourceType.playlist,
                   'favTitle': '播放列表',
@@ -983,7 +993,7 @@ abstract final class PiliScheme {
           progress: progress,
           off: off,
           dimension: res!.dimension,
-          title: res.title,
+          title: res!.title,
         );
       }
     } catch (e) {

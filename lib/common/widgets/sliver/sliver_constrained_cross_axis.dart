@@ -11,11 +11,9 @@ class CenteredSliverConstrainedCrossAxis extends SliverConstrainedCrossAxis {
 
   @override
   Widget build(BuildContext context) {
-    return SliverZeroFlexParentDataWidget(
-      sliver: _CenteredSliverConstrainedCrossAxis(
-        maxExtent: maxExtent,
-        sliver: sliver,
-      ),
+    return _CenteredSliverConstrainedCrossAxis(
+      maxExtent: maxExtent,
+      sliver: sliver,
     );
   }
 }

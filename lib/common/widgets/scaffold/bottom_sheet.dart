@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart' show VerticalDragGestureRecognizer;
 import 'package:flutter/material.dart';
 
+const double _kBottomSheetDragHandleHeight = 45.0;
+
 // ignore: camel_case_types
 class BottomSheet_ extends BottomSheet {
   const BottomSheet_({
@@ -81,8 +83,8 @@ class _VerticalDragGestureRecognizer extends VerticalDragGestureRecognizer {
   _VerticalDragGestureRecognizer({super.debugOwner});
 
   @override
-  bool isPointerAllowed(PointerEvent event) {
-    return event.localPosition.dy < 45 &&
-        super.isPointerAllowed(event as PointerDownEvent);
+  bool isPointerAllowed(PointerDownEvent event) {
+    return event.localPosition.dy < _kBottomSheetDragHandleHeight &&
+        super.isPointerAllowed(event);
   }
 }

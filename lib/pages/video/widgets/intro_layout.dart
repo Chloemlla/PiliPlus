@@ -48,7 +48,7 @@ class RenderIntroLayout extends RenderBox
     size = constraints.biggest;
 
     final body = this.body..layout(constraints);
-    setOffset(body, .zero);
+    setSlotOffset(body, .zero);
 
     final playlist = this.playlist;
     if (playlist != null) {
@@ -56,7 +56,7 @@ class RenderIntroLayout extends RenderBox
         playlist,
         constraints.loosen(),
       );
-      setOffset(
+      setSlotOffset(
         playlist,
         Offset(
           (constraints.maxWidth - playlistSize.width) / 2,
@@ -70,7 +70,7 @@ class RenderIntroLayout extends RenderBox
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
       if (child != null) {
-        context.paintChild(child, getOffset(child) + offset);
+        context.paintChild(child, slotOffsetOf(child) + offset);
       }
     }
 

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart' show SlottedContainerRenderObjectMixin;
 import 'package:flutter/rendering.dart'
     show Offset, RenderBox, BoxParentData, BoxHitTestResult;
 
-Offset getOffset(RenderBox child) {
+Offset slotOffsetOf(RenderBox child) {
   return (child.parentData as BoxParentData).offset;
 }
 
-void setOffset(RenderBox child, Offset offset) {
+void setSlotOffset(RenderBox child, Offset offset) {
   (child.parentData as BoxParentData).offset = offset;
 }
 
@@ -20,7 +20,7 @@ mixin SlottedLayoutMixin<SlotType>
       final child = childForSlot(type);
       if (child == null) continue;
       final bool isHit = result.addWithPaintOffset(
-        offset: getOffset(child),
+        offset: slotOffsetOf(child),
         position: position,
         hitTest: (BoxHitTestResult result, Offset transformed) {
           return child.hitTest(result, position: transformed);

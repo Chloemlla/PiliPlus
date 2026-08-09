@@ -3,8 +3,6 @@ import 'dart:async' show Completer;
 import 'package:pili_plus/common/widgets/scaffold/bottom_sheet.dart';
 import 'package:pili_plus/common/widgets/scaffold/bottom_sheet_layout.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/src/extension_navigation.dart';
 
 class MiniScaffold extends StatefulWidget {
   const MiniScaffold({
@@ -119,7 +117,7 @@ class MiniScaffoldState extends State<MiniScaffold>
       constraints: constraints,
     );
 
-    (Get.routing.route! as ModalRoute).addLocalHistoryEntry(entry);
+    ModalRoute.of(context)?.addLocalHistoryEntry(entry);
 
     return PersistentBottomSheetController(
       bottomSheet,

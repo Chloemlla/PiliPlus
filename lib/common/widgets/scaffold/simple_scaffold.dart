@@ -87,7 +87,7 @@ class _RenderScaffoldLayout extends RenderBox
         appBar,
         BoxConstraints.tightFor(width: constraints.maxWidth),
       ).height;
-      setOffset(appBar, .zero);
+      setSlotOffset(appBar, .zero);
 
       bodyOffset = Offset(0, appBarHeight);
       bodyConstraints = BoxConstraints.tightFor(
@@ -100,12 +100,12 @@ class _RenderScaffoldLayout extends RenderBox
     }
 
     final body = this.body..layout(bodyConstraints);
-    setOffset(body, bodyOffset);
+    setSlotOffset(body, bodyOffset);
 
     final fab = this.fab;
     if (fab != null) {
       final fabSize = ChildLayoutHelper.layoutChild(fab, constraints.loosen());
-      setOffset(
+      setSlotOffset(
         fab,
         Offset(
           constraints.maxWidth - fabSize.width,
@@ -119,7 +119,7 @@ class _RenderScaffoldLayout extends RenderBox
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
       if (child != null) {
-        context.paintChild(child, getOffset(child) + offset);
+        context.paintChild(child, slotOffsetOf(child) + offset);
       }
     }
 

@@ -1821,9 +1821,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         SliverToBoxAdapter(
           child: SizedBox(
             height:
-                (videoDetailController.isPlayAll && !isPortrait
-                    ? 80
-                    : Style.safeSpace) +
+                (videoDetailController.isPlayAll ? 80 : Style.safeSpace) +
                 padding.bottom,
           ),
         ),

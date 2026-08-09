@@ -19,13 +19,12 @@ import 'package:flutter/material.dart' hide RefreshIndicator;
 
 const kIndicatorSize = 49.0;
 
-/// The distance from the child's top or bottom [edgeOffset] where
+/// The distance from the child's top or bottom edge where
 /// the refresh indicator will settle. During the drag that exposes the refresh
 /// indicator, its actual displacement may significantly exceed this value.
 ///
 /// In most cases, [displacement] distance starts counting from the parent's
-/// edges. However, if [edgeOffset] is larger than zero then the [displacement]
-/// value is calculated from that offset instead of the parent's edge.
+/// edges.
 double _displacement = Pref.refreshDisplacement;
 double get displacement => _displacement;
 set displacement(double value) {
@@ -163,22 +162,6 @@ class RefreshIndicator extends StatefulWidget {
   ///
   /// Typically a [ListView] or [CustomScrollView].
   final Widget child;
-
-  /// The offset where [RefreshProgressIndicator] starts to appear on drag start.
-  ///
-  /// Depending whether the indicator is showing on the top or bottom, the value
-  /// of this variable controls how far from the parent's edge the progress
-  /// indicator starts to appear. This may come in handy when, for example, the
-  /// UI contains a top [Widget] which covers the parent's edge where the progress
-  /// indicator would otherwise appear.
-  ///
-  /// By default, the edge offset is set to 0.
-  ///
-  /// See also:
-  ///
-  ///  * [displacement], can be used to change the distance from the edge that
-  ///    the indicator settles.
-  // final double edgeOffset;
 
   /// A function that's called when the user has dragged the refresh indicator
   /// far enough to demonstrate that they want the app to refresh. The returned
@@ -544,8 +527,6 @@ class RefreshIndicatorState extends State<RefreshIndicator>
           child: child,
         );
       }
-      return child;
-    }
       return child;
     }
     return ScrollConfiguration(

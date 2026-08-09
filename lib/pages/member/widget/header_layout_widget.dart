@@ -79,12 +79,12 @@ class RenderHeaderWidget extends RenderBox
     double height = kHeaderHeight;
     final maxWidth = constraints.maxWidth;
 
-    setOffset(
+    setSlotOffset(
       header..layout(constraints),
       Offset.zero,
     );
 
-    setOffset(
+    setSlotOffset(
       avatar..layout(constraints),
       const Offset(_kAvatarLeftPadding, _kAvatarTopPadding),
     );
@@ -102,7 +102,7 @@ class RenderHeaderWidget extends RenderBox
             ))
             .size;
     height += (math.max(_kAvatarEffectiveHeight, childSize.height)) + 5.0;
-    setOffset(
+    setSlotOffset(
       actions,
       Offset(
         maxWidth - childSize.width - _kActionsRightPadding,
@@ -116,7 +116,7 @@ class RenderHeaderWidget extends RenderBox
   @override
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox child) {
-      context.paintChild(child, getOffset(child) + offset);
+      context.paintChild(child, slotOffsetOf(child) + offset);
     }
 
     doPaint(header);

@@ -101,7 +101,10 @@ class MainController extends GetxController
 
     hasDyn = navigationBars.contains(NavigationBarType.dynamics);
     if (dynamicBadgeMode != DynamicBadgeMode.hidden) {
-      if (hasDyn && navigationBars[selectedIndex.value] != .dynamics) {
+      if (hasDyn &&
+          selectedIndex.value >= 0 &&
+          selectedIndex.value < navigationBars.length &&
+          navigationBars[selectedIndex.value] != .dynamics) {
         if (checkDynamic) {
           _lastCheckDynamicAt = DateTime.now().millisecondsSinceEpoch;
         }
@@ -233,12 +236,15 @@ class MainController extends GetxController
     }
     this.navigationBars = navigationBars;
     final defPage = Pref.defaultHomePage;
-    selectedIndex.value = navigationBars.indexOf(defPage);
+    final index = navigationBars.indexOf(defPage);
+    selectedIndex.value = index >= 0 ? index : 0;
   }
 
   void checkDefaultSearch([bool shouldCheck = false]) {
     if (hasHome && homeController.enableSearchWord) {
       if (shouldCheck &&
+          selectedIndex.value >= 0 &&
+          selectedIndex.value < navigationBars.length &&
           navigationBars[selectedIndex.value] != NavigationBarType.home) {
         return;
       }
@@ -256,6 +262,8 @@ class MainController extends GetxController
         hasHome &&
         msgBadgeMode != DynamicBadgeMode.hidden) {
       if (shouldCheck &&
+          selectedIndex.value >= 0 &&
+          selectedIndex.value < navigationBars.length &&
           navigationBars[selectedIndex.value] != NavigationBarType.home) {
         return;
       }

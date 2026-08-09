@@ -47,17 +47,30 @@ class _RenderPgcLayout extends RenderBox
     size = constraints.biggest;
 
     final body = this.body..layout(constraints);
-    setOffset(body, .zero);
+    setSlotOffset(body, .zero);
 
     final toolbar = this.toolbar
       ..layout(BoxConstraints.tightFor(width: constraints.maxWidth));
-    setOffset(toolbar, Offset(0, constraints.maxHeight));
+    setSlotOffset(toolbar, Offset(0, constraints.maxHeight));
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final Rect toolbarRect = slotOffsetOf(toolbar) & toolbar.size;
+    if (size.contains(position) || toolbarRect.contains(position)) {
+      if (hitTestChildren(result, position: position) ||
+          hitTestSelf(position)) {
+        result.add(BoxHitTestEntry(this, position));
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox child) {
-      context.paintChild(child, getOffset(child) + offset);
+      context.paintChild(child, slotOffsetOf(child) + offset);
     }
 
     doPaint(body);

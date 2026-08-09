@@ -723,6 +723,7 @@ abstract final class PageUtils {
             epId: episode.epId,
             pgcType: response.type,
             cover: episode.cover,
+            title: episode.title,
             progress: progress,
             extraArguments: {
               'pgcItem': response,

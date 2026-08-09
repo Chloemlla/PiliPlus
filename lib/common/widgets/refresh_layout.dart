@@ -101,7 +101,7 @@ class RenderRefreshLayout extends RenderBox
     size = constraints.biggest;
 
     final body = this.body..layout(constraints);
-    setOffset(body, .zero);
+    setSlotOffset(body, .zero);
 
     if (heightFactor > 0 && scaleFactor > 0) {
       _layoutIndicator();
@@ -114,7 +114,7 @@ class RenderRefreshLayout extends RenderBox
     indicator.layout(
       BoxConstraints.tightFor(width: scaleSize, height: scaleSize),
     );
-    setOffset(
+    setSlotOffset(
       indicator,
       Offset(
         (constraints.maxWidth - scaleSize) / 2,
@@ -128,12 +128,12 @@ class RenderRefreshLayout extends RenderBox
   @override
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox child) {
-      context.paintChild(child, getOffset(child) + offset);
+      context.paintChild(child, slotOffsetOf(child) + offset);
     }
 
     doPaint(body);
     if (heightFactor > 0 && scaleFactor > 0) {
-      final indicatorOffset = getOffset(indicator);
+      final indicatorOffset = slotOffsetOf(indicator);
       if (indicatorOffset.dy > 0) {
         context.paintChild(indicator, indicatorOffset + offset);
         layer = null;
@@ -158,7 +158,7 @@ class RenderRefreshLayout extends RenderBox
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     final body = this.body;
     return result.addWithPaintOffset(
-      offset: getOffset(body),
+      offset: slotOffsetOf(body),
       position: position,
       hitTest: (BoxHitTestResult result, Offset transformed) {
         return body.hitTest(result, position: transformed);

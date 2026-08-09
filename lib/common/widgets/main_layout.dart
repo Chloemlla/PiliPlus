@@ -60,7 +60,7 @@ class _RenderMainLayout extends RenderBox
         sideBar,
         BoxConstraints.tightFor(height: constraints.maxHeight),
       ).width;
-      setOffset(sideBar, .zero);
+      setSlotOffset(sideBar, .zero);
 
       bodyOffset = Offset(sideBarWidth, 0);
       bodyConstraints = BoxConstraints.tightFor(
@@ -74,7 +74,7 @@ class _RenderMainLayout extends RenderBox
           bottomNav,
           constraints.loosen(),
         );
-        setOffset(
+        setSlotOffset(
           bottomNav,
           Offset(
             (constraints.maxWidth - bottomNavSize.width) / 2,
@@ -91,14 +91,14 @@ class _RenderMainLayout extends RenderBox
     }
 
     final body = this.body..layout(bodyConstraints);
-    setOffset(body, bodyOffset);
+    setSlotOffset(body, bodyOffset);
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
     void doPaint(RenderBox? child) {
       if (child != null) {
-        context.paintChild(child, getOffset(child) + offset);
+        context.paintChild(child, slotOffsetOf(child) + offset);
       }
     }
 
