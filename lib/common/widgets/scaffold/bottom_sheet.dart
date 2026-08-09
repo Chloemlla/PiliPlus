@@ -83,7 +83,7 @@ class _VerticalDragGestureRecognizer extends VerticalDragGestureRecognizer {
   _VerticalDragGestureRecognizer({super.debugOwner});
 
   @override
-  bool isPointerAllowed(PointerDownEvent event) {
+  bool isPointerAllowed(PointerEvent event) {
     return event.localPosition.dy < _kBottomSheetDragHandleHeight &&
         super.isPointerAllowed(event);
   }
