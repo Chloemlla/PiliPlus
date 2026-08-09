@@ -540,7 +540,7 @@ class RefreshIndicatorState extends State<RefreshIndicator>
     );
   }
 
-  bool _onDrag(double offset) {
+  bool _onDrag(double offset, double viewportDimension) {
     if (_positionController.value > 0.0 && _status == .drag) {
       _dragOffset = _dragOffset! + offset;
       _checkDragOffset();
@@ -597,7 +597,7 @@ class RefreshScrollBehavior extends CustomScrollBehavior {
     required this.scrollPhysics,
   });
 
-  final RefreshScrollPhysics scrollPhysics;
+  final ScrollPhysics scrollPhysics;
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
