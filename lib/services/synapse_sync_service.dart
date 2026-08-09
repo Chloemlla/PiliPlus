@@ -236,6 +236,19 @@ abstract final class SynapseSyncService {
       await setEnabled(true);
       await syncNow();
       return result;
+    } on DioException catch (error) {
+      // A 409 here is a bind conflict: the Synapse account is already tied to
+      // a different Bilibili UID. Roll back the partial setup and surface the
+      // server's message instead of a raw DioException.
+      final isBindConflict = error.response?.statusCode == 409;
+      SynapseCredentialStore.delete();
+      if (isBindConflict) {
+        throw SynapseOAuthException(
+          SynapseOAuthErrorCode.authorizationDenied,
+          'Synapse 绑定冲突：${_syncErrorMessage(error)}',
+        );
+      }
+      rethrow;
     } catch (_) {
       SynapseCredentialStore.delete();
       rethrow;
@@ -608,18 +621,27 @@ abstract final class SynapseSyncService {
     var data = const <String, dynamic>{};
     for (var offset = 0; offset < localRecords.length; offset += _searchBatchSize) {
       final batch = localRecords.skip(offset).take(_searchBatchSize);
-      data = _responseData(await _client().post<Object?>('search-records/batch', data: {
-        'records': [
-          for (final entry in batch) {
-            'id': entry.id,
-            'keyword': entry.keyword,
-            'createdAt': entry.updatedAt.toUtc().toIso8601String(),
-            'updatedAt': entry.updatedAt.toUtc().toIso8601String(),
-            'isDeleted': entry.deleted,
-            'deletedAt': entry.deleted ? entry.updatedAt.toUtc().toIso8601String() : null,
-          },
-        ],
-      }));
+      try {
+        final response = await _client().post<Object?>('search-records/batch', data: {
+          'records': [
+            for (final entry in batch) {
+              'id': entry.id,
+              'keyword': entry.keyword,
+              'createdAt': entry.updatedAt.toUtc().toIso8601String(),
+              'updatedAt': entry.updatedAt.toUtc().toIso8601String(),
+              'isDeleted': entry.deleted,
+              'deletedAt': entry.deleted ? entry.updatedAt.toUtc().toIso8601String() : null,
+            },
+          ],
+        });
+        data = _responseData(response);
+      } on DioException catch (error) {
+        if (error.response?.statusCode != 409) rethrow;
+        // 409 = another device committed a concurrent write. The incremental
+        // read on the next cycle reconciles this batch, so skip it instead of
+        // surfacing a raw DioException.
+        CrashBreadcrumbs.record('Synapse search-records batch skipped: HTTP 409');
+      }
     }
     final settings = _settingsSnapshot();
     Response<Object?> settingsResponse;
@@ -630,19 +652,41 @@ abstract final class SynapseSyncService {
         'includeSummary': true,
       });
     } on DioException catch (error) {
-      if (!allowConflictPrompt || error.response?.statusCode != 409) rethrow;
+      if (error.response?.statusCode != 409) rethrow;
       final remote = await fetchSnapshot();
-      final navigator = await StartupOverlayCoordinator.waitForNavigator(debugLabel: 'Synapse-conflict');
-      if (navigator == null || !navigator.mounted) return;
-      final choice = await _showSyncChoiceDialog(
-        navigator.context,
-        remote,
-        title: 'Synapse 设置发生冲突',
-      );
-      if (choice != null) {
-        await applyRemote(remote, choice, allowConflictPrompt: false);
+      if (!allowConflictPrompt) {
+        // Background or re-entrant conflict (e.g. the re-apply after a conflict
+        // dialog): retry once against the freshest version. A second conflict
+        // means another device is writing right now, so drop the write and let
+        // the next cycle reconcile instead of surfacing a raw DioException.
+        try {
+          final freshVersion = remote.settingsVersion;
+          await GStorage.setting.put(SettingBoxKey.synapseSettingsVersion, freshVersion);
+          settingsResponse = await _client().put<Object?>('settings', data: {
+            'settings': _settingsSnapshot(),
+            'baseVersion': freshVersion,
+            'includeSummary': true,
+          });
+        } on DioException catch (retryError) {
+          if (retryError.response?.statusCode == 409) {
+            CrashBreadcrumbs.record('Synapse settings write skipped: HTTP 409 after re-fetch');
+            return;
+          }
+          rethrow;
+        }
+      } else {
+        final navigator = await StartupOverlayCoordinator.waitForNavigator(debugLabel: 'Synapse-conflict');
+        if (navigator == null || !navigator.mounted) return;
+        final choice = await _showSyncChoiceDialog(
+          navigator.context,
+          remote,
+          title: 'Synapse 设置发生冲突',
+        );
+        if (choice != null) {
+          await applyRemote(remote, choice, allowConflictPrompt: false);
+        }
+        return;
       }
-      return;
     }
     final settingsData = _responseData(settingsResponse);
     _syncWriteInProgress = true;
@@ -1103,6 +1147,14 @@ abstract final class SynapseSyncService {
       throw StateError(body['error']?.toString() ?? body['message']?.toString() ?? 'Synapse 请求失败');
     }
     return Map<String, dynamic>.from(body['data'] as Map);
+  }
+
+  static String _syncErrorMessage(DioException error) {
+    final body = error.response?.data;
+    if (body is Map && body['error'] is String && (body['error'] as String).isNotEmpty) {
+      return body['error'] as String;
+    }
+    return '云端状态与本地不一致，请先解绑或切换到已绑定的 Bilibili 账号后重试';
   }
 
 }

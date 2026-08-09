@@ -96,6 +96,17 @@ abstract final class WhatsNewData {
       tip: '路径：视频播放页顶部 → 更多设置。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.sync_problem,
+      title: 'Synapse 同步冲突优化',
+      subtitle: '云端设置或搜索记录与其他设备并发冲突时，不再弹出底层 HTTP 409 错误，而是自动处理冲突或给出清晰提示。',
+      bullets: [
+        '设置版本冲突：自动以最新云端版本重试一次；仍冲突则交由下一轮同步，不再中断。',
+        '搜索记录冲突：并发写入冲突时跳过本次批次，下一轮自动补同步。',
+        '绑定冲突：Synapse 账号已绑定其他 Bilibili UID 时，直接提示先解绑或切换账号，不再显示原始错误。',
+      ],
+      tip: '在「设置 → Synapse 同步」体验。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
       title: '可以继续使用了',
       subtitle: '以上是本构建值得知道的有意变更。之后同一 Commit / Build Time 不会再自动弹出。',
