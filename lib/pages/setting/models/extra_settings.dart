@@ -4,7 +4,8 @@ import 'dart:math' show max;
 
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart'
+    show RefreshIndicator, displacement, refreshDragExtent;
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart'
@@ -356,15 +357,10 @@ List<SettingsModel> get extraSettings => [
     leading: const Icon(Icons.pan_tool_alt_outlined),
   ),
   NormalModel(
-    title: '刷新滑动距离',
-    leading: const Icon(Icons.refresh),
-    getSubtitle: () => '当前滑动距离: ${Pref.refreshDragPercentage}x',
-    onTap: _showRefreshDragDialog,
-  ),
-  NormalModel(
     title: '刷新指示器高度',
     leading: const Icon(Icons.height),
-    getSubtitle: () => '当前指示器高度: ${Pref.refreshDisplacement}',
+    getSubtitle: () =>
+        '当前指示器高度: ${Pref.refreshDisplacement}, 刷新滑动距离: $refreshDragExtent',
     onTap: _showRefreshDialog,
   ),
   const SwitchModel(
@@ -1119,29 +1115,6 @@ void _showTouchSlopDialog(BuildContext context, VoidCallback setState) {
       ],
     ),
   );
-}
-
-Future<void> _showRefreshDragDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<double>(
-    context: context,
-    builder: (context) => SliderDialog(
-      title: const Text('刷新滑动距离'),
-      min: 0.1,
-      max: 0.5,
-      divisions: 8,
-      precise: 2,
-      value: Pref.refreshDragPercentage,
-      suffix: 'x',
-    ),
-  );
-  if (res != null) {
-    kDragContainerExtentPercentage = res;
-    await GStorage.setting.put(SettingBoxKey.refreshDragPercentage, res);
-    setState();
-  }
 }
 
 Future<void> _showRefreshDialog(
