@@ -182,11 +182,15 @@ abstract final class Pref {
   static int get previewQ =>
       _setting.get(SettingBoxKey.previewQuality, defaultValue: 100);
 
-  static double get smallCardWidth =>
-      _setting.get(SettingBoxKey.smallCardWidth, defaultValue: 240.0);
+  static double get smallCardWidth => (_setting.get(
+    SettingBoxKey.smallCardWidth,
+    defaultValue: 240.0,
+  ) as num).toDouble();
 
-  static double get recommendCardWidth =>
-      _setting.get(SettingBoxKey.recommendCardWidth, defaultValue: 240.0);
+  static double get recommendCardWidth => (_setting.get(
+    SettingBoxKey.recommendCardWidth,
+    defaultValue: 240.0,
+  ) as num).toDouble();
 
   static UpPanelPosition get upPanelPosition =>
       UpPanelPosition.values[_setting.get(
@@ -323,16 +327,20 @@ abstract final class Pref {
   static bool get showDynInteraction =>
       _setting.get(SettingBoxKey.showDynInteraction, defaultValue: true);
 
-  static double get blockLimit =>
-      _setting.get(SettingBoxKey.blockLimit, defaultValue: 0.0);
+  static double get blockLimit => (_setting.get(
+    SettingBoxKey.blockLimit,
+    defaultValue: 0.0,
+  ) as num).toDouble();
 
-  static double get refreshDragPercentage =>
-      _setting.get(SettingBoxKey.refreshDragPercentage, defaultValue: 0.25);
+  static double get refreshDragPercentage => (_setting.get(
+    SettingBoxKey.refreshDragPercentage,
+    defaultValue: 0.25,
+  ) as num).toDouble();
 
-  static double get refreshDisplacement => _setting.get(
+  static double get refreshDisplacement => (_setting.get(
     SettingBoxKey.refreshDisplacement,
     defaultValue: PlatformUtils.isMobile ? 20.0 : 40.0,
-  );
+  ) as num).toDouble();
 
   static String get blockUserID {
     String? blockUserID = _setting.get(SettingBoxKey.blockUserID);
@@ -368,10 +376,10 @@ abstract final class Pref {
         defaultValue: FlexSchemeVariant.material3Legacy.index,
       )];
 
-  static double get danmakuFontScaleFS => _setting.get(
+  static double get danmakuFontScaleFS => (_setting.get(
     SettingBoxKey.danmakuFontScaleFS,
     defaultValue: PlatformUtils.isMobile ? 1.2 : 1.7,
-  );
+  ) as num).toDouble();
 
   static bool get danmakuMassiveMode =>
       _setting.get(SettingBoxKey.danmakuMassiveMode, defaultValue: false);
@@ -382,11 +390,15 @@ abstract final class Pref {
   static bool get danmakuStatic2Scroll =>
       _setting.get(SettingBoxKey.danmakuStatic2Scroll, defaultValue: false);
 
-  static double get subtitleFontScale =>
-      _setting.get(SettingBoxKey.subtitleFontScale, defaultValue: 1.0);
+  static double get subtitleFontScale => (_setting.get(
+    SettingBoxKey.subtitleFontScale,
+    defaultValue: 1.0,
+  ) as num).toDouble();
 
-  static double get subtitleFontScaleFS =>
-      _setting.get(SettingBoxKey.subtitleFontScaleFS, defaultValue: 1.5);
+  static double get subtitleFontScaleFS => (_setting.get(
+    SettingBoxKey.subtitleFontScaleFS,
+    defaultValue: 1.5,
+  ) as num).toDouble();
 
   static bool get showViewPoints =>
       _setting.get(SettingBoxKey.showViewPoints, defaultValue: true);
@@ -427,8 +439,10 @@ abstract final class Pref {
   static int get defaultPicQa =>
       _setting.get(SettingBoxKey.defaultPicQa, defaultValue: 10);
 
-  static double get danmakuLineHeight =>
-      _setting.get(SettingBoxKey.danmakuLineHeight, defaultValue: 1.6);
+  static double get danmakuLineHeight => (_setting.get(
+    SettingBoxKey.danmakuLineHeight,
+    defaultValue: 1.6,
+  ) as num).toDouble();
 
   static bool get showArgueMsg =>
       _setting.get(SettingBoxKey.showArgueMsg, defaultValue: true);
@@ -442,11 +456,15 @@ abstract final class Pref {
   static int get subtitlePaddingB =>
       _setting.get(SettingBoxKey.subtitlePaddingB, defaultValue: 24);
 
-  static double get subtitleBgOpacity =>
-      _setting.get(SettingBoxKey.subtitleBgOpacity, defaultValue: 0.67);
+  static double get subtitleBgOpacity => (_setting.get(
+    SettingBoxKey.subtitleBgOpacity,
+    defaultValue: 0.67,
+  ) as num).toDouble();
 
-  static double get subtitleStrokeWidth =>
-      _setting.get(SettingBoxKey.subtitleStrokeWidth, defaultValue: 2.0);
+  static double get subtitleStrokeWidth => (_setting.get(
+    SettingBoxKey.subtitleStrokeWidth,
+    defaultValue: 2.0,
+  ) as num).toDouble();
 
   static int get subtitleFontWeight =>
       _setting.get(SettingBoxKey.subtitleFontWeight, defaultValue: 5);
@@ -767,11 +785,15 @@ abstract final class Pref {
   static bool get enableVerticalExpand =>
       _setting.get(SettingBoxKey.enableVerticalExpand, defaultValue: false);
 
-  static double get defaultTextScale =>
-      _setting.get(SettingBoxKey.defaultTextScale, defaultValue: 1.0);
+  static double get defaultTextScale => (_setting.get(
+    SettingBoxKey.defaultTextScale,
+    defaultValue: 1.0,
+  ) as num).toDouble();
 
-  static double get uiScale =>
-      _setting.get(SettingBoxKey.uiScale, defaultValue: 1.0);
+  static double get uiScale => (_setting.get(
+    SettingBoxKey.uiScale,
+    defaultValue: 1.0,
+  ) as num).toDouble();
 
   static bool get dynamicsWaterfallFlow => _setting.get(
     SettingBoxKey.dynamicsWaterfallFlow,
@@ -877,27 +899,35 @@ abstract final class Pref {
   static int get danmakuWeight =>
       _setting.get(SettingBoxKey.danmakuWeight, defaultValue: 0);
 
-  static double get danmakuShowArea =>
-      _setting.get(SettingBoxKey.danmakuShowArea, defaultValue: 0.5);
+  static double get danmakuShowArea => (_setting.get(
+    SettingBoxKey.danmakuShowArea,
+    defaultValue: 0.5,
+  ) as num).toDouble();
 
-  static double get danmakuOpacity =>
-      _setting.get(SettingBoxKey.danmakuOpacity, defaultValue: 1.0);
+  static double get danmakuOpacity => (_setting.get(
+    SettingBoxKey.danmakuOpacity,
+    defaultValue: 1.0,
+  ) as num).toDouble();
 
-  static double get danmakuFontScale => _setting.get(
+  static double get danmakuFontScale => (_setting.get(
     SettingBoxKey.danmakuFontScale,
     defaultValue: PlatformUtils.isMobile ? 1.0 : 1.4,
-  );
+  ) as num).toDouble();
 
-  static double get danmakuDuration =>
-      _setting.get(SettingBoxKey.danmakuDuration, defaultValue: 7.0);
+  static double get danmakuDuration => (_setting.get(
+    SettingBoxKey.danmakuDuration,
+    defaultValue: 7.0,
+  ) as num).toDouble();
 
-  static double get danmakuStaticDuration =>
-      _setting.get(SettingBoxKey.danmakuStaticDuration, defaultValue: 4.0);
+  static double get danmakuStaticDuration => (_setting.get(
+    SettingBoxKey.danmakuStaticDuration,
+    defaultValue: 4.0,
+  ) as num).toDouble();
 
-  static double get danmakuStrokeWidth => _setting.get(
+  static double get danmakuStrokeWidth => (_setting.get(
     SettingBoxKey.danmakuStrokeWidth,
     defaultValue: PlatformUtils.isMobile ? 1.5 : 2.5,
-  );
+  ) as num).toDouble();
 
   static int get danmakuFontWeight => _setting.get(
     SettingBoxKey.danmakuFontWeight,
@@ -907,11 +937,15 @@ abstract final class Pref {
   static bool get enableLongShowControl =>
       _setting.get(SettingBoxKey.enableLongShowControl, defaultValue: false);
 
-  static double get bufferSize =>
-      _setting.get(SettingBoxKey.bufferSize, defaultValue: 4.0);
+  static double get bufferSize => (_setting.get(
+    SettingBoxKey.bufferSize,
+    defaultValue: 4.0,
+  ) as num).toDouble();
 
-  static double get bufferSec =>
-      _setting.get(SettingBoxKey.bufferSec, defaultValue: 16.0);
+  static double get bufferSec => (_setting.get(
+    SettingBoxKey.bufferSec,
+    defaultValue: 16.0,
+  ) as num).toDouble();
 
   static Map<String, String> initBuffer([double playbackSpeed = 1.0]) {
     final bufSec = Pref.bufferSec * playbackSpeed;
@@ -950,16 +984,20 @@ abstract final class Pref {
   static bool get enableAutoLongPressSpeed =>
       _setting.get(SettingBoxKey.enableAutoLongPressSpeed, defaultValue: false);
 
-  static double get playSpeedDefault =>
-      _video.get(VideoBoxKey.playSpeedDefault, defaultValue: 1.0);
+  static double get playSpeedDefault => (_video.get(
+    VideoBoxKey.playSpeedDefault,
+    defaultValue: 1.0,
+  ) as num).toDouble();
 
-  static double get longPressSpeedDefault =>
-      _video.get(VideoBoxKey.longPressSpeedDefault, defaultValue: 3.0);
+  static double get longPressSpeedDefault => (_video.get(
+    VideoBoxKey.longPressSpeedDefault,
+    defaultValue: 3.0,
+  ) as num).toDouble();
 
-  static double get longPressSpeedGain => _video.get(
+  static double get longPressSpeedGain => (_video.get(
     VideoBoxKey.longPressSpeedGain,
     defaultValue: LongPressSpeedFormulaDefaults.gain,
-  );
+  ) as num).toDouble();
 
   static LongPressSpeedFormula get longPressSpeedFormula =>
       LongPressSpeedFormula.fromIndex(
@@ -1048,10 +1086,10 @@ abstract final class Pref {
         defaultValue: SuperChatType.valid.index,
       )];
 
-  static double get fullScreenSCWidth => _setting.get(
+  static double get fullScreenSCWidth => (_setting.get(
     SettingBoxKey.fullScreenSCWidth,
     defaultValue: kFullScreenSCWidth,
-  );
+  ) as num).toDouble();
 
   static bool get minimizeOnExit =>
       _setting.get(SettingBoxKey.minimizeOnExit, defaultValue: true);
@@ -1121,10 +1159,10 @@ abstract final class Pref {
   static bool get showDynDispute =>
       _setting.get(SettingBoxKey.showDynDispute, defaultValue: false);
 
-  static double get touchSlopH => _setting.get(
+  static double get touchSlopH => (_setting.get(
     SettingBoxKey.touchSlopH,
     defaultValue: deviceTouchSlop + 6.0,
-  );
+  ) as num).toDouble();
 
   static bool get saveReply =>
       _setting.get(SettingBoxKey.saveReply, defaultValue: true);
@@ -1139,10 +1177,12 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.angleDegrees, defaultValue: 30);
 
   static double get playerVolume => // mobile
-      _setting.get(SettingBoxKey.playerVolume, defaultValue: 100.0);
+    (_setting.get(SettingBoxKey.playerVolume, defaultValue: 100.0) as num)
+        .toDouble();
 
   static double get maxVolume => // desktop
-      _setting.get(SettingBoxKey.maxVolume, defaultValue: 2.0);
+    (_setting.get(SettingBoxKey.maxVolume, defaultValue: 2.0) as num)
+        .toDouble();
 
   static List? get liveStream => _setting.get(SettingBoxKey.liveStream);
 }
