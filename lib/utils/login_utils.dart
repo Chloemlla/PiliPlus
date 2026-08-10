@@ -78,6 +78,12 @@ abstract final class LoginUtils {
   static Future<void> onLoginMain() async {
     final account = Accounts.main;
     final res = await UserHttp.userInfo();
+    if (account != Accounts.main) {
+      // A rapid A→B main-account switch replaced the main slot while
+      // userInfo() was in flight; this response belongs to the previous
+      // account, so ignore it entirely.
+      return;
+    }
     if (res case Success(:final response)) {
       await setWebCookie(account);
       RequestUtils.syncHistoryStatus();
@@ -108,7 +114,23 @@ abstract final class LoginUtils {
           notifyType: .warning,
         );
       } else {
+        // 非“账号未登录”的失败：Accounts.main 已是新账号，但会话状态
+        // (isLogin / userInfoCache) 仍可能指向旧账号或匿名状态，导致 UI
+        // 显示“已登录却按错误账号鉴权”。这里把会话对齐到实际的 main 账号。
         SmartDialog.showToast(errMsg);
+        final accountService = Get.find<AccountService>();
+        if (accountService.isLogin.value) {
+          accountService.isLogin.refresh();
+        } else {
+          accountService.isLogin.value = true;
+        }
+        final cached = Pref.userInfoCache;
+        if (cached?.mid != Accounts.main.mid) {
+          accountService.face.value = '';
+          await GStorage.userInfo.delete('userInfoCache');
+        } else {
+          accountService.face.value = cached?.face ?? '';
+        }
       }
     }
   }

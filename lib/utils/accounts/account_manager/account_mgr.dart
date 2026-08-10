@@ -100,7 +100,18 @@ class AccountManager extends Interceptor {
         AppSign.appSign(dataPtr..remove('sign'));
         // if (kDebugMode) debugPrint(dataPtr.toString());
       }
-      handler.next(options);
+      // 同时携带 Cookie 以支持 cookie-only 登录的 APP REST 鉴权
+      await account.cookieJar.loadForRequest(options.uri).then<void>(
+        (cookies) {
+          if (cookies.isNotEmpty) {
+            options.headers['Cookie'] = getCookies(cookies);
+          }
+          handler.next(options);
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          handler.next(options);
+        },
+      );
       return;
     } else {
       await account.cookieJar
@@ -254,14 +265,23 @@ class AccountManager extends Interceptor {
         path.contains('biliimg.com');
   }
 
-  Account _findAccount(String path) => ApiType.loginApi.contains(path)
-      ? AnonymousAccount()
-      : Accounts.get(
-          AccountType.values.firstWhere(
-            (i) => ApiType.apiTypeSet[i]?.contains(path) == true,
-            orElse: () => AccountType.main,
-          ),
-        );
+  Account _findAccount(String path) {
+    if (ApiType.loginApi.contains(path)) {
+      return AnonymousAccount();
+    }
+    final account = Accounts.get(
+      AccountType.values.firstWhere(
+        (i) => ApiType.apiTypeSet[i]?.contains(path) == true,
+        orElse: () => AccountType.main,
+      ),
+    );
+    if (!account.isLogin &&
+        Accounts.main.isLogin &&
+        !identical(account, Accounts.main)) {
+      return Accounts.main;
+    }
+    return account;
+  }
 
   static Future<String> dioError(DioException error) async {
     switch (error.type) {
