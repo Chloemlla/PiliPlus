@@ -42,6 +42,20 @@ abstract final class LoginUtils {
       }
       await SynapseSyncService.maybeShowStartupPrompt();
     }
+
+    // 会话/鉴权对齐：让 AccountService.isLogin / userInfoCache 反映实际 main
+    // 账号，消除"显示已登录但请求按匿名/错误账号鉴权"的分歧。refresh() 只重建
+    // accountMode，不驱动 main 登录回调；这里在存在分歧时才补一次，避免重复网络调用。
+    if (Get.isRegistered<AccountService>()) {
+      final session = Get.find<AccountService>();
+      if (Accounts.main.isLogin) {
+        if (!session.isLogin.value) {
+          await onLoginMain();
+        }
+      } else if (session.isLogin.value) {
+        await onLogoutMain();
+      }
+    }
   }
 
   static Future<void> syncCoin() async {

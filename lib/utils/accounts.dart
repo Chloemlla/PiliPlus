@@ -2,8 +2,6 @@ import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:get/get.dart';
-import 'package:pili_plus/services/account_service.dart';
 
 typedef AccountActivator = Future<void> Function(Account account);
 typedef AccountSessionCallback = Future<void> Function();
@@ -97,29 +95,6 @@ abstract final class Accounts {
           activateAccount,
         ),
       );
-    }
-
-    // Reconcile the UI session (AccountService.isLogin / Pref.userInfoCache)
-    // with the actual main slot, which refresh() rebuilds from the Hive box.
-    // Without this the two can diverge: isLogin stays true while the main slot
-    // is anonymous (so requests auth as anonymous), or main is logged-in while
-    // the session flag still says logged out. Skip until Getx services are
-    // registered (e.g. in unit tests) and only fire the network-backed login
-    // callback when the session does not already reflect a login, so repeated
-    // refreshes do not spam userInfo().
-    final onMainLogin = _onMainLogin;
-    final onMainLogout = _onMainLogout;
-    if ((onMainLogin != null || onMainLogout != null) &&
-        Get.isRegistered<AccountService>()) {
-      final main = accountMode[AccountType.main.index];
-      final session = Get.find<AccountService>();
-      if (main.isLogin) {
-        if (!session.isLogin.value && onMainLogin != null) {
-          await onMainLogin();
-        }
-      } else if (session.isLogin.value && onMainLogout != null) {
-        await onMainLogout();
-      }
     }
   }
 
