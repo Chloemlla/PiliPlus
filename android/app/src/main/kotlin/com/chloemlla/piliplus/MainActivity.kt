@@ -20,6 +20,7 @@ class MainActivity : AudioServiceActivity() {
     private var sealDownloadChannel: SealDownloadChannel? = null
     private var clashCompatChannel: ClashCompatChannel? = null
     private var pipChannel: MethodChannel? = null
+    private var synapseClientDetectChannel: SynapseClientDetectChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -35,6 +36,10 @@ class MainActivity : AudioServiceActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
         )
         clashCompatChannel = ClashCompatChannel(
+            applicationContext,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
+        synapseClientDetectChannel = SynapseClientDetectChannel(
             applicationContext,
             flutterEngine.dartExecutor.binaryMessenger,
         )
@@ -66,6 +71,8 @@ class MainActivity : AudioServiceActivity() {
         sealDownloadChannel = null
         clashCompatChannel?.dispose()
         clashCompatChannel = null
+        synapseClientDetectChannel?.dispose()
+        synapseClientDetectChannel = null
         pipChannel = null
         NativeMediaService.detachFlutterEngine()
         LiveUpdateService.detachFlutterEngine()

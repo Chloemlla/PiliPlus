@@ -122,7 +122,7 @@ abstract final class ImprovementsGuideData {
     ImprovementsGuidePageData(
       icon: Icons.sync_alt_outlined,
       title: 'Synapse 设置与搜索记录同步',
-      subtitle: '通过 Synapse-Client 授权后，将通用设置、播放设置和搜索历史在账号设备间同步。',
+      subtitle: '通过 Synapse-Client 授权后，将通用设置、播放设置和搜索历史在账号设备间同步。\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
       bullets: [
         '同步前明确区分本地设置、账号设置和敏感字段；WebDAV 密码、Cookie 与 Token 保留本地。',
         '网络失败时保留本地状态，下一次同步可继续处理。',

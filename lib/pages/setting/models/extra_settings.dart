@@ -120,7 +120,7 @@ List<SettingsModel> get extraSettings => [
   if (Accounts.main.isLogin)
     NormalModel(
       title: 'Synapse 云同步',
-      subtitle: '通过 Synapse-Client 授权后完整同步设置和搜索历史；绑定时校验当前 B 站登录',
+      subtitle: '通过 Synapse-Client 授权后完整同步设置和搜索历史；绑定时校验当前 B 站登录\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
       leading: const Icon(Icons.cloud_sync_outlined),
       getSubtitle: () => SynapseSyncService.isEnabled
           ? '已启用（绑定 UID ${SynapseSyncService.boundMid}） · ${SynapseSyncService.deviceTrackingStatus}'
@@ -761,6 +761,11 @@ Future<void> _showSynapseSyncDialog(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。设置变更会在短暂延迟后上传，并每五分钟检查远端。'),
+              const SizedBox(height: 4),
+              Text(
+                '下载 Synapse-Client: https://github.com/Chloemlla/Synapse-Client/releases/latest',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,

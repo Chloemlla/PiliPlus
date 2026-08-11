@@ -5,7 +5,9 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart' show sha256;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel, MissingPluginException, PlatformException;
 import 'package:pili_plus/build_config.dart';
 import 'package:pili_plus/models/synapse_oauth.dart';
 import 'package:pili_plus/models/search/search_history_entry.dart';
@@ -215,7 +217,7 @@ abstract final class SynapseSyncService {
     if (!callback.isSuccess) {
       throw SynapseOAuthException(
         SynapseOAuthErrorCode.authorizationDenied,
-        'Synapse-Client 未完成授权：${callback.errorDescription ?? callback.error}',
+        'Synapse-Client 未完成授权：${callback.errorDescription ?? callback.error}\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
         serverCode: callback.error,
       );
     }
@@ -1040,6 +1042,28 @@ abstract final class SynapseSyncService {
     return _clientIdentity();
   }
 
+  static const _synapseDetectChannel = MethodChannel(
+    'pili_plus/synapse_client_detect',
+  );
+
+  /// Whether Synapse-Client is installed on this device.
+  /// Only meaningful on Android; returns false on other platforms.
+  static Future<bool> _isSynapseClientInstalled() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      return await _synapseDetectChannel
+          .invokeMethod<bool>('isSynapseClientInstalled') ?? false;
+    } on MissingPluginException {
+      if (kDebugMode) debugPrint('SynapseClientDetectChannel not registered');
+      return false;
+    } on PlatformException catch (error) {
+      if (kDebugMode) {
+        debugPrint('Failed to detect Synapse-Client: ${error.message}');
+      }
+      return false;
+    }
+  }
+
   static String _shortDeviceId(String value) =>
       value.length <= 8 ? value : value.substring(0, 8);
 
@@ -1221,7 +1245,7 @@ final class _SynapseOAuthHandoff {
         SynapseSyncService._oauthTimeout,
         onTimeout: () => throw const SynapseOAuthException(
           SynapseOAuthErrorCode.callbackTimeout,
-          '等待 Synapse-Client 回调超时',
+          '等待 Synapse-Client 回调超时\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
         ),
       );
     } finally {
@@ -1234,6 +1258,15 @@ final class _SynapseOAuthHandoff {
     final pending = PiliScheme.takePendingOAuthCallback(session.state);
     if (pending != null) _onCallback(pending);
     if (_completed) return;
+
+    // Pre-flight check: Synapse-Client must be installed on this device.
+    if (!await SynapseSyncService._isSynapseClientInstalled()) {
+      _completeError(const SynapseOAuthException(
+        SynapseOAuthErrorCode.clientUnavailable,
+        '未检测到 Synapse-Client\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
+      ));
+      return;
+    }
 
     final authorizeUri = Uri(
       scheme: 'synapse',
@@ -1257,13 +1290,13 @@ final class _SynapseOAuthHandoff {
       if (!launched) {
         _completeError(const SynapseOAuthException(
           SynapseOAuthErrorCode.clientUnavailable,
-          '未找到可处理 Synapse-Client 授权的应用',
+          '未找到可处理 Synapse-Client 授权的应用\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
         ));
       }
     } on Object {
       _completeError(const SynapseOAuthException(
         SynapseOAuthErrorCode.clientUnavailable,
-        '无法启动 Synapse-Client 授权',
+        '无法启动 Synapse-Client 授权\n下载: https://github.com/Chloemlla/Synapse-Client/releases/latest',
       ));
     }
   }
@@ -1331,7 +1364,7 @@ class _SynapseAuthorizationDialogState
     title: const Text('连接 Synapse-Client'),
     content: SizedBox(
       width: 400,
-      height: 170,
+      height: 200,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1347,6 +1380,33 @@ class _SynapseAuthorizationDialogState
             '授权完成后会自动返回 PiliPlus，不会打开浏览器。',
             textAlign: TextAlign.center,
             style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text.rich(
+            TextSpan(
+              text: '未安装 Synapse-Client？',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
+              children: [
+                TextSpan(
+                  text: '\ngithub.com/Chloemlla/Synapse-Client',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
               fontSize: 13,
               color: Theme.of(context).colorScheme.outline,
             ),
