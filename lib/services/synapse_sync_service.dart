@@ -1407,13 +1407,6 @@ class _SynapseAuthorizationDialogState
         ],
       ),
     ),
-              fontSize: 13,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-        ],
-      ),
-    ),
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
