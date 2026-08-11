@@ -2,13 +2,13 @@ package com.chloemlla.piliplus
 
 import android.content.pm.PackageManager
 import android.os.Build
-import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 internal class SynapseClientDetectChannel(
     private val applicationContext: android.content.Context,
-    messenger: DartExecutor.BinaryMessenger,
+    messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler {
     private val channel = MethodChannel(messenger, CHANNEL_NAME)
 
