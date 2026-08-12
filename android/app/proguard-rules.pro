@@ -44,9 +44,9 @@
 
 ############################################################
 # Google ML Kit Barcode Scanning
-# Artifact ships consumer rules; keep dontwarn for R8 full-mode
-# missing-class checks on optional Play-services internals.
+# Artifact ships consumer rules; keep dontwarn only for the
+# optional Play-services internal model runtime so missing
+# classes remain visible to R8 full-mode checks.
 ############################################################
 
--dontwarn com.google.mlkit.**
 -dontwarn com.google.android.gms.internal.mlkit_vision_barcode.**

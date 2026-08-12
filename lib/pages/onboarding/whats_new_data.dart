@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建优化 Synapse 同步报错提示：同步、预览或绑定失败时直接显示服务端返回的原因文案，不再展示底层错误信息。',
+      subtitle: '本构建将 Android 网页登录扫码从华为 Scan Kit 迁移到 CameraX + Google ML Kit，不再依赖华为扫描引擎。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -46,6 +46,16 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.qr_code_scanner_outlined,
+      title: '扫码改用 CameraX + Google ML Kit',
+      subtitle: 'Android 网页登录扫码从华为 HMS Scan Kit 迁移到 CameraX 相机预览 + Google ML Kit 识别。',
+      bullets: [
+        '移除华为扫描引擎（scanplus / libscannative.so）依赖，相机扫码与相册识别统一走 Google ML Kit。',
+        '扫码仅识别 QR 码格式以提升速度；手电筒开关与失败处理行为保持不变。',
+      ],
+      tip: '入口：登录 / Web QR 授权相关页面（扫描网页登录）。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.error_outline,

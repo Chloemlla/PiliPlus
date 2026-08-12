@@ -386,8 +386,15 @@ abstract final class OssNoticeData {
       name: 'Google ML Kit (barcode-scanning)',
       author: 'Google LLC',
       description: 'Android 网页二维码扫码（相机 CameraX 预览 + 图库 InputImage 识别）。',
+      license: 'ML Kit Terms of Service / Google APIs Terms of Service',
+      url: 'https://developers.google.com/ml-kit/terms',
+    ),
+    OssCredit(
+      name: 'CameraX',
+      author: 'AndroidX / Google',
+      description: 'Android 相机预览与帧分析，向 ML Kit 提供扫码输入。',
       license: 'Apache License 2.0',
-      url: 'https://developers.google.com/ml-kit/vision/barcode-scanning/android',
+      url: 'https://developer.android.com/jetpack/androidx/releases/camera',
     ),
     OssCredit(
       name: 'Seal（联调下载器，可选）',
