@@ -7,10 +7,10 @@ import 'package:pili_plus/models/common/search/search_type.dart';
 import 'package:pili_plus/models/search/result.dart';
 import 'package:pili_plus/models/search/suggest.dart';
 import 'package:pili_plus/models_new/dynamic/dyn_topic_pub_search/data.dart';
+import 'package:pili_plus/models_new/pagelist/page_item.dart';
 import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
 import 'package:pili_plus/models_new/search/search_rcmd/data.dart';
 import 'package:pili_plus/models_new/search/search_trending/data.dart';
-import 'package:pili_plus/models_new/video/video_detail/dimension.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/wbi_sign.dart';
@@ -177,7 +177,7 @@ abstract final class SearchHttp {
     return (await ab2cWithDimension(aid: aid, bvid: bvid, part: part))?.cid;
   }
 
-  static Future<({int? cid, Dimension? dimension})?> ab2cWithDimension({
+  static Future<PageItem?> ab2cWithDimension({
     dynamic aid,
     dynamic bvid,
     int? part,
@@ -195,12 +195,7 @@ abstract final class SearchHttp {
             ? (list.getOrNull(part - 1) ?? list.firstOrNull)
             : list.firstOrNull;
         if (target != null) {
-          return (
-            cid: target['cid'] as int?,
-            dimension: target['dimension'] == null
-                ? null
-                : Dimension.fromJson(target['dimension']),
-          );
+          return PageItem.fromJson(target);
         }
       }
       return null;

@@ -710,6 +710,7 @@ abstract final class PiliScheme {
                 bvid: bvid,
                 cid: cid,
                 dimension: res!.dimension,
+                title: res.title,
                 extraArguments: {
                   'sourceType': SourceType.playlist,
                   'favTitle': '播放列表',
@@ -982,6 +983,7 @@ abstract final class PiliScheme {
           progress: progress,
           off: off,
           dimension: res!.dimension,
+          title: res.title,
         );
       }
     } catch (e) {

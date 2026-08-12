@@ -1,5 +1,5 @@
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
-    show ReplyInfo, DetailListReply, Mode;
+    show ReplyInfo, DetailListReply;
 import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/common/publish/publish_route.dart';
@@ -53,7 +53,6 @@ class VideoReplyReplyController extends ReplyController
   @override
   void onInit() {
     super.onInit();
-    mode = Mode.MAIN_LIST_TIME;
     queryData();
   }
 

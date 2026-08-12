@@ -14,6 +14,8 @@ import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/material.dart' hide RefreshIndicator;
 
+const kIndicatorSize = 49.0;
+
 /// The distance from the child's top or bottom [edgeOffset] where
 /// the refresh indicator will settle. During the drag that exposes the refresh
 /// indicator, its actual displacement may significantly exceed this value.

@@ -87,21 +87,24 @@ class RenderParagraphEllipsis extends RenderParagraph {
   }
 
   @override
+  void performLayout() {
+    super.performLayout();
+    final lineMetrics = textPainter.computeLineMetrics();
+    if (textPainter.didExceedMaxLines && lineMetrics.last.width == 0.0) {
+      _initEllipsisPainterIfNeeded();
+    } else {
+      _disposeEllipsis();
+    }
+  }
+
+  @override
   void paint(PaintingContext context, Offset offset) {
     super.paint(context, offset);
-    if (maxLines != null) {
-      final lineMetrics = textPainter.computeLineMetrics();
-      if (lineMetrics.length == maxLines) {
-        if (lineMetrics.last.width == 0.0) {
-          _initEllipsisPainterIfNeeded();
-          _ellipsisPainter!.paint(
-            context.canvas,
-            offset + Offset(0, size.height - _ellipsisPainter!.height),
-          );
-        } else {
-          _disposeEllipsis();
-        }
-      }
+    if (_ellipsisPainter != null) {
+      _ellipsisPainter!.paint(
+        context.canvas,
+        offset + Offset(0, textPainter.height - _ellipsisPainter!.height),
+      );
     }
   }
 

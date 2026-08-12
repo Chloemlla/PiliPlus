@@ -33,6 +33,7 @@ import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/extension/core_palettes_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/json_file_handler.dart';
 import 'package:pili_plus/utils/login_utils.dart';
@@ -47,7 +48,7 @@ import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:catcher_2/catcher_2.dart';
 import 'package:collection/collection.dart';
-import 'package:dynamic_color/dynamic_color.dart';
+import 'package:dynamic_color/dynamic_color.dart' show DynamicColorPlugin;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -489,14 +490,17 @@ class MyApp extends StatelessWidget {
     if (_light != null || _dark != null) return true;
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
-      final corePalette = await DynamicColorPlugin.getCorePalette();
+      final colors = await DynamicColorPlugin.channel.invokeMethod(
+        DynamicColorPlugin.methodName,
+      );
 
-      if (corePalette != null) {
+      if (colors != null) {
+        final corePalettes = CorePalettesExt.fromList(colors.toList());
         if (kDebugMode) {
           debugPrint('dynamic_color: Core palette detected.');
         }
-        _light = corePalette.toColorScheme();
-        _dark = corePalette.toColorScheme(brightness: Brightness.dark);
+        _light = corePalettes.toColorScheme();
+        _dark = corePalettes.toColorScheme(brightness: Brightness.dark);
         return true;
       }
     } on PlatformException {
