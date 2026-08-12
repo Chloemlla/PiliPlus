@@ -799,7 +799,7 @@ Future<void> _showSynapseSyncDialog(
                   final applied = await SynapseSyncService.previewChanges(dialogContext);
                   if (applied && dialogContext.mounted) Navigator.pop(dialogContext, true);
                 } catch (error) {
-                  SmartDialog.showToast(error.toString());
+                  SmartDialog.showToast(SynapseSyncService.errorMessage(error));
                 }
               },
               child: const Text('预览变更'),
@@ -814,7 +814,7 @@ Future<void> _showSynapseSyncDialog(
                 SmartDialog.showToast('Synapse 已绑定 UID ${result['uid']}');
                 if (dialogContext.mounted) Navigator.pop(dialogContext, true);
               } catch (error) {
-                SmartDialog.showToast(error.toString());
+                SmartDialog.showToast(SynapseSyncService.errorMessage(error));
               }
             },
             child: const Text('保存并启用'),

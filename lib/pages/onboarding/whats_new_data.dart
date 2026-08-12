@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建新增应用声明与直播更新进度通知，恢复播放器「更多设置」的下载/书签/画质推荐/应用内小窗入口，并合并上游 PR #23 的文本省略与选择增强。',
+      subtitle: '本构建新增应用声明与直播更新进度通知，恢复播放器「更多设置」的下载/书签/画质推荐/应用内小窗入口，合并上游 PR #23 的文本省略与选择增强，并优化 Synapse 同步报错提示。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -105,6 +105,16 @@ abstract final class WhatsNewData {
         '绑定冲突：Synapse 账号已绑定其他 Bilibili UID 时，直接提示先解绑或切换账号，不再显示原始错误。',
       ],
       tip: '在「设置 → Synapse 同步」体验。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.error_outline,
+      title: 'Synapse 同步报错提示',
+      subtitle: '同步、预览或绑定失败时，直接显示服务端返回的原因文案，不再展示底层的 "Bad state" 或 DioException 原始信息。',
+      bullets: [
+        '预览变更 / 保存并启用失败时，Toast 直接显示服务端提示（如「Bilibili 凭据不可用」）。',
+        '网络或服务异常时给出可读的失败提示，并附 HTTP 状态码。',
+      ],
+      tip: '在「设置 → Synapse 同步」中触发一次失败即可看到。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,

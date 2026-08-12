@@ -1181,6 +1181,34 @@ abstract final class SynapseSyncService {
     return '云端状态与本地不一致，请先解绑或切换到已绑定的 Bilibili 账号后重试';
   }
 
+  /// Returns a user-facing message for a Synapse sync failure, preferring the
+  /// backend's own `error`/`message` field so the server's reason (e.g.
+  /// "Bilibili 凭据不可用") is shown verbatim instead of a raw "Bad state:" or
+  /// DioException string.
+  static String errorMessage(Object error) {
+    if (error is SynapseOAuthException) return error.message;
+    if (error is DioException) {
+      final body = error.response?.data;
+      if (body is Map) {
+        final serverError = body['error'];
+        if (serverError is String && serverError.trim().isNotEmpty) {
+          return serverError.trim();
+        }
+        final serverMessage = body['message'];
+        if (serverMessage is String && serverMessage.trim().isNotEmpty) {
+          return serverMessage.trim();
+        }
+      }
+      final status = error.response?.statusCode;
+      return status == null
+          ? 'Synapse 网络请求失败，请稍后重试'
+          : 'Synapse 请求失败（HTTP $status），请稍后重试';
+    }
+    final text = error.toString();
+    if (text.startsWith('Bad state: ')) return text.substring('Bad state: '.length);
+    return text;
+  }
+
 }
 
 class SynapseSyncGate extends StatefulWidget {
