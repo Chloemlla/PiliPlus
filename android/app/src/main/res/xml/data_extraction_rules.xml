@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (API 31) selective backup rules.
+
+  Only MMKV boxes that hold non-credential, low-sensitivity state are backed up:
+    setting / video / watchProgress / historyWord / reply / favoriteReply
+  plus the __meta__ box, which records MMKV migration flags and MUST be restored
+  together with the boxes or the app would treat them as unmigrated and overwrite
+  them with empty Hive boxes on first launch (see openAndroidMmkvBackedBox).
+
+  Deliberately excluded:
+    - mmkv/pili_plus_userInfo.mmkv   (logged-in profile cache)
+    - mmkv/pili_plus_localCache.mmkv (buvid device fingerprint, blacklist)
+    - secrets/  (encrypted Bilibili session / webdav password + their key files)
+    - hive/     (legacy Hive boxes; authoritative data lives in MMKV on Android)
+    - download/ (bulk media)
+
+  To keep these boxes out of Google Drive cloud backup, replace the <cloud-backup>
+  block with a single <exclude domain="file" path="." />.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="mmkv/pili_plus_setting.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_setting.crc" />
+        <include domain="file" path="mmkv/pili_plus_video.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_video.crc" />
+        <include domain="file" path="mmkv/pili_plus_watchProgress.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_watchProgress.crc" />
+        <include domain="file" path="mmkv/pili_plus_historyWord.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_historyWord.crc" />
+        <include domain="file" path="mmkv/pili_plus_reply.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_reply.crc" />
+        <include domain="file" path="mmkv/pili_plus_favoriteReply.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_favoriteReply.crc" />
+        <include domain="file" path="mmkv/pili_plus___meta__.mmkv" />
+        <include domain="file" path="mmkv/pili_plus___meta__.crc" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="mmkv/pili_plus_setting.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_setting.crc" />
+        <include domain="file" path="mmkv/pili_plus_video.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_video.crc" />
+        <include domain="file" path="mmkv/pili_plus_watchProgress.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_watchProgress.crc" />
+        <include domain="file" path="mmkv/pili_plus_historyWord.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_historyWord.crc" />
+        <include domain="file" path="mmkv/pili_plus_reply.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_reply.crc" />
+        <include domain="file" path="mmkv/pili_plus_favoriteReply.mmkv" />
+        <include domain="file" path="mmkv/pili_plus_favoriteReply.crc" />
+        <include domain="file" path="mmkv/pili_plus___meta__.mmkv" />
+        <include domain="file" path="mmkv/pili_plus___meta__.crc" />
+    </device-transfer>
+</data-extraction-rules>
