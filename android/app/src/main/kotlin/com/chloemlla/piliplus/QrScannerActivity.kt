@@ -25,9 +25,11 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -42,7 +44,7 @@ class QrScannerActivity : ComponentActivity() {
     private val destroyed = AtomicBoolean(false)
 
     private lateinit var previewView: PreviewView
-    private var scanner: BarcodeScanner? = null
+    @Volatile private var scanner: BarcodeScanner? = null
     private var camera: Camera? = null
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private lateinit var statusText: TextView
@@ -79,12 +81,28 @@ class QrScannerActivity : ComponentActivity() {
 
     override fun onDestroy() {
         destroyed.set(true)
-        scanner?.close()
+        val detector = scanner
+        scanner = null
         analysisExecutor.shutdown()
+        try {
+            if (!analysisExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                analysisExecutor.shutdownNow()
+                analysisExecutor.awaitTermination(2, TimeUnit.SECONDS)
+            }
+        } catch (interrupted: InterruptedException) {
+            analysisExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
+        } finally {
+            detector?.close()
+        }
         super.onDestroy()
     }
 
     private fun bindCamera() {
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+        scanner = BarcodeScanning.getClient(options)
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener(
             {
@@ -110,7 +128,6 @@ class QrScannerActivity : ComponentActivity() {
                         val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
                         torchButton.isEnabled = hasFlash
                         torchButton.alpha = if (hasFlash) 1f else 0.5f
-                        scanner = BarcodeScanning.getClient()
                     }
             },
             ContextCompat.getMainExecutor(this),
@@ -127,8 +144,13 @@ class QrScannerActivity : ComponentActivity() {
             image.close()
             return
         }
-        val input = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
-        val task = scanner?.process(input)
+        val task = try {
+            val input = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
+            scanner?.process(input)
+        } catch (error: Exception) {
+            image.close()
+            return
+        }
         if (task == null) {
             image.close()
             return

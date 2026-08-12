@@ -18,6 +18,7 @@ if (!isBuiltInKotlinEnabled) {
     apply(plugin = "org.jetbrains.kotlin.android")
 }
 val targetAndroidSdk = rootProject.extra["targetAndroidSdk"] as Int
+val cameraXVersion = "1.4.2"
 
 android {
     namespace = "com.chloemlla.piliplus"
@@ -119,9 +120,9 @@ dependencies {
     // Google ML Kit barcode scanning: on-device QR/barcode decode (bundled native engine).
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // CameraX: camera preview + frame analysis feeding ML Kit.
-    implementation("androidx.camera:camera-camera2:1.4.2")
-    implementation("androidx.camera:camera-lifecycle:1.4.2")
-    implementation("androidx.camera:camera-view:1.4.2")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
     implementation("com.tencent:mmkv-static:1.3.14")
     // Capture-only host: Flutter owns crash product UI. Prefer lumen-crash-core
     // so Compose crash UI / FileProvider share surface is not pulled in.
