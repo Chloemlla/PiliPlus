@@ -14,11 +14,6 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
-        // Huawei public Maven (Scan Kit scanplus and transitive HMS artifacts).
-        maven {
-            name = "HuaweiMaven"
-            url = uri("https://developer.huawei.com/repo/")
-        }
     }
 }
 

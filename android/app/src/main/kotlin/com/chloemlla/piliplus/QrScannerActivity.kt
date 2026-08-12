@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Looper
@@ -16,28 +15,39 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import com.huawei.hms.hmsscankit.RemoteView
-import com.huawei.hms.ml.scan.HmsScan
+import com.google.mlkit.vision.barcode.Barcode
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.common.InputImage
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Camera QR scanner backed by Huawei HMS Scan Kit [RemoteView].
+ * Camera QR scanner backed by Google ML Kit barcode scanning.
  *
- * Scan Kit free/public SDK path (`com.huawei.hms:scanplus`) does not require
- * `agconnect-services.json` or the AGConnect Gradle plugin. Recognition works
- * without a full HMS Core account on generic Android devices; optional HMS Core
- * on Huawei devices may still accelerate decoding when present.
+ * Camera preview is provided by CameraX [PreviewView]; QR codes are decoded with
+ * ML Kit (`com.google.mlkit:barcode-scanning`) and reported back to the Flutter
+ * side through the result extras declared in the companion object.
  */
 class QrScannerActivity : ComponentActivity() {
     private val delivered = AtomicBoolean(false)
     private val destroyed = AtomicBoolean(false)
 
-    private var remoteView: RemoteView? = null
+    private lateinit var previewView: PreviewView
+    private var scanner: BarcodeScanner? = null
+    private var camera: Camera? = null
+    private val analysisExecutor = Executors.newSingleThreadExecutor()
     private lateinit var statusText: TextView
     private lateinit var torchButton: TextView
     private var torchEnabled = false
-    private var lightControlVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +66,8 @@ class QrScannerActivity : ComponentActivity() {
             return
         }
         try {
-            setContentView(buildContentView(savedInstanceState))
+            setContentView(buildContentView())
+            bindCamera()
         } catch (exception: Exception) {
             finishWithScannerError("camera_unavailable", "无法打开扫码界面", exception)
             return
@@ -66,54 +77,76 @@ class QrScannerActivity : ComponentActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        try {
-            remoteView?.onStart()
-        } catch (error: Throwable) {
-            finishWithScannerError("camera_unavailable", "无法启动扫码预览", error)
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        try {
-            remoteView?.onResume()
-        } catch (error: Throwable) {
-            finishWithScannerError("camera_unavailable", "无法恢复扫码预览", error)
-        }
-    }
-
-    override fun onPause() {
-        try {
-            remoteView?.onPause()
-        } catch (_: Throwable) {
-            // Best-effort pause while tearing down.
-        }
-        super.onPause()
-    }
-
-    override fun onStop() {
-        try {
-            remoteView?.onStop()
-        } catch (_: Throwable) {
-            // Best-effort stop while tearing down.
-        }
-        super.onStop()
-    }
-
     override fun onDestroy() {
         destroyed.set(true)
-        try {
-            remoteView?.onDestroy()
-        } catch (_: Throwable) {
-            // RemoteView may already be released after OEM/camera failures.
-        }
-        remoteView = null
+        scanner?.close()
+        analysisExecutor.shutdown()
         super.onDestroy()
     }
 
-    private fun buildContentView(savedInstanceState: Bundle?): FrameLayout {
+    private fun bindCamera() {
+        val providerFuture = ProcessCameraProvider.getInstance(this)
+        providerFuture.addListener(
+            {
+                if (destroyed.get() || isFinishing || isDestroyed) return@addListener
+                runCatching { providerFuture.get() }
+                    .onFailure {
+                        finishWithScannerError("camera_unavailable", "无法启动扫码预览", it)
+                    }
+                    .onSuccess { provider ->
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
+                        }
+                        val analysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                            .also { it.setAnalyzer(analysisExecutor, ::analyze) }
+                        camera = provider.bindToLifecycle(
+                            this,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            analysis,
+                        )
+                        val hasFlash = camera?.cameraInfo?.hasFlashUnit() == true
+                        torchButton.isEnabled = hasFlash
+                        torchButton.alpha = if (hasFlash) 1f else 0.5f
+                        scanner = BarcodeScanning.getClient()
+                    }
+            },
+            ContextCompat.getMainExecutor(this),
+        )
+    }
+
+    private fun analyze(image: ImageProxy) {
+        if (destroyed.get()) {
+            image.close()
+            return
+        }
+        val mediaImage = image.image
+        if (mediaImage == null) {
+            image.close()
+            return
+        }
+        val input = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
+        val task = scanner?.process(input)
+        if (task == null) {
+            image.close()
+            return
+        }
+        task.addOnSuccessListener { barcodes ->
+            val value = barcodes.firstOrNull { it.format == Barcode.FORMAT_QR_CODE }?.rawValue
+                ?: barcodes.firstOrNull()?.rawValue
+            if (!value.isNullOrBlank()) {
+                runOnUiThread { finishWithResult(value) }
+            }
+        }.addOnFailureListener {
+            // Ignore decode failures; keep scanning.
+        }.addOnCompleteListener {
+            image.close()
+        }
+    }
+
+    private fun buildContentView(): FrameLayout {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val previewHost = FrameLayout(this)
         root.addView(previewHost, matchParentLayoutParams())
@@ -155,60 +188,32 @@ class QrScannerActivity : ComponentActivity() {
             },
         )
 
-        remoteView = createRemoteView(savedInstanceState).also { view ->
-            previewHost.addView(
-                view,
-                FrameLayout.LayoutParams(matchParent, matchParent),
-            )
-        }
+        previewView = PreviewView(this)
+        previewHost.addView(previewView, FrameLayout.LayoutParams(matchParent, matchParent))
         return root
     }
 
-    private fun createRemoteView(savedInstanceState: Bundle?): RemoteView {
-        val metrics = resources.displayMetrics
-        val scanFrameSize = (SCAN_FRAME_SIZE_DP * metrics.density).toInt()
-        val width = metrics.widthPixels
-        val height = metrics.heightPixels
-        val rect = Rect(
-            width / 2 - scanFrameSize / 2,
-            height / 2 - scanFrameSize / 2,
-            width / 2 + scanFrameSize / 2,
-            height / 2 + scanFrameSize / 2,
-        )
-        val view = RemoteView.Builder()
-            .setContext(this)
-            .setBoundingBox(rect)
-            .setFormat(HmsScan.QRCODE_SCAN_TYPE)
-            .build()
-        view.setOnLightVisibleCallback { visible ->
-            if (destroyed.get() || isFinishing || isDestroyed) return@setOnLightVisibleCallback
-            lightControlVisible = visible || torchEnabled
-            torchButton.isEnabled = lightControlVisible
-            torchButton.alpha = if (lightControlVisible) 1f else 0.5f
-        }
-        view.setOnResultCallback { results ->
-            val value = results
-                ?.firstOrNull()
-                ?.originalValue
-                ?.takeIf(String::isNotBlank)
-            if (value != null) {
-                finishWithResult(value)
-            }
-        }
-        view.onCreate(savedInstanceState)
-        // Torch may be available even before low-light callback fires.
-        torchButton.isEnabled = true
-        torchButton.alpha = 1f
-        lightControlVisible = true
-        return view
-    }
-
     private fun toggleTorch() {
-        val view = remoteView ?: return
+        val cam = camera ?: return
         try {
-            view.switchLight()
-            torchEnabled = view.lightStatus
-            torchButton.text = if (torchEnabled) "关闭手电筒" else "手电筒"
+            if (!cam.cameraInfo.hasFlashUnit()) {
+                statusText.text = "此设备不支持手电筒"
+                return
+            }
+            val future = cam.cameraControl.enableTorch(!torchEnabled)
+            future.addListener(
+                {
+                    runCatching { future.get() }
+                        .onSuccess {
+                            torchEnabled = !torchEnabled
+                            torchButton.text = if (torchEnabled) "关闭手电筒" else "手电筒"
+                        }
+                        .onFailure {
+                            statusText.text = "无法控制手电筒"
+                        }
+                },
+                ContextCompat.getMainExecutor(this),
+            )
         } catch (exception: Exception) {
             torchEnabled = false
             torchButton.text = "手电筒"
@@ -282,7 +287,6 @@ class QrScannerActivity : ComponentActivity() {
         const val RESULT_ERROR = Activity.RESULT_FIRST_USER + 1
 
         private const val TAG = "QrScannerActivity"
-        private const val SCAN_FRAME_SIZE_DP = 240
         private const val matchParent = ViewGroup.LayoutParams.MATCH_PARENT
         private const val wrapContent = ViewGroup.LayoutParams.WRAP_CONTENT
     }
