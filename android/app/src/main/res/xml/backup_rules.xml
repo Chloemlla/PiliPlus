@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 7.1-11 (API 26-30) full-backup-content rules. API 31+ ignores this
+  file and uses data_extraction_rules.xml instead.
+
+  Same selective set as data_extraction_rules.xml: only the non-credential MMKV
+  boxes (setting / video / watchProgress / historyWord / reply / favoriteReply)
+  plus the __meta__ migration marker are eligible. Everything else — secrets/,
+  hive/, userInfo, localCache, download/ — stays out of backup and adb backup.
+-->
+<full-backup-content>
+    <include domain="file" path="mmkv/pili_plus_setting.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_setting.crc" />
+    <include domain="file" path="mmkv/pili_plus_video.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_video.crc" />
+    <include domain="file" path="mmkv/pili_plus_watchProgress.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_watchProgress.crc" />
+    <include domain="file" path="mmkv/pili_plus_historyWord.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_historyWord.crc" />
+    <include domain="file" path="mmkv/pili_plus_reply.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_reply.crc" />
+    <include domain="file" path="mmkv/pili_plus_favoriteReply.mmkv" />
+    <include domain="file" path="mmkv/pili_plus_favoriteReply.crc" />
+    <include domain="file" path="mmkv/pili_plus___meta__.mmkv" />
+    <include domain="file" path="mmkv/pili_plus___meta__.crc" />
+</full-backup-content>

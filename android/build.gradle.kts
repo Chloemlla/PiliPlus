@@ -7,11 +7,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // Huawei HMS public Maven (Scan Kit scanplus SDK).
-        maven {
-            name = "HuaweiMaven"
-            url = uri("https://developer.huawei.com/repo/")
-        }
         maven {
             name = "GitHubPackagesProjectLumen"
             url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")

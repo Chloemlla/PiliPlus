@@ -77,8 +77,8 @@ android {
                     value = "PiliPlus dev",
                 )
             }
-            // Flutter release enables minify/R8 by default; keep Scan Kit / optional
-            // HMS network stubs from failing full-mode missing-class checks.
+            // Flutter release enables minify/R8 by default; ML Kit barcode-scanning
+            // ships consumer rules so no extra keep rules are required here.
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -116,10 +116,12 @@ dependencies {
             .orElse("0.1.0")
             .get()
 
-    // Huawei Scan Kit full SDK (scanplus): camera + bitmap decode without GMS.
-    // Independent SDK path — no agconnect-services.json / AGConnect plugin required.
-    // Artifact lives on https://developer.huawei.com/repo/ (see android/build.gradle.kts).
-    implementation("com.huawei.hms:scanplus:2.15.0.301")
+    // Google ML Kit barcode scanning: on-device QR/barcode decode (bundled native engine).
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // CameraX: camera preview + frame analysis feeding ML Kit.
+    implementation("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-view:1.4.2")
     implementation("com.tencent:mmkv-static:1.3.14")
     // Capture-only host: Flutter owns crash product UI. Prefer lumen-crash-core
     // so Compose crash UI / FileProvider share surface is not pulled in.

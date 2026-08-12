@@ -127,7 +127,7 @@ Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Sea
 | UI | `lib/pages/web_qr_auth/*` | 阶段机 `idle/loading/ready/confirming/success/error`、场景面板、扫码源面板 |
 | HTTP | `WebQrAuthHttp` | passport 场景查询 / 确认 / 短信与极验相关接口；请求附着账号 Cookie |
 | 模型 | `models_new/web_qr_auth` | 二维码 key、场景、环境参数；host / 显式默认端口校验 |
-| Native 扫码 | `QrScannerActivity` + 华为 HMS Scan Kit（`scanplus` RemoteView / `decodeWithBitmap`） | 无 GMS 可用；MethodChannel 契约不变，替换旧 CameraX/ZXing/ML Kit 路径 |
+| Native 扫码 | `QrScannerActivity` + CameraX / Google ML Kit（`BarcodeScanning`） | MethodChannel 契约不变；相机扫码走 CameraX 预览 + ML Kit 识别，相册解码走 ML Kit InputImage |
 | Dart 通道 | `AndroidQrScanner` | 相机权限、错误码映射、相册解码 |
 
 #### 安全与可观测
@@ -286,7 +286,7 @@ Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Sea
 | debug / dev | `.debug` / `.dev` suffix |
 | 源码与更新 | `Constants.sourceCodeRepository = Chloemlla/PiliPlus`；检查更新走本仓库 Releases |
 | `minSdk` | `max(flutter.minSdk, 26)`（lumen-crash） |
-| 依赖 | MMKV、HMS Scan Kit（scanplus）、lumen-crash、ProfileInstaller 等 |
+| 依赖 | MMKV、CameraX、Google ML Kit（barcode-scanning）、lumen-crash、ProfileInstaller 等 |
 
 ---
 
@@ -393,7 +393,7 @@ Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Sea
 - [x] 播放全部/继续播放/倒序播放
 - [x] Cookie登录
 - [x] B 站网页二维码授权（Android）
-- [x] Android 华为 Scan Kit 相机 / 相册扫码
+- [x] Android CameraX / Google ML Kit 相机 / 相册扫码
 - [x] Android Clash VPN 伙伴应用自动适配
 - [x] Android MMKV 热存储与懒加载
 - [x] 账号/设置密钥旁路存储与 Cookie 凭据保护
