@@ -8,6 +8,8 @@
         <package android:name="com.github.metacubex.clash" />
         <package android:name="com.github.metacubex.clash.meta" />
         <package android:name="com.github.metacubex.clash.alpha" />
+        <package android:name="com.chloemlla.synapse.mobile" />
+        <package android:name="com.synapse.mobile" />
         <intent>
             <action android:name="com.chloemlla.seal.action.DOWNLOAD" />
             <data android:mimeType="text/plain" />
