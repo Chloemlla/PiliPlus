@@ -242,6 +242,9 @@ Future<void> _main() async {
   // declares the app unresponsive (ANR / launch timeout).
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(_initDeferredStartup());
+    if (PlatformUtils.isDesktop) {
+      FocusManager.instance.addEarlyKeyEventHandler(_onKeyEvent);
+    }
   });
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(
@@ -341,32 +344,40 @@ Future<void> _main() async {
   }
 }
 
+KeyEventResult _onKeyEvent(KeyEvent event) {
+  if (event.logicalKey == .escape && event is KeyDownEvent) {
+    _onBack();
+    return .handled;
+  }
+  return .ignored;
+}
+
+void _onBack() {
+  if (SmartDialog.checkExist()) {
+    SmartDialog.dismiss();
+    return;
+  }
+
+  final route = Get.routing.route;
+  if (route is GetPageRoute) {
+    if (route.popDisposition == .doNotPop) {
+      route.onPopInvokedWithResult(false, null);
+      return;
+    }
+  }
+
+  final navigator = Get.key.currentState!;
+  if (navigator.canPop()) {
+    navigator.pop();
+  }
+}
+
 class MyApp extends StatelessWidget {
   final CrashReport? startupCrashReport;
 
   const MyApp({this.startupCrashReport, super.key});
 
   static ColorScheme? _light, _dark;
-
-  static void _onBack() {
-    if (SmartDialog.checkExist()) {
-      SmartDialog.dismiss();
-      return;
-    }
-
-    final route = Get.routing.route;
-    if (route is GetPageRoute) {
-      if (route.popDisposition == .doNotPop) {
-        route.onPopInvokedWithResult(false, null);
-        return;
-      }
-    }
-
-    final navigator = Get.key.currentState;
-    if (navigator?.canPop() ?? false) {
-      navigator!.pop();
-    }
-  }
 
   static (ThemeData, ThemeData) getAllTheme() {
     final dynamicColor = _light != null && _dark != null && Pref.dynamicColor;

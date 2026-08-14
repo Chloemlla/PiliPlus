@@ -90,6 +90,8 @@ $TextPainterPatch = "lib/scripts/text_painter.patch"
 
 $SliverPatch = "lib/scripts/sliver.patch"
 
+$RefreshIndicatorPatch = "lib/scripts/refresh_indicator.patch"
+
 # TODO: remove
 # https://github.com/flutter/flutter/issues/124078
 # https://github.com/flutter/flutter/pull/183261
@@ -281,14 +283,20 @@ function Remove-PubCacheAndroidManifestPackageAttributes {
 Apply-CanvasDanmakuPatch
 
 if ($platform.ToLower() -eq "ios") {
-    git apply $BottomSheetIOSPiliPlusPatch
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "$BottomSheetIOSPiliPlusPatch applied"
+    $iosPiliPlusOutput = @(
+        git apply $BottomSheetIOSPiliPlusPatch 2>&1
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to apply $BottomSheetIOSPiliPlusPatch`: $($iosPiliPlusOutput -join [Environment]::NewLine)"
     }
-    git apply $GeetestIOSPatch
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "$GeetestIOSPatch applied"
+    Write-Host "$BottomSheetIOSPiliPlusPatch applied"
+    $geetestOutput = @(
+        git apply $GeetestIOSPatch 2>&1
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to apply $GeetestIOSPatch`: $($geetestOutput -join [Environment]::NewLine)"
     }
+    Write-Host "$GeetestIOSPatch applied"
 }
 
 if ($platform.ToLower() -eq "android") {
@@ -307,7 +315,7 @@ if ($FlutterRootPath.Path -eq $RepositoryRootPath) {
 
 Set-Location $FlutterRootPath
 
-$picks   = @($TextSelectionMenuFix)
+$picks   = @()
 $reverts = @()
 $patches = @($ModalBarrierPatch, $TextSelectionPatch, $MouseCursorPatch,
             $ImageAnimPatch, $LayoutBuilderPatch, $NavigationDrawerPatch,
@@ -315,7 +323,7 @@ $patches = @($ModalBarrierPatch, $TextSelectionPatch, $MouseCursorPatch,
             $SelectableRegionPatch, $EditableTextPatch, $TextFieldPatch,
             $ScrollPositionPatch, $ScrollablePatch, $ScrollableGesturePatch,
             $DraggableScrollableSheetPatch, $ScaffoldPatch, $TextPatch,
-            $TextPainterPatch, $SliverPatch)
+            $TextPainterPatch, $SliverPatch, $RefreshIndicatorPatch)
 
 switch ($platform.ToLower()) {
     "android" {
@@ -363,8 +371,11 @@ foreach ($revert in $reverts) {
 }
 
 foreach ($patch in $patches) {
-    git apply --recount (Join-Path $RepositoryRootPath $patch)
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "$patch applied"
+    $applyOutput = @(
+        git apply --recount (Join-Path $RepositoryRootPath $patch) 2>&1
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to apply $patch`: $($applyOutput -join [Environment]::NewLine)"
     }
+    Write-Host "$patch applied"
 }
