@@ -112,7 +112,7 @@ class _GalleryViewerState extends State<GalleryViewer>
     final player = await Player.create();
     _videoController = await VideoController.create(player);
     if (!mounted) {
-      player.dispose();
+      await player.dispose();
       _videoController = null;
       return;
     }
@@ -282,9 +282,12 @@ class _GalleryViewerState extends State<GalleryViewer>
 
   @override
   void dispose() {
-    _player?.dispose();
+    final player = _player;
     _player = null;
     _videoController = null;
+    if (player != null) {
+      unawaited(player.dispose());
+    }
     _pageController.dispose();
     _animateController.dispose();
     _tapGestureRecognizer.dispose();

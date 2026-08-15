@@ -395,7 +395,7 @@ class AudioController extends GetxController
       ),
     );
     if (isClosed) {
-      player!.dispose();
+      await player!.dispose();
       player = null;
       return;
     }
@@ -840,8 +840,11 @@ class AudioController extends GetxController
     _subscriptions?.forEach((e) => e.cancel());
     _subscriptions?.clear();
     _subscriptions = null;
-    player?.dispose();
-    player = null;
+    final player = this.player;
+    this.player = null;
+    if (player != null) {
+      unawaited(player.dispose());
+    }
     animController.dispose();
     super.onClose();
   }

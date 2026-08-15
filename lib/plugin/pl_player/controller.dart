@@ -1747,11 +1747,10 @@ class PlPlayerController with BlockConfigMixin {
     }
   }
 
-  /// Stops & disposes a [Player] with a bound timeout so a wedged player can
-  /// never block the UI isolate indefinitely.
+  /// Releases a [Player] without blocking the UI isolate.
   Future<void> _releasePlayer(Player player) async {
     try {
-      await player.dispose().timeout(const Duration(seconds: 3));
+      await player.dispose();
     } catch (_) {
       // The player is unrecoverable; drop the reference and let GC reclaim it.
     }

@@ -300,7 +300,6 @@ if ($platform.ToLower() -eq "ios") {
 }
 
 if ($platform.ToLower() -eq "android") {
-    & (Join-Path $PSScriptRoot "patch_media_kit_android_isolate.ps1")
     Remove-PubCacheAndroidManifestPackageAttributes
 }
 
