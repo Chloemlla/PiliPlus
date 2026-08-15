@@ -2251,7 +2251,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       builder: (_) => LoadingWidget(progress: progress, msg: '正在保存，可能需要较长时间'),
       onDismiss: () async {
         if (progress.value < 1.0) {
-          mpv.dispose();
+          await mpv.dispose();
         }
         if (await future) {
           await ImageUtils.saveFileImg(

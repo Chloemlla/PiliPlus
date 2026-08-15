@@ -1,0 +1,96 @@
+diff --git a/media_kit/lib/src/player/native/core/initializer.dart b/media_kit/lib/src/player/native/core/initializer.dart
+index 1963c5c3..b39653bd 100644
+--- a/media_kit/lib/src/player/native/core/initializer.dart
++++ b/media_kit/lib/src/player/native/core/initializer.dart
+@@ -7,0 +8 @@ import 'dart:ffi';
++import 'dart:io';
+@@ -27,0 +29,7 @@ abstract class Initializer {
++    if (Platform.isAndroid) {
++      return InitializerIsolate.create(
++        mpv,
++        callback,
++        options,
++      );
++    }
+@@ -46 +54,5 @@ abstract class Initializer {
+-  static void dispose(Pointer<mpv_handle> handle) {
++  static Future<void> dispose(MPV mpv, Pointer<mpv_handle> handle) async {
++    if (Platform.isAndroid) {
++      await InitializerIsolate.dispose(mpv, handle);
++      return;
++    }
+@@ -50 +62 @@ abstract class Initializer {
+-      InitializerIsolate.dispose(handle);
++      await InitializerIsolate.dispose(mpv, handle);
+diff --git a/media_kit/lib/src/player/native/core/initializer_isolate.dart b/media_kit/lib/src/player/native/core/initializer_isolate.dart
+index 786d3c91..dc6cdcdc 100644
+--- a/media_kit/lib/src/player/native/core/initializer_isolate.dart
++++ b/media_kit/lib/src/player/native/core/initializer_isolate.dart
+@@ -77 +77 @@ abstract class InitializerIsolate {
+-          else {
++          else if (message != null) {
+@@ -86,0 +87,9 @@ abstract class InitializerIsolate {
++          // Receiving event loop shutdown acknowledgement.
++          else {
++            final shutdown = _disposeCompleters.remove(handle.address);
++            if (shutdown != null && !shutdown.isCompleted) {
++              shutdown.complete();
++              _isolates.remove(handle.address);
++              receiver.close();
++            }
++          }
+@@ -102 +111 @@ abstract class InitializerIsolate {
+-  static void dispose(Pointer<mpv_handle> handle) {
++  static Future<void> dispose(MPV mpv, Pointer<mpv_handle> handle) {
+@@ -105,9 +114,8 @@ abstract class InitializerIsolate {
+-    if (port != null && isolate != null) {
+-      port.send(null);
+-      _ports.remove(handle.address);
+-      _isolates.remove(handle.address);
+-      // A voluntary delay. Although, [Isolate.kill] is not necessary since execution in the [Isolate] will stop automatically.
+-      Future.delayed(const Duration(seconds: 2), () {
+-        isolate.kill(priority: Isolate.immediate);
+-      });
+-    }
++    if (port == null || isolate == null) return Future.value();
++
++    final completer = Completer<void>();
++    _disposeCompleters[handle.address] = completer;
++    port.send(null);
++    _ports.remove(handle.address);
++    mpv.mpv_wakeup(handle);
++    return completer.future;
+@@ -154 +162 @@ abstract class InitializerIsolate {
+-          completer.complete();
++          if (!completer.isCompleted) completer.complete();
+@@ -157,2 +165 @@ abstract class InitializerIsolate {
+-            // Break out of last event await.
+-            completer.complete();
++            disposed = true;
+@@ -161 +167,0 @@ abstract class InitializerIsolate {
+-            disposed = true;
+@@ -195 +201 @@ abstract class InitializerIsolate {
+-    while (true) {
++    while (!disposed) {
+@@ -197 +203 @@ abstract class InitializerIsolate {
+-      final event = mpv.mpv_wait_event(handle, kReleaseMode ? -1 : 0.1);
++      final event = mpv.mpv_wait_event(handle, kReleaseMode ? 1 : 0.1);
+@@ -202,0 +209 @@ abstract class InitializerIsolate {
++      if (event == nullptr) break;
+@@ -209,0 +217,2 @@ abstract class InitializerIsolate {
++    port.send(null);
++    receiver.close();
+@@ -216,0 +226,3 @@ abstract class InitializerIsolate {
++
++  /// Completes when the event loop isolate has stopped.
++  static final _disposeCompleters = HashMap<int, Completer<void>>();
+diff --git a/media_kit/lib/src/player/native/player/real.dart b/media_kit/lib/src/player/native/player/real.dart
+index 92dd0e8a..bdd0ae1e 100644
+--- a/media_kit/lib/src/player/native/player/real.dart
++++ b/media_kit/lib/src/player/native/player/real.dart
+@@ -87 +87 @@ class NativePlayer extends PlatformPlayer {
+-    Initializer.dispose(ctx);
++    await Initializer.dispose(mpv, ctx);
+@@ -89 +89 @@ class NativePlayer extends PlatformPlayer {
+-    Timer(const Duration(seconds: 5), () => mpv.mpv_terminate_destroy(ctx));
++    mpv.mpv_terminate_destroy(ctx);

@@ -71,8 +71,14 @@ class MpvConvertWebp {
     calloc.free(level);
   }
 
-  void dispose() {
-    Initializer.dispose(_ctx);
+  Future<void>? _disposeFuture;
+
+  Future<void> dispose() {
+    return _disposeFuture ??= _dispose();
+  }
+
+  Future<void> _dispose() async {
+    await Initializer.dispose(_mpv, _ctx);
     _mpv.mpv_terminate_destroy(_ctx);
     if (!_completer.isCompleted) _completer.complete(false);
   }
@@ -111,7 +117,7 @@ class MpvConvertWebp {
           generated.mpv_event_id.MPV_EVENT_SHUTDOWN:
         progress?.value = 1;
         _completer.complete(_success);
-        dispose();
+        unawaited(dispose());
         break;
     }
     return null;
