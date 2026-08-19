@@ -3,10 +3,11 @@ $ErrorActionPreference = "Stop"
 $RepositoryRootPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
 $MediaKitRevision = "deac6b62569584b6a5e28e6c60c187a0a7281b3a"
 $PatchPath = Join-Path $PSScriptRoot "media_kit_android_isolate.patch"
+$Md5PatchPath = Join-Path $PSScriptRoot "media_kit_android_md5.patch"
 $PackageConfigPath = Join-Path $RepositoryRootPath ".dart_tool/package_config.json"
 $LockPath = Join-Path $RepositoryRootPath "pubspec.lock"
 
-foreach ($path in @($PackageConfigPath, $LockPath, $PatchPath)) {
+foreach ($path in @($PackageConfigPath, $LockPath, $PatchPath, $Md5PatchPath)) {
     if (-not (Test-Path -LiteralPath $path)) {
         throw "Required media_kit patch input not found: $path"
     }
@@ -123,6 +124,26 @@ if (
     @(Compare-Object $expectedStatus $patchedStatus).Count -ne 0
 ) {
     throw "media_kit contains changes beyond the expected patch: $($patchedStatus -join [Environment]::NewLine)"
+}
+
+# Apply MD5 removal patch to media_kit_libs_android_video
+$md5PatchPathFull = Join-Path $checkoutPath "libs/android/media_kit_libs_android_video/android/build.gradle"
+if (Test-Path -LiteralPath $md5PatchPathFull) {
+    $md5ApplyCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --check -- $Md5PatchPath 2>&1)
+    if ($LASTEXITCODE -eq 0) {
+        $md5ApplyOutput = @(& git -C $checkoutPath apply --unidiff-zero --whitespace=nowarn -- $Md5PatchPath 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to apply $Md5PatchPath`: $($md5ApplyOutput -join [Environment]::NewLine)"
+        }
+        Write-Host "$Md5PatchPath applied to media_kit@$MediaKitRevision"
+    } else {
+        $md5ReverseCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --reverse --check -- $Md5PatchPath 2>&1)
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "$Md5PatchPath already applied to media_kit@$MediaKitRevision"
+        } else {
+            throw "$Md5PatchPath neither applies cleanly nor appears already applied."
+        }
+    }
 }
 
 $initializerPath = Join-Path $packagePath "lib/src/player/native/core/initializer.dart"
