@@ -15,6 +15,7 @@
  * along with PiliPlus.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:io' show File, Platform;
 
 import 'package:pili_plus/common/widgets/colored_box_transition.dart';
