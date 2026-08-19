@@ -2,64 +2,12 @@ diff --git a/libs/android/media_kit_libs_android_video/android/build.gradle b/li
 index 5d6f366..b386b5a 100644
 --- a/libs/android/media_kit_libs_android_video/android/build.gradle
 +++ b/libs/android/media_kit_libs_android_video/android/build.gradle
-@@ -2,12 +2,9 @@ import java.nio.file.Files
- import java.security.MessageDigest
-
- group 'com.alexmercerind.media_kit_libs_android_video'
- version '1.0'
-
- buildscript {
-     repositories {
-         google()
-         mavenCentral()
-     }
-
-     dependencies {
-         classpath 'com.android.tools.build:gradle:7.3.0'
-     }
- }
-
- rootProject.allprojects {
-     repositories {
-         google()
-         mavenCentral()
-     }
- }
-
- apply plugin: 'com.android.library'
-
- android {
-     // Conditional for compatibility with AGP <4.2.
-     if (project.android.hasProperty("namespace")) {
-         namespace 'com.alexmercerind.media_kit_libs_android_video'
-     }
-
-     compileSdkVersion 31
-
-     compileOptions {
-         sourceCompatibility JavaVersion.VERSION_1_8
-         targetCompatibility JavaVersion.VERSION_1_8
-     }
-
-     defaultConfig {
-         minSdkVersion 16
-     }
-
-     dependencies {
-         implementation fileTree(dir: "$buildDir/output", include: "*.jar")
-     }
- }
-
- task downloadDependencies(type: Exec) {
-         // Delete previously created /output subdirectory.
-
-         def outputDir = file("$buildDir/output")
-         if (outputDir.exists()) {
-             outputDir.deleteDir()
+@@ -53,36 +53,22 @@ task downloadDependencies(type: Exec) {
          }
          outputDir.mkdirs()
 
-         // Download all *.jar dependencies.
+-        // Download all *.jar dependencies & verify their MD5 checksums.
++        // Download all *.jar dependencies.
          def filesToDownload = [
 -            ["url": "https://github.com/bggRGjQaUbCoE/libmpv-android-video-build/releases/download/vnext/default-arm64-v8a.jar", "md5": "2451ce9f388c67cf19e26e1f8f4caf0c", "destination": file("$buildDir/v1.1.6/default-arm64-v8a.jar")],
 -            ["url": "https://github.com/bggRGjQaUbCoE/libmpv-android-video-build/releases/download/vnext/default-armeabi-v7a.jar", "md5": "9d6caaa4d6bf660f4d9a611c4deab5af", "destination": file("$buildDir/v1.1.6/default-armeabi-v7a.jar")],
@@ -79,13 +27,16 @@ index 5d6f366..b386b5a 100644
 -                    println "MD5 mismatch. File deleted: ${destFile}"
 -                }
 -
-             } else {
+-            }
+-
+-            if (!destFile.exists()) {
++            } else {
                  destFile.parentFile.mkdirs()
                  println "Downloading file from: ${fileInfo.url}"
                  destFile.withOutputStream { os ->
                      os << new URL(fileInfo.url).openStream()
                  }
-
+-
 -                def calculatedMD5 = MessageDigest.getInstance("MD5").digest(Files.readAllBytes(destFile.toPath())).encodeHex().toString()
 -                if (calculatedMD5 != fileInfo.md5) {
 -                    throw new GradleException("MD5 verification failed for ${destFile}")
