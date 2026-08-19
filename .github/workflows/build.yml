@@ -42,6 +42,12 @@ on:
         default: true
         type: boolean
 
+      generate_baseline_profile:
+        description: "Generate Android baseline profile (requires emulator, currently broken due to media_kit MD5 mismatch)"
+        required: false
+        default: false
+        type: boolean
+
       tag:
         description: "tag"
         required: false
@@ -247,7 +253,7 @@ jobs:
         run: lib/scripts/build.ps1 android
 
       - name: Generate Baseline Profile
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.generate_baseline_profile == 'true' }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           # API 34 aosp_atd boots more reliably on GHA than google_apis/default.
@@ -274,7 +280,7 @@ jobs:
           script: gradle -p android -Pdart-defines="$(jq -r 'to_entries | map("\(.key)=\(.value | tostring)" | @base64) | join(",")' pili_release.json)" :app:generateBaselineProfile --no-daemon --stacktrace
 
       - name: Validate Baseline Profile
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.generate_baseline_profile == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -296,7 +302,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Baseline Profile
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.generate_baseline_profile == 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: Android_baseline_profile
