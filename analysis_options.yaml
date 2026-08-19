@@ -18,9 +18,9 @@ analyzer:
     - linux/**
     - macos/**
     - windows/**
-- web/**
+    - web/**
     - build/**
-    # - lib/common/widgets/flutter/**
+    - lib/common/widgets/flutter/**
 
 formatter:
   trailing_commas: preserve
