@@ -74,7 +74,7 @@ abstract final class SynapseDeviceReport {
       Permission.location,
       Permission.phone,
       Permission.sms,
-      Permission.calendar,
+      Permission.calendarFullAccess,
       Permission.bluetooth,
       Permission.sensors,
       Permission.nearbyWifiDevices,
