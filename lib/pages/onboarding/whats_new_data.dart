@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建将 Android 网页登录扫码从华为 Scan Kit 迁移到 CameraX + Google ML Kit，不再依赖华为扫描引擎。',
+      subtitle: '本构建合并了上游 PiliPlus 2.1.1，同时保留本分支的画质推荐、音频解码自恢复与倍速步进等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -48,24 +48,26 @@ abstract final class WhatsNewData {
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
     ),
     const ImprovementsGuidePageData(
-      icon: Icons.qr_code_scanner_outlined,
-      title: '扫码改用 CameraX + Google ML Kit',
-      subtitle: 'Android 网页登录扫码从华为 HMS Scan Kit 迁移到 CameraX 相机预览 + Google ML Kit 识别。',
+      icon: Icons.merge_outlined,
+      title: '同步上游 2.1.1',
+      subtitle: '合入上游 bggRGjQaUbCoE/PiliPlus 的 Release 2.1.1，包含其间的修复与细节调整。',
       bullets: [
-        '移除华为扫描引擎（scanplus / libscannative.so）依赖，相机扫码与相册识别统一走 Google ML Kit。',
-        '扫码仅识别 QR 码格式以提升速度；手电筒开关与失败处理行为保持不变。',
+        '桌面端托盘隐藏/显示改为先切换窗口透明度，规避 Windows 上隐藏后残留的问题。',
+        '视频弹幕趋势请求补齐 aid 与浏览器 UA、Referer，接口更稳定。',
+        '字幕加载失败时不再写入空结果，重进可重新拉取。',
       ],
-      tip: '入口：登录 / Web QR 授权相关页面（扫描网页登录）。',
+      tip: '本分支特有能力（画质推荐、Seal 委托下载、Synapse 同步等）均未改动。',
     ),
     const ImprovementsGuidePageData(
-      icon: Icons.error_outline,
-      title: 'Synapse 同步报错提示',
-      subtitle: '同步、预览或绑定失败时，直接显示服务端返回的原因文案，不再展示底层的 "Bad state" 或 DioException 原始信息。',
+      icon: Icons.speed_outlined,
+      title: '播放器改动保留说明',
+      subtitle: '上游与本分支在播放器上都有改动，本次合并按「保留本分支行为 + 吸收上游修正」处理。',
       bullets: [
-        '预览变更 / 保存并启用失败时，Toast 直接显示服务端提示（如「Bilibili 凭据不可用」）。',
-        '网络或服务异常时给出可读的失败提示，并附 HTTP 状态码。',
+        '保留：音频解码器出错时自动 seek 回当前位置恢复声音。',
+        '保留：X / C 长按连续步进 0.1x 倍速。',
+        '吸收：播放器错误上报附带播放列表上下文，便于定位问题。',
       ],
-      tip: '在「设置 → Synapse 同步」中触发一次失败即可看到。',
+      tip: '如遇播放异常，可在「设置 → 关于 → 日志」查看上报内容。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
