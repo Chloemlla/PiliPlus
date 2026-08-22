@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:pili_plus/models/common/rank_type.dart';
 import 'package:pili_plus/pages/common/common_controller.dart';
 import 'package:pili_plus/pages/rank/zone/controller.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class RankController extends GetxController
     with GetSingleTickerProviderStateMixin, ScrollOrRefreshMixin {

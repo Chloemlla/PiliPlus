@@ -3,8 +3,8 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models_new/dynamic/dyn_mention/group.dart';
 import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/common/common_list_controller.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class DynMentionController
     extends CommonListController<List<MentionGroup>?, MentionGroup> {

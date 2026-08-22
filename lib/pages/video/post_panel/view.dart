@@ -15,11 +15,11 @@ import 'package:pili_plus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class PostPanel extends CommonSlidePage {
   const PostPanel({

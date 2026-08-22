@@ -1,5 +1,6 @@
 import 'package:pili_plus/models_new/live/live_medal_wall/uinfo_medal.dart';
 import 'package:pili_plus/models_new/live/live_superchat/user_info.dart';
+import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/parse_int.dart';
 import 'package:pili_plus/utils/parse_string.dart';
@@ -53,6 +54,7 @@ class SuperChatItem {
       "message": Utils.generateRandomString(55),
       "user_info": {
         "face": "",
+        'face_frame': BiliUtils.liveGuardPendant(Utils.random.nextInt(4)),
         "uname": "UNAME",
       },
       'token': '',

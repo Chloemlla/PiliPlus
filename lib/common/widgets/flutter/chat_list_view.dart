@@ -8,8 +8,8 @@ import 'dart:math' as math;
 
 import 'package:pili_plus/common/widgets/sliver/sliver_constrained_cross_axis.dart';
 import 'package:flutter/foundation.dart' show precisionErrorTolerance;
-import 'package:flutter/material.dart' hide ListView;
 import 'package:flutter/rendering.dart' hide RenderSliverList;
+import 'package:flutter/material.dart' hide ListView;
 
 class ChatListView extends BoxScrollView {
   ChatListView.separated({

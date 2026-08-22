@@ -6,9 +6,9 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models_new/login_devices/device.dart';
 import 'package:pili_plus/pages/login_devices/controller.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
-import 'package:flutter/material.dart' hide ListTile;
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart' hide ListTile;
 
 class LoginDevicesPage extends StatefulWidget {
   const LoginDevicesPage({super.key});

@@ -13,10 +13,10 @@ import 'package:pili_plus/pages/emote/controller.dart';
 import 'package:pili_plus/pages/emote/view.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/request_utils.dart';
-import 'package:flutter/material.dart' hide TextField;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/animated_height.dart';
+import 'package:flutter/material.dart' hide TextField;
 
 class RepostPanel extends CommonRichTextPubPage {
   const RepostPanel({

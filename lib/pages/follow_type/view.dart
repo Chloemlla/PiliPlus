@@ -7,9 +7,9 @@ import 'package:pili_plus/models_new/follow/list.dart';
 import 'package:pili_plus/pages/follow/widgets/follow_item.dart';
 import 'package:pili_plus/pages/follow_type/controller.dart';
 import 'package:pili_plus/utils/grid.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
-import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 abstract class FollowTypePageState<T extends StatefulWidget> extends State<T> {

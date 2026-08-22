@@ -20,9 +20,9 @@ import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
     show ExtendedNestedScrollViewState;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberController extends CommonDataController<SpaceData, SpaceData?>
     with GetTickerProviderStateMixin {

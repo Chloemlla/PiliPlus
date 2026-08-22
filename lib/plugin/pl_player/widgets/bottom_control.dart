@@ -6,8 +6,8 @@ import 'package:pili_plus/plugin/pl_player/view/view.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class BottomControl extends StatelessWidget {
   const BottomControl({

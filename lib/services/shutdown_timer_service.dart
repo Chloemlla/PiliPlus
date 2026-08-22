@@ -9,8 +9,8 @@ import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:flutter/material.dart';
 
 enum _ShutdownType with EnumWithLabel {
   pause('暂停视频'),

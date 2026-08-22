@@ -7,9 +7,9 @@ import 'package:pili_plus/models_new/live/live_follow/item.dart';
 import 'package:pili_plus/pages/live_follow/controller.dart';
 import 'package:pili_plus/pages/live_follow/widgets/live_item_follow.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class LiveFollowPage extends StatefulWidget {
   const LiveFollowPage({super.key});

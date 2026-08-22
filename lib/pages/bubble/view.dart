@@ -10,9 +10,9 @@ import 'package:pili_plus/pages/bubble/controller.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:collection/collection.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart'
     hide ListTile, SliverGridDelegateWithMaxCrossAxisExtent;
-import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
 class BubblePage extends StatefulWidget {

@@ -1,8 +1,8 @@
 // dart format width=120
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/material.dart';
 
 class UserLevel extends LeafRenderObjectWidget {
   const UserLevel(

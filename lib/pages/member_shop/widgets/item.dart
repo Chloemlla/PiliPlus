@@ -3,8 +3,8 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/models/common/badge_type.dart';
 import 'package:pili_plus/models_new/space/space_shop/item.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberShopItem extends StatelessWidget {
   const MemberShopItem({

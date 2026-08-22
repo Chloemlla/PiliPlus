@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:pili_plus/common/assets.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:pili_plus/common/widgets/emote_span.dart';
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/cached_network_svg_image.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -23,10 +22,10 @@ import 'package:pili_plus/utils/page_utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter/material.dart';
 import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
 import 'package:re_highlight/styles/github-dark.dart';
@@ -60,7 +59,7 @@ class OpusContent extends StatelessWidget {
           case 'RICH_TEXT_NODE_TYPE_EMOJI':
             Emoji emoji = rich.emoji!;
             final size = 20.0 * emoji.size;
-            return EmoteSpan(
+            return WidgetSpan(
               rawText: rich.origText,
               child: NetworkImgLayer(
                 width: size,

@@ -47,9 +47,9 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart' show FlexSchemeVariant;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:flutter/material.dart';
 
 abstract final class Pref {
   static final Box _setting = GStorage.setting;

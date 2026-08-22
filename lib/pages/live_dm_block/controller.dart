@@ -2,8 +2,8 @@ import 'package:pili_plus/http/live.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/live/live_dm_silent_type.dart';
 import 'package:pili_plus/models_new/live/live_dm_block/shield_user_list.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class LiveDmBlockController extends GetxController
     with GetSingleTickerProviderStateMixin {

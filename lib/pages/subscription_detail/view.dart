@@ -9,8 +9,8 @@ import 'package:pili_plus/pages/subscription_detail/widget/sub_video_card.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class SubDetailPage extends StatefulWidget {
   const SubDetailPage({super.key});

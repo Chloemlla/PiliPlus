@@ -4,8 +4,8 @@ import 'package:pili_plus/models_new/fav/fav_folder/list.dart';
 import 'package:pili_plus/pages/common/common_intro_controller.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/feed_back.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FavPanel extends StatefulWidget {
   const FavPanel({

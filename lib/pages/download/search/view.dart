@@ -6,10 +6,10 @@ import 'package:pili_plus/pages/download/detail/widgets/item.dart';
 import 'package:pili_plus/pages/download/search/controller.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart'
-    hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart'
+    hide SliverGridDelegateWithMaxCrossAxisExtent;
 
 class DownloadSearchPage extends StatefulWidget {
   const DownloadSearchPage({

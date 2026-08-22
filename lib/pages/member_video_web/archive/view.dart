@@ -6,8 +6,8 @@ import 'package:pili_plus/models_new/member/search_archive/vlist.dart';
 import 'package:pili_plus/pages/member_video_web/archive/controller.dart';
 import 'package:pili_plus/pages/member_video_web/base/view.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberVideoWeb extends StatefulWidget {
   const MemberVideoWeb({super.key});

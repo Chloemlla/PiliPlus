@@ -14,10 +14,10 @@ import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter/material.dart';
 
 class HistoryItem extends StatelessWidget {
   final HistoryItemModel item;

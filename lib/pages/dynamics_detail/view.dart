@@ -32,12 +32,12 @@ import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 const Set<TargetPlatform> _kDesktopPlatforms = <TargetPlatform>{
   TargetPlatform.macOS,
@@ -575,7 +575,7 @@ class _DynamicDetailPageState
                     text: '分享',
                     stat: null,
                     onPressed: (_) => ShareUtils.shareText(
-                      '${HttpString.dynamicShareBaseUrl}/${controller.dynItem.idStr}',
+                      '${HttpString.opusBaseUrl}/${controller.dynItem.idStr}',
                     ),
                   ),
                 ),

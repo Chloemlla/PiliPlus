@@ -10,11 +10,11 @@ import 'package:pili_plus/pages/danmaku_block/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class DanmakuBlockPage extends StatefulWidget {
   const DanmakuBlockPage({super.key});
@@ -99,7 +99,7 @@ class _DanmakuBlockPageState extends State<DanmakuBlockPage> {
     );
   }
 
-  Widget tabViewBuilder(final int tabIndex, List<SimpleRule> list) {
+  Widget tabViewBuilder(int tabIndex, List<SimpleRule> list) {
     if (list.isEmpty) {
       return scrollableError;
     }

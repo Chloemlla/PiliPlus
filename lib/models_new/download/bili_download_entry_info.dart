@@ -5,9 +5,9 @@ import 'package:pili_plus/pages/common/multi_select/base.dart'
     show MultiSelectData;
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/route_manager.dart';
+import 'package:flutter/material.dart';
 
 class BiliDownloadEntryInfo with MultiSelectData {
   int mediaType;

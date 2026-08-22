@@ -3,8 +3,8 @@ import 'package:pili_plus/models_new/follow/list.dart';
 import 'package:pili_plus/pages/share/view.dart' show UserModel;
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/request_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FollowItem extends StatelessWidget {
   final FollowItemModel item;

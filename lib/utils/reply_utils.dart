@@ -15,9 +15,9 @@ import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 abstract final class ReplyUtils {
   static void onCheckReply({

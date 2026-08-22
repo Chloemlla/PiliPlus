@@ -3,8 +3,8 @@ import 'package:pili_plus/common/widgets/flutter/list_tile.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
-import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:flutter/material.dart' hide ListTile;
 
 class SetSwitchItem extends StatefulWidget {
   final String title;

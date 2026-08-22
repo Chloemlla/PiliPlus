@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:pili_plus/models_new/space/space/tab2.dart';
 import 'package:pili_plus/pages/member/controller.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberContributeCtr extends GetxController
     with GetSingleTickerProviderStateMixin {

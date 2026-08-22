@@ -13,10 +13,10 @@ import 'package:pili_plus/pages/setting/slide_color_picker.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:canvas_danmaku/models/danmaku_content_item.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class SendDanmakuPanel extends CommonTextPubPage {
   // video

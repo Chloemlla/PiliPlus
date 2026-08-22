@@ -2,8 +2,8 @@ import 'package:pili_plus/common/widgets/flutter/vertical_tabs.dart';
 import 'package:pili_plus/models/common/rank_type.dart';
 import 'package:pili_plus/pages/rank/controller.dart';
 import 'package:pili_plus/pages/rank/zone/view.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class RankPage extends StatefulWidget {
   const RankPage({super.key});

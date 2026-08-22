@@ -19,9 +19,8 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:catcher_2/catcher_2.dart';
 import 'package:catcher_2/utils/log_printer.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 const _snackBarDisplayDuration = Duration(seconds: 1);
 
@@ -118,7 +117,7 @@ class _LogsPageState extends State<LogsPage> {
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.viewPaddingOf(context);
-    return SimpleScaffold(
+    return Scaffold(
       appBar: AppBar(
         title: const Text('日志'),
         actions: [

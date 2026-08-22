@@ -5,8 +5,8 @@ import 'package:pili_plus/models/model_hot_video_item.dart';
 import 'package:pili_plus/pages/video/related/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class RelatedVideoPanel extends StatefulWidget {
   const RelatedVideoPanel({super.key, required this.heroTag});

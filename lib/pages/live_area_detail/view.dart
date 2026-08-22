@@ -8,10 +8,10 @@ import 'package:pili_plus/pages/live_area_detail/child/controller.dart';
 import 'package:pili_plus/pages/live_area_detail/child/view.dart';
 import 'package:pili_plus/pages/live_area_detail/controller.dart';
 import 'package:pili_plus/pages/live_search/view.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class LiveAreaDetailPage extends StatefulWidget {
   const LiveAreaDetailPage({

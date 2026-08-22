@@ -5,8 +5,8 @@ import 'package:pili_plus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/theme_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 mixin HeaderMixin<T extends StatefulWidget> on State<T> {
   PlPlayerController get plPlayerController;

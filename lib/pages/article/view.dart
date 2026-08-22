@@ -27,13 +27,13 @@ import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:html/parser.dart' as parser;
+import 'package:flutter/material.dart';
 
 class ArticlePage extends StatefulWidget {
   const ArticlePage({super.key});

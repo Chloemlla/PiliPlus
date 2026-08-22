@@ -17,8 +17,8 @@ import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:fixnum/fixnum.dart' show Int64;
-import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter/material.dart';
 
 class SearchArchiveGrpc extends StatelessWidget {
   const SearchArchiveGrpc({

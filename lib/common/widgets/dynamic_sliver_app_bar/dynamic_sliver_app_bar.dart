@@ -23,10 +23,10 @@ import 'package:pili_plus/common/widgets/dynamic_sliver_app_bar/sliver_persisten
 import 'package:pili_plus/common/widgets/only_layout_widget.dart'
     show LayoutCallback;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart'
-    hide SliverPersistentHeader, SliverPersistentHeaderDelegate;
 import 'package:flutter/rendering.dart' show RenderOpacity, OpacityLayer;
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart'
+    hide SliverPersistentHeader, SliverPersistentHeaderDelegate;
 
 /// ref [SliverAppBar]
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {

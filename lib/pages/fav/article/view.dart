@@ -6,8 +6,8 @@ import 'package:pili_plus/models_new/fav/fav_article/item.dart';
 import 'package:pili_plus/pages/fav/article/controller.dart';
 import 'package:pili_plus/pages/fav/article/widget/item.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FavArticlePage extends StatefulWidget {
   const FavArticlePage({super.key});

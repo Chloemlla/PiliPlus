@@ -4,10 +4,10 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/member/tags.dart';
 import 'package:pili_plus/pages/follow/controller.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class FollowTagSortPage extends StatefulWidget {
   const FollowTagSortPage({super.key, required this.controller});

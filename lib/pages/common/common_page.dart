@@ -2,8 +2,8 @@ import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/pages/home/controller.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 abstract class CommonPageState<T extends StatefulWidget> extends State<T> {
   RxDouble? _barOffset;

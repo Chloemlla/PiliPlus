@@ -7,8 +7,8 @@ import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/common/multi_select/base.dart';
 import 'package:pili_plus/pages/common/search/common_search_controller.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 abstract class CommonSearchPageState<S extends StatefulWidget, R, T>
     extends State<S> {

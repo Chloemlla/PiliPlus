@@ -5,9 +5,9 @@ import 'package:pili_plus/pages/search_panel/controller.dart';
 import 'package:pili_plus/pages/search_panel/pgc/widgets/item.dart';
 import 'package:pili_plus/pages/search_panel/view.dart';
 import 'package:pili_plus/utils/grid.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
-import 'package:get/get.dart';
 
 class SearchPgcPanel extends CommonSearchPanel {
   const SearchPgcPanel({

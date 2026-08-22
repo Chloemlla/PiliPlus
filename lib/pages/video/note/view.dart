@@ -11,10 +11,10 @@ import 'package:pili_plus/pages/webview/view.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class NoteListPage extends CommonSlidePage {
   const NoteListPage({

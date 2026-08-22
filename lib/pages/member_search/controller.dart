@@ -2,8 +2,8 @@ import 'package:pili_plus/models/common/member/search_type.dart';
 import 'package:pili_plus/pages/member_search/child/controller.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberSearchController extends GetxController
     with GetSingleTickerProviderStateMixin {

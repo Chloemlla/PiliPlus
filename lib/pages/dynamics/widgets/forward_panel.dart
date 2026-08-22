@@ -5,8 +5,8 @@ import 'package:pili_plus/pages/dynamics/widgets/module_panel.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 Widget forwardPanel(
   BuildContext context, {

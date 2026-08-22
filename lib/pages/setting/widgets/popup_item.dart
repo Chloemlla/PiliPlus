@@ -3,8 +3,10 @@ import 'package:pili_plus/models/common/enum_with_label.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 
-typedef PopupMenuItemSelected<T> =
-    void Function(T value, VoidCallback setState);
+typedef PopupMenuItemSelected<T> = void Function(
+  T value,
+  VoidCallback setState,
+);
 
 List<PopupMenuEntry<T>> enumItemBuilder<T extends EnumWithLabel>(
   List<T> items,

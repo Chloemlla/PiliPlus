@@ -10,9 +10,9 @@ import 'package:pili_plus/common/widgets/gesture/image_horizontal_drag_gesture_r
 import 'package:pili_plus/common/widgets/image_viewer/viewer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart' show DoubleTapGestureRecognizer;
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/material.dart';
 
 class Image extends StatefulWidget {
   const Image({

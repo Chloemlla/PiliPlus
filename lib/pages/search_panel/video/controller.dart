@@ -10,9 +10,9 @@ import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class SearchVideoController
     extends SearchPanelController<SearchVideoData, SearchVideoItemModel> {

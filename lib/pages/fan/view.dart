@@ -7,8 +7,8 @@ import 'package:pili_plus/pages/share/view.dart' show UserModel;
 import 'package:pili_plus/utils/parse_int.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FansPage extends StatefulWidget {
   const FansPage({

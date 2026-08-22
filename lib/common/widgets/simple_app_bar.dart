@@ -1,6 +1,6 @@
 import 'package:pili_plus/utils/extension/theme_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:flutter/material.dart';
 
 class SimpleAppBar extends StatelessWidget {
   const SimpleAppBar({

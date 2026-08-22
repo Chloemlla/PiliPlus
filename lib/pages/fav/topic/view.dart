@@ -9,9 +9,9 @@ import 'package:pili_plus/models_new/fav/fav_topic/topic_item.dart';
 import 'package:pili_plus/pages/fav/topic/controller.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
-import 'package:get/get.dart';
 
 class FavTopicPage extends StatefulWidget {
   const FavTopicPage({super.key});

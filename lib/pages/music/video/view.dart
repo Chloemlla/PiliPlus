@@ -8,8 +8,8 @@ import 'package:pili_plus/pages/music/video/controller.dart';
 import 'package:pili_plus/pages/music/widget/music_video_card_h.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MusicRecommendPage extends StatefulWidget {
   const MusicRecommendPage({super.key});

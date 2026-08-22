@@ -3,8 +3,8 @@ import 'package:pili_plus/pages/follow_type/view.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/parse_int.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FollowedPage extends StatefulWidget {
   const FollowedPage({super.key});

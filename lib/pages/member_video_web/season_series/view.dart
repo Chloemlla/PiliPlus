@@ -4,8 +4,8 @@ import 'package:pili_plus/models_new/member/season_web/archive.dart';
 import 'package:pili_plus/models_new/member/season_web/data.dart';
 import 'package:pili_plus/pages/member_video_web/base/view.dart';
 import 'package:pili_plus/pages/member_video_web/season_series/controller.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberSSWeb extends StatefulWidget {
   const MemberSSWeb({super.key});

@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:pili_plus/common/skeleton/video_card_h.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/material.dart';
 
 mixin GridMixin {
   late final gridDelegate = Grid.videoCardHDelegate();

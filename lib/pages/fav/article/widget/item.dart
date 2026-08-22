@@ -4,8 +4,8 @@ import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/stat/stat.dart';
 import 'package:pili_plus/models/common/stat_type.dart';
 import 'package:pili_plus/models_new/fav/fav_article/item.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class FavArticleItem extends StatelessWidget {
   const FavArticleItem({

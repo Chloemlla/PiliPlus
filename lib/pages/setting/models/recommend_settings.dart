@@ -4,8 +4,8 @@ import 'package:pili_plus/pages/setting/models/model.dart';
 import 'package:pili_plus/utils/recommend_filter.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 List<SettingsModel> get recommendSettings => [
   const SwitchModel(

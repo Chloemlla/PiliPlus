@@ -11,9 +11,9 @@ import 'package:pili_plus/pages/hot/controller.dart';
 import 'package:pili_plus/pages/rank/view.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class HotPage extends StatefulWidget {
   const HotPage({super.key});
@@ -73,8 +73,7 @@ class _HotPageState extends State<HotPage>
                   mainAxisAlignment: .spaceEvenly,
                   children: [
                     _buildEntranceItem(
-                      iconUrl:
-                          'https://i0.hdslb.com/bfs/archive/a3f11218aaf4521b4967db2ae164ecd3052586b9.png',
+                      iconUrl: 'https://i0.hdslb.com/bfs/archive/a3f11218aaf4521b4967db2ae164ecd3052586b9.png',
                       title: '排行榜',
                       onTap: () {
                         try {
@@ -96,14 +95,12 @@ class _HotPageState extends State<HotPage>
                       },
                     ),
                     _buildEntranceItem(
-                      iconUrl:
-                          'https://i0.hdslb.com/bfs/archive/552ebe8c4794aeef30ebd1568b59ad35f15e21ad.png',
+                      iconUrl: 'https://i0.hdslb.com/bfs/archive/552ebe8c4794aeef30ebd1568b59ad35f15e21ad.png',
                       title: '每周必看',
                       onTap: () => Get.toNamed('/popularSeries'),
                     ),
                     _buildEntranceItem(
-                      iconUrl:
-                          'https://i0.hdslb.com/bfs/archive/3693ec9335b78ca57353ac0734f36a46f3d179a9.png',
+                      iconUrl: 'https://i0.hdslb.com/bfs/archive/3693ec9335b78ca57353ac0734f36a46f3d179a9.png',
                       title: '入站必刷',
                       onTap: () => Get.toNamed('/popularPrecious'),
                     ),

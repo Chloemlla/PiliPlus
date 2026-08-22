@@ -11,11 +11,11 @@ import 'package:pili_plus/pages/live_area/controller.dart';
 import 'package:pili_plus/pages/live_area_detail/view.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_sortable_wrap/sortable_wrap.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class LiveAreaPage extends StatefulWidget {
   const LiveAreaPage({super.key});

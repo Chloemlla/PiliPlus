@@ -2,9 +2,9 @@ import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/view_insets_safe_area.dart';
 import 'package:pili_plus/http/pgc.dart';
 import 'package:pili_plus/utils/accounts.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class PgcReviewPostPanel extends StatefulWidget {
   const PgcReviewPostPanel({

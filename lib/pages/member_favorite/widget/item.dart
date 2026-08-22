@@ -8,8 +8,8 @@ import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberFavItem extends StatelessWidget {
   const MemberFavItem({super.key, required this.item, this.onDelete});

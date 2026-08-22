@@ -10,9 +10,9 @@ import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

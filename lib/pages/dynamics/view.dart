@@ -10,8 +10,8 @@ import 'package:pili_plus/pages/dynamics_create/view.dart';
 import 'package:pili_plus/pages/dynamics_tab/view.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
-import 'package:flutter/material.dart' hide DraggableScrollableSheet;
 import 'package:get/get.dart';
+import 'package:flutter/material.dart' hide DraggableScrollableSheet;
 
 class DynamicsPage extends StatefulWidget {
   const DynamicsPage({super.key});

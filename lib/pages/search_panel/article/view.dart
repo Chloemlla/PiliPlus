@@ -4,8 +4,8 @@ import 'package:pili_plus/pages/search_panel/article/controller.dart';
 import 'package:pili_plus/pages/search_panel/article/widgets/item.dart';
 import 'package:pili_plus/pages/search_panel/view.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class SearchArticlePanel extends CommonSearchPanel {
   const SearchArticlePanel({

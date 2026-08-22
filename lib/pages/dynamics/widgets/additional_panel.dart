@@ -8,8 +8,8 @@ import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/pages/dynamics/widgets/vote.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/num_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 Widget? addWidget(
   BuildContext context, {

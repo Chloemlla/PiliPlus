@@ -16,12 +16,13 @@ import 'package:pili_plus/pages/video/reply_reply/controller.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
 import 'package:pili_plus/utils/num_utils.dart';
+import 'package:pili_plus/utils/parse_string.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:fixnum/fixnum.dart' show Int64;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 
@@ -59,7 +60,7 @@ class VideoReplyReplyPanel extends CommonSlidePage {
     required int type,
     Uri? uri,
   }) {
-    final rpId = rpIdStr == null ? null : int.tryParse(rpIdStr);
+    final rpId = parseIntOrNull(rpIdStr);
     return Get.to(
       arguments: {
         'oid': oid,

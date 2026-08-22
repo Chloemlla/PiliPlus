@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderSliverToBoxAdapter;
+import 'package:flutter/material.dart';
 
 class TrendingHeader extends SliverToBoxAdapter {
   const TrendingHeader({

@@ -14,8 +14,8 @@ import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class DynMentionPanel extends StatefulWidget {
   const DynMentionPanel({

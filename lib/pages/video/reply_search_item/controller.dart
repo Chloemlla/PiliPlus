@@ -2,8 +2,8 @@ import 'package:pili_plus/models/common/reply/reply_search_type.dart';
 import 'package:pili_plus/pages/video/reply_search_item/child/controller.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class ReplySearchController extends GetxController
     with GetSingleTickerProviderStateMixin {

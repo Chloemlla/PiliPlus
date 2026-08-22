@@ -14,11 +14,11 @@ import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart'
-    hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart'
+    hide SliverGridDelegateWithMaxCrossAxisExtent;
 
 class DownloadDetailPage extends StatefulWidget {
   const DownloadDetailPage({

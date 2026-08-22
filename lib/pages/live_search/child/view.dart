@@ -9,9 +9,9 @@ import 'package:pili_plus/pages/live_search/child/controller.dart';
 import 'package:pili_plus/pages/live_search/widgets/live_search_room.dart';
 import 'package:pili_plus/pages/live_search/widgets/live_search_user.dart';
 import 'package:pili_plus/utils/grid.dart';
+import 'package:get/get.dart';
 import 'package:flutter/material.dart'
     hide SliverGridDelegateWithMaxCrossAxisExtent;
-import 'package:get/get.dart';
 
 class LiveSearchChildPage extends StatefulWidget {
   const LiveSearchChildPage({

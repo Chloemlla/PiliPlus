@@ -8,9 +8,9 @@ import 'package:pili_plus/pages/member_season_series/controller.dart';
 import 'package:pili_plus/pages/member_season_series/widget/season_series_card.dart';
 import 'package:pili_plus/pages/member_video/view.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class SeasonSeriesPage extends StatefulWidget {
   const SeasonSeriesPage({

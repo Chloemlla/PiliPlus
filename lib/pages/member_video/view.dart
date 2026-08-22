@@ -12,10 +12,10 @@ import 'package:pili_plus/pages/member_video/controller.dart';
 import 'package:pili_plus/pages/member_video/widgets/video_card_h_member_video.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class MemberVideo extends StatefulWidget {
   const MemberVideo({

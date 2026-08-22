@@ -6,8 +6,8 @@ import 'package:pili_plus/models/common/avatar_badge_type.dart';
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:flutter/material.dart';
 
 class PendantAvatar extends StatelessWidget {
   const PendantAvatar(

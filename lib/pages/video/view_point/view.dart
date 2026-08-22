@@ -6,9 +6,9 @@ import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class ViewPointsPage extends CommonSlidePage {
   const ViewPointsPage({

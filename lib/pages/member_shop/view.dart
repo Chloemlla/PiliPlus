@@ -8,8 +8,8 @@ import 'package:pili_plus/pages/member_shop/controller.dart';
 import 'package:pili_plus/pages/member_shop/widgets/item.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/waterfall.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:waterfall_flow/waterfall_flow.dart'
     hide SliverWaterfallFlowDelegateWithMaxCrossAxisExtent;
 

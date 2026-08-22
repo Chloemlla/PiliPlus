@@ -21,6 +21,7 @@ import 'package:pili_plus/pages/share/view.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
@@ -33,9 +34,9 @@ import 'package:pili_plus/utils/url_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 abstract final class PageUtils {
@@ -438,19 +439,12 @@ abstract final class PageUtils {
     if (Pref.openInBrowser) {
       launchURL(url);
     } else {
-      if (off) {
-        Get.offNamed(
-          '/webview',
-          parameters: {'url': url},
-          arguments: {'inApp': true},
-        );
-      } else {
-        Get.toNamed(
-          '/webview',
-          parameters: {'url': url},
-          arguments: {'inApp': true},
-        );
-      }
+      Get.offOrToNamed(
+        '/webview',
+        parameters: {'url': url},
+        arguments: const {'inApp': true},
+        off: off,
+      );
     }
   }
 
@@ -459,7 +453,7 @@ abstract final class PageUtils {
     LaunchMode mode = LaunchMode.externalApplication,
   }) async {
     try {
-      final Uri uri = Uri.parse(url);
+      final uri = Uri.parse(url);
       if (!await launchUrl(uri, mode: mode)) {
         SmartDialog.showToast('Could not launch $url');
       }
@@ -479,17 +473,12 @@ abstract final class PageUtils {
         launchURL(url);
       }
     } else {
-      if (off) {
-        Get.offNamed(
-          '/webview',
-          parameters: {
-            'url': url,
-            ...?parameters,
-          },
-        );
-      } else {
-        PiliScheme.routePushFromUrl(url, parameters: parameters);
-      }
+      Get.offOrToNamed(
+        '/webview',
+        parameters: {'url': url, ...?parameters},
+        preventDuplicates: off,
+        off: off,
+      );
     }
   }
 
@@ -546,11 +535,12 @@ abstract final class PageUtils {
     if (roomId == null) {
       return;
     }
-    if (off) {
-      Get.offNamed('/liveRoom', arguments: roomId);
-    } else {
-      PageUtils.toDupNamed('/liveRoom', arguments: roomId);
-    }
+    Get.offOrToNamed(
+      '/liveRoom',
+      arguments: roomId,
+      off: off,
+      preventDuplicates: off,
+    );
   }
 
   static Future<void>? toVideoPage({
@@ -584,19 +574,7 @@ abstract final class PageUtils {
       'heroTag': Utils.makeHeroTag(cid),
       ...?extraArguments,
     };
-    if (off) {
-      return Get.offNamed(
-        '/videoV',
-        arguments: arguments,
-        preventDuplicates: false,
-      );
-    } else {
-      return Get.toNamed(
-        '/videoV',
-        arguments: arguments,
-        preventDuplicates: false,
-      );
-    }
+    return PageUtils.toDupNamed('/videoV', arguments: arguments, off: off);
   }
 
   static final _pgcRegex = RegExp(r'(ep|ss)(\d+)');
@@ -797,26 +775,17 @@ abstract final class PageUtils {
     }
   }
 
-  static void toDupNamed(
+  @pragma('vm:prefer-inline')
+  static Future<T?>? toDupNamed<T>(
     String page, {
     dynamic arguments,
     Map<String, String>? parameters,
     bool off = false,
-  }) {
-    if (off) {
-      Get.offNamed(
-        page,
-        arguments: arguments,
-        parameters: parameters,
-        preventDuplicates: false,
-      );
-    } else {
-      Get.toNamed(
-        page,
-        arguments: arguments,
-        parameters: parameters,
-        preventDuplicates: false,
-      );
-    }
-  }
+  }) => Get.offOrToNamed(
+    page,
+    arguments: arguments,
+    parameters: parameters,
+    preventDuplicates: false,
+    off: off,
+  );
 }

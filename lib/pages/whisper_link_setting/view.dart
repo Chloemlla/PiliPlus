@@ -6,9 +6,9 @@ import 'package:pili_plus/models_new/msg/session_ss/data.dart';
 import 'package:pili_plus/pages/whisper_link_setting/controller.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:flutter/material.dart';
 
 class WhisperLinkSettingPage extends StatefulWidget {
   const WhisperLinkSettingPage({

@@ -7,8 +7,8 @@ import 'package:pili_plus/models_new/space/space_fav/data.dart';
 import 'package:pili_plus/pages/member_favorite/controller.dart';
 import 'package:pili_plus/pages/member_favorite/widget/item.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberFavorite extends StatefulWidget {
   const MemberFavorite({

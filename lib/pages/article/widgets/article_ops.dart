@@ -7,8 +7,8 @@ import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class ArticleOpus extends StatelessWidget {
   const ArticleOpus({

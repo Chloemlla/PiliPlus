@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/badge.dart';
-import 'package:pili_plus/common/widgets/emote_span.dart';
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
@@ -23,9 +22,9 @@ import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class ChatItem extends StatelessWidget {
   static MsgType msgTypeFromValue(int value) {
@@ -689,7 +688,7 @@ class ChatItem extends StatelessWidget {
           if (emoji != null) {
             final size = emoji['size'];
             children.add(
-              EmoteSpan(
+              WidgetSpan(
                 rawText: matchStr,
                 child: NetworkImgLayer(
                   width: size,

@@ -18,9 +18,9 @@ import 'package:pili_plus/pages/member_like_arc/view.dart';
 import 'package:pili_plus/pages/member_pgc/widgets/pgc_card_v_member_pgc.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class MemberHome extends StatefulWidget {
   const MemberHome({super.key, this.heroTag});

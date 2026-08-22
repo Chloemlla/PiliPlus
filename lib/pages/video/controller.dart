@@ -10,6 +10,7 @@ import 'package:pili_plus/controllers/quality_recommendation_controller.dart';
 import 'package:pili_plus/grpc/bilibili/app/listener/v1.pbenum.dart'
     show PlaylistSource;
 import 'package:pili_plus/grpc/dm.dart';
+import 'package:pili_plus/http/browser_ua.dart';
 import 'package:pili_plus/http/fav.dart';
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -68,15 +69,16 @@ import 'package:pili_plus/utils/theme_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/video_utils.dart';
 import 'package:collection/collection.dart';
+import 'package:dio/dio.dart' show Options;
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart'
     show ExtendedNestedScrollViewState;
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart' hide Subtitle;
 
 class VideoDetailController extends GetxController
@@ -1157,19 +1159,19 @@ class VideoDetailController extends GetxController
       vttSubtitlesIndex.value = index;
     }
 
-    ({bool isData, String id})? subtitle = vttSubtitles[index - 1];
-    if (subtitle != null) {
-      await setSub(subtitle);
-    } else {
-      final result = await VideoHttp.vttSubtitles(
+    var subtitle = vttSubtitles[index - 1];
+    if (subtitle == null) {
+      final result = await VideoHttp.getSubtitles(
         subtitles[index - 1].subtitleUrl!,
       );
       if (!isClosed && result != null) {
-        final subtitle = (isData: true, id: result);
+        subtitle = (isData: true, id: result);
         vttSubtitles[index - 1] = subtitle;
-        await setSub(subtitle);
+      } else {
+        return;
       }
     }
+    await setSub(subtitle);
   }
 
   // interactive video
@@ -1418,10 +1420,28 @@ class VideoDetailController extends GetxController
     try {
       final res = await Request().get(
         'https://bvc.bilivideo.com/pbp/data',
-        queryParameters: {'bvid': bvid, 'cid': cid.value},
+        queryParameters: {
+          'aid': aid,
+          'bvid': bvid,
+          'cid': cid.value,
+          'r': 'loader',
+        },
+        options: Options(
+          headers: {
+            'user-agent': BrowserUa.pc,
+            'origin': 'https://www.bilibili.com',
+            'referer': 'https://www.bilibili.com/video/$bvid',
+          },
+        ),
       );
-      PbpData data = PbpData.fromJson(res.data);
-      int stepSec = data.stepSec ?? 0;
+      dynamic json;
+      try {
+        json = (res.data['modules'] as List).first['params']['data'];
+      } catch (_) {
+        json = res.data;
+      }
+      final data = PbpData.fromJson(json);
+      final stepSec = data.stepSec ?? 0;
       if (stepSec != 0 && data.events?.eDefault?.isNotEmpty == true) {
         dmTrend.value = Success(data.events!.eDefault!);
         return;
