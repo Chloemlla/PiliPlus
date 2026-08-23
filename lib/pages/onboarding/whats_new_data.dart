@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建合并了上游 PiliPlus 2.1.1，同时保留本分支的画质推荐、音频解码自恢复与倍速步进等能力。',
+      subtitle: '本构建同步了上游 PiliPlus main 的最新修正，同时保留本分支的定时关闭倒计时、画质推荐与音频解码自恢复等能力。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -49,14 +49,26 @@ abstract final class WhatsNewData {
     ),
     const ImprovementsGuidePageData(
       icon: Icons.merge_outlined,
-      title: '同步上游 2.1.1',
-      subtitle: '合入上游 bggRGjQaUbCoE/PiliPlus 的 Release 2.1.1，包含其间的修复与细节调整。',
+      title: '同步上游最新修正',
+      subtitle: '合入上游 bggRGjQaUbCoE/PiliPlus main 在 2.1.1 之后的修复与细节调整。',
       bullets: [
-        '桌面端托盘隐藏/显示改为先切换窗口透明度，规避 Windows 上隐藏后残留的问题。',
-        '视频弹幕趋势请求补齐 aid 与浏览器 UA、Referer，接口更稳定。',
-        '字幕加载失败时不再写入空结果，重进可重新拉取。',
+        '自定义定时关闭改为小时 / 分钟滚轮选择器，确认后按分钟启动或更新定时。',
+        '修正播放信息里 VideoTrack 的显示与复制内容（之前误用了音频轨道）。',
+        '多分段视频拼接不再强制 no_clip，提升播放兼容性。',
+        '为等级 / 播放图标与视频时间补齐 LTR 文本方向，改善无障碍朗读。',
       ],
       tip: '本分支特有能力（画质推荐、Seal 委托下载、Synapse 同步等）均未改动。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.timer_outlined,
+      title: '定时关闭改动保留说明',
+      subtitle: '上游重写了自定义定时面板，本次合并按「吸收上游选择器 + 保留本分支倒计时」处理。',
+      bullets: [
+        '吸收：小时/分钟滚轮选择器代替原来的时间输入弹窗。',
+        '保留：定时关闭剩余时间倒计时与「当前播放结束后关闭」提示。',
+        '保留：音频页与直播全屏控件上的剩余时间展示，到时暂停后自动清理定时器。',
+      ],
+      tip: '在播放器更多设置 → 定时关闭里可看到剩余时间。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.speed_outlined,
@@ -65,7 +77,7 @@ abstract final class WhatsNewData {
       bullets: [
         '保留：音频解码器出错时自动 seek 回当前位置恢复声音。',
         '保留：X / C 长按连续步进 0.1x 倍速。',
-        '吸收：播放器错误上报附带播放列表上下文，便于定位问题。',
+        '保留：下拉刷新指示器的本分支 Stack 实现（上游的 RefreshLayout 空指示器修正已同步到布局层）。',
       ],
       tip: '如遇播放异常，可在「设置 → 关于 → 日志」查看上报内容。',
     ),
