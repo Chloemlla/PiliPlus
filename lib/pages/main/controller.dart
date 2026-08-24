@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/grpc/dyn.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/msg.dart';
 import 'package:pili_plus/models/common/dynamic/dynamic_badge_mode.dart';
+import 'package:pili_plus/models/common/home_tab_type.dart';
 import 'package:pili_plus/models/common/msg/msg_unread_type.dart';
 import 'package:pili_plus/models/common/nav_bar_config.dart';
 import 'package:pili_plus/pages/dynamics/controller.dart';
@@ -233,7 +235,7 @@ class MainController extends GetxController
     }
     this.navigationBars = navigationBars;
     final defPage = Pref.defaultHomePage;
-    selectedIndex.value = navigationBars.indexOf(defPage);
+    selectedIndex.value = math.max(0, navigationBars.indexOf(defPage));
   }
 
   void checkDefaultSearch([bool shouldCheck = false]) {
@@ -330,6 +332,16 @@ class MainController extends GetxController
     if (hasHome) {
       homeController.showTopBar?.value = true;
     }
+  }
+
+  bool refreshRecommendations() {
+    if (navigationBars[selectedIndex.value] == NavigationBarType.home &&
+        homeController.tabs[homeController.tabController.index] ==
+            HomeTabType.rcmd) {
+      homeController.onRefresh();
+      return true;
+    }
+    return false;
   }
 
   @override

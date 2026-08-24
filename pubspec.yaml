@@ -17,7 +17,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 # update when release
-version: 2.1.1+1
+version: 2.1.2+1
 
 environment:
   sdk: ">=3.12.0"
@@ -83,6 +83,7 @@ dependencies:
     git:
       url: https://github.com/bggRGjQaUbCoE/extended_nested_scroll_view.git
       ref: 161cd202c20bf0ba2394e3a86381d58864dc9e4e
+  ffi: ^2.2.0
   file_picker:
     git:
       url: https://github.com/miguelpruivo/flutter_file_picker.git

@@ -39,11 +39,13 @@ abstract final class ThemeUtils {
     final fontWeight = appFontWeight == -1
         ? null
         : FontWeight.values[appFontWeight];
-    late final textStyle = TextStyle(fontWeight: fontWeight);
+    final font = Pref.appFont;
+    final changeStyle = font == null && fontWeight == null;
+    late final textStyle = TextStyle(fontWeight: fontWeight, fontFamily: font);
     ThemeData theme = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: fontWeight == null
+      textTheme: changeStyle
           ? null
           : TextTheme(
               displayLarge: textStyle,
@@ -62,9 +64,7 @@ abstract final class ThemeUtils {
               labelMedium: textStyle,
               labelSmall: textStyle,
             ),
-      tabBarTheme: fontWeight == null
-          ? null
-          : TabBarThemeData(labelStyle: textStyle),
+      tabBarTheme: changeStyle ? null : TabBarThemeData(labelStyle: textStyle),
       appBarTheme: AppBarTheme(
         elevation: 0,
         titleSpacing: 0,
@@ -80,6 +80,7 @@ abstract final class ThemeUtils {
         titleTextStyle: TextStyle(
           fontSize: 16,
           color: colorScheme.onSurface,
+          fontFamily: font,
           fontWeight: fontWeight,
         ),
       ),
@@ -113,6 +114,7 @@ abstract final class ThemeUtils {
       dialogTheme: DialogThemeData(
         titleTextStyle: TextStyle(
           fontSize: 18,
+          fontFamily: font,
           fontWeight: fontWeight,
           color: colorScheme.onSurface,
         ),

@@ -95,8 +95,12 @@ class DynamicsController
 
   @override
   Future<void> onRefresh() {
-    singleRefresh();
-    return controller!.onRefresh();
+    final controller = this.controller;
+    if (controller != null) {
+      singleRefresh();
+      return controller.onRefresh();
+    }
+    return singleRefresh();
   }
 
   @override

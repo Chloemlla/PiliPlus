@@ -64,7 +64,7 @@ import 'package:pili_plus/pages/search_trending/view.dart';
 import 'package:pili_plus/pages/setting/pages/bar_set.dart';
 import 'package:pili_plus/pages/setting/pages/color_select.dart';
 import 'package:pili_plus/pages/setting/pages/display_mode.dart';
-import 'package:pili_plus/pages/setting/pages/font_size_select.dart';
+import 'package:pili_plus/pages/setting/pages/font_setting.dart';
 import 'package:pili_plus/pages/setting/pages/logs.dart';
 import 'package:pili_plus/pages/setting/pages/play_speed_set.dart';
 import 'package:pili_plus/pages/setting/view.dart';
@@ -124,7 +124,7 @@ class Routes {
     //
     GetPage(name: '/blackListPage', page: () => const BlackListPage()),
     GetPage(name: '/colorSetting', page: () => const ColorSelectPage()),
-    GetPage(name: '/fontSizeSetting', page: () => const FontSizeSelectPage()),
+    GetPage(name: '/fontSetting', page: () => const FontSettingPage()),
     // 屏幕帧率
     GetPage(name: '/displayModeSetting', page: () => const SetDisplayMode()),
     //

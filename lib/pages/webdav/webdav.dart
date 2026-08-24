@@ -11,42 +11,64 @@ import 'package:dio/dio.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
-class WebDav {
-  late String _webdavDirectory;
-  String? _fileName;
+typedef _WebDavConfig = ({
+  String uri,
+  String username,
+  String password,
+  String directory,
+});
 
+class WebDav {
+  _WebDavConfig? _clientConfig;
   webdav.Client? _client;
 
   WebDav._internal();
   static final WebDav _instance = WebDav._internal();
   factory WebDav() => _instance;
 
-  Future<Pair<bool, String?>> init() async {
-    final webDavUri = Pref.webdavUri;
-    final webDavUsername = Pref.webdavUsername;
-    final webDavPassword = Pref.webdavPassword;
-    _webdavDirectory = Pref.webdavDirectory;
-    if (!_webdavDirectory.endsWith('/')) {
-      _webdavDirectory += '/';
+  _WebDavConfig _getConfig() {
+    String directory = Pref.webdavDirectory;
+    if (!directory.endsWith('/')) {
+      directory += '/';
     }
-    _webdavDirectory += Constants.appName;
+    return (
+      uri: Pref.webdavUri,
+      username: Pref.webdavUsername,
+      password: Pref.webdavPassword,
+      directory: '$directory${Constants.appName}',
+    );
+  }
 
+  Future<webdav.Client> _connect(
+    _WebDavConfig config, {
+    bool force = false,
+  }) async {
+    final cachedClient = _client;
+    if (!force && cachedClient != null && _clientConfig == config) {
+      return cachedClient;
+    }
+
+    final client =
+        webdav.newClient(
+            config.uri,
+            user: config.username,
+            password: config.password,
+          )
+          ..setHeaders({'accept-charset': 'utf-8'})
+          ..setConnectTimeout(12000)
+          ..setReceiveTimeout(12000)
+          ..setSendTimeout(12000);
+
+    await client.mkdirAll(config.directory);
+    _clientConfig = config;
+    _client = client;
+    return client;
+  }
+
+  Future<Pair<bool, String?>> init() async {
     try {
-      _client = null;
-      final client =
-          webdav.newClient(
-              webDavUri,
-              user: webDavUsername,
-              password: webDavPassword,
-            )
-            ..setHeaders({'accept-charset': 'utf-8'})
-            ..setConnectTimeout(12000)
-            ..setReceiveTimeout(12000)
-            ..setSendTimeout(12000);
+      await _connect(_getConfig(), force: true);
 
-      await client.mkdirAll(_webdavDirectory);
-
-      _client = client;
       return Pair(first: true, second: null);
     } catch (e) {
       return Pair(first: false, second: e.toString());
@@ -58,17 +80,18 @@ class WebDav {
   }
 
   Future<void> backup() async {
-    if (_client == null) {
-      final res = await init();
-      if (!res.first) {
-        SmartDialog.showToast('备份失败，请检查配置: ${res.second}');
-        return;
-      }
+    // Keep the payload bound to the same settings snapshot as the connection.
+    final config = _getConfig();
+    final data = GStorage.exportAllSettings();
+    final webdav.Client client;
+    try {
+      client = await _connect(config);
+    } catch (e) {
+      SmartDialog.showToast('备份失败，请检查配置: $e');
+      return;
     }
     try {
-      String data = GStorage.exportAllSettings();
-      _fileName ??= _getFileName();
-      final path = '$_webdavDirectory/$_fileName';
+      final path = '${config.directory}/${_getFileName()}';
       final tempPath = '$path.tmp.${DateTime.now().millisecondsSinceEpoch}';
       final backupPath = '$path.bak';
       await replaceWebDavBackup(
@@ -77,12 +100,12 @@ class WebDav {
         backupPath: backupPath,
         data: utf8.encode(data),
         write: (path, data) async {
-          await _client!.write(path, Uint8List.fromList(data));
+          await client.write(path, Uint8List.fromList(data));
         },
-        read: _client!.read,
+        read: client.read,
         exists: (path) async {
           try {
-            await _client!.readProps(path);
+            await client.readProps(path);
             return true;
           } on DioException catch (error) {
             if (error.response?.statusCode == 404) return false;
@@ -90,13 +113,13 @@ class WebDav {
           }
         },
         copy: (source, destination, overwrite) async {
-          await _client!.copy(source, destination, overwrite);
+          await client.copy(source, destination, overwrite);
         },
         rename: (source, destination, overwrite) async {
-          await _client!.rename(source, destination, overwrite);
+          await client.rename(source, destination, overwrite);
         },
         remove: (path) async {
-          await _client!.remove(path);
+          await client.remove(path);
         },
       );
       SmartDialog.showToast('备份成功');
@@ -106,17 +129,17 @@ class WebDav {
   }
 
   Future<void> restore() async {
-    if (_client == null) {
-      final res = await init();
-      if (!res.first) {
-        SmartDialog.showToast('恢复失败，请检查配置: ${res.second}');
-        return;
-      }
+    final config = _getConfig();
+    final webdav.Client client;
+    try {
+      client = await _connect(config);
+    } catch (e) {
+      SmartDialog.showToast('恢复失败，请检查配置: $e');
+      return;
     }
     try {
-      _fileName ??= _getFileName();
-      final path = '$_webdavDirectory/$_fileName';
-      final data = await _client!.read(path);
+      final path = '${config.directory}/${_getFileName()}';
+      final data = await client.read(path);
       await GStorage.importAllSettings(utf8.decode(data));
       SmartDialog.showToast('恢复成功');
     } catch (e) {
