@@ -213,22 +213,23 @@ class _WhisperDetailPageState
         else
           PopupMenuItem(
             height: 42,
-            onTap: () => autoWrapReportDialog(
-              context,
-              ban: false,
-              ReportOptions.imMsgReport,
-              (reasonType, reasonDesc, banUid) =>
-                  _whisperDetailController.onReport(
-                    item,
-                    reasonType,
-                    reasonType == 0
-                        ? reasonDesc!
-                        : ReportOptions.imMsgReport['']![reasonType]!,
-                  ),
-            ),
+            onTap: () => onReport(item),
             child: const Text('举报', style: TextStyle(fontSize: 14)),
           ),
       ],
+    );
+  }
+
+  void onReport(Msg item) {
+    autoWrapReportDialog(
+      context,
+      ban: false,
+      ReportOptions.imMsgReport,
+      (reasonType, reasonDesc, banUid) => _whisperDetailController.onReport(
+        item,
+        reasonType,
+        reasonDesc ?? ReportOptions.imMsgReport['']![reasonType]!,
+      ),
     );
   }
 
@@ -256,19 +257,7 @@ class _WhisperDetailPageState
             : ListTile(
                 onTap: () {
                   Get.back();
-                  autoWrapReportDialog(
-                    context,
-                    ban: false,
-                    ReportOptions.imMsgReport,
-                    (reasonType, reasonDesc, banUid) =>
-                        _whisperDetailController.onReport(
-                          item,
-                          reasonType,
-                          reasonType == 0
-                              ? reasonDesc!
-                              : ReportOptions.imMsgReport['']![reasonType]!,
-                        ),
-                  );
+                  onReport(item);
                 },
                 dense: true,
                 title: const Text('举报', style: TextStyle(fontSize: 14)),

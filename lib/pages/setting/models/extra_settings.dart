@@ -50,9 +50,9 @@ import 'package:pili_plus/utils/update.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, PlatformDispatcher;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide RefreshIndicator;
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
@@ -84,7 +84,7 @@ List<SettingsModel> get extraSettings => [
       leading: const Icon(Icons.storage),
       setKey: SettingBoxKey.enableDocProvider,
       defaultVal: Pref.enableDocProvider,
-      onChanged: _onDocProviderChanged,
+      onChanged: AndroidHelper.updateDocProvider,
     ),
   SplitModel(
     normalModel: const NormalModel.split(
@@ -1561,8 +1561,4 @@ Future<void> _showStripMinDurationDialog(
   if (res == null) return;
   await Pref.setStripMinSegmentMs((res * 1000).round());
   setState();
-}
-
-void _onDocProviderChanged(bool value) {
-  AndroidHelper.updateDocProvider(PlatformDispatcher.instance.engineId!, value);
 }
