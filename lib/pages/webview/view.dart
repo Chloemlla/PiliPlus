@@ -6,6 +6,7 @@ import 'package:pili_plus/main.dart';
 import 'package:pili_plus/models/common/webview_menu_type.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -37,7 +38,8 @@ class WebviewPage extends StatefulWidget {
 }
 
 class _WebviewPageState extends State<WebviewPage> {
-  late final String _url = widget.url ?? Get.parameters['url'] ?? '';
+  late final String _url =
+      (widget.url ?? Get.parameters['url'])?.http2https ?? '';
   late final String userAgent;
   final RxString title = ''.obs;
   final RxDouble progress = 1.0.obs;

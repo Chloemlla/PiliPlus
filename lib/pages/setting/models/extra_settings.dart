@@ -32,6 +32,7 @@ import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/clash_compat.dart';
 import 'package:pili_plus/http/init.dart' show Request;
@@ -49,7 +50,7 @@ import 'package:pili_plus/utils/update.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, PlatformDispatcher;
 import 'package:flutter/material.dart' hide RefreshIndicator;
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -76,7 +77,15 @@ List<SettingsModel> get extraSettings => [
       leading: const Icon(Icons.storage),
       onTap: _showDownPathDialog,
     ),
-  ],
+  ] else if (Platform.isAndroid)
+    SwitchModel(
+      title: '允许三方APP访问私有存储',
+      subtitle: '允许三方APP（例如MT管理器）通过访问外部存储的方式访问私有存储下的文件',
+      leading: const Icon(Icons.storage),
+      setKey: SettingBoxKey.enableDocProvider,
+      defaultVal: Pref.enableDocProvider,
+      onChanged: _onDocProviderChanged,
+    ),
   SplitModel(
     normalModel: const NormalModel.split(
       title: '空降助手',
@@ -664,23 +673,32 @@ List<SettingsModel> get extraSettings => [
     leading: Icon(Icons.more_time_outlined),
     onTap: _showReplyDelayDialog,
   ),
-  NormalModel(
+  PopupModel(
     title: '评论展示',
     leading: const Icon(Icons.whatshot_outlined),
-    getSubtitle: () => '当前优先展示「${Pref.replySortType.title}」',
-    onTap: _showReplySortDialog,
+    value: () => Pref.replySortType,
+    items: ReplySortType.values.take(2),
+    onSelected: (value, setState) => GStorage.setting
+        .put(SettingBoxKey.replySortType, value.index)
+        .whenComplete(setState),
   ),
-  NormalModel(
-    title: '二级评论展示',
+  PopupModel(
+    title: '楼中楼评论展示',
     leading: const Icon(Icons.subdirectory_arrow_right_outlined),
-    getSubtitle: () => '当前优先展示「${Pref.reply2SortType.title}」',
-    onTap: _showReply2SortDialog,
+    value: () => Pref.reply2SortType,
+    items: ReplySortType.values.take(2),
+    onSelected: (value, setState) => GStorage.setting
+        .put(SettingBoxKey.reply2SortType, value.index)
+        .whenComplete(setState),
   ),
-  NormalModel(
+  PopupModel(
     title: '动态展示',
     leading: const Icon(Icons.dynamic_feed_rounded),
-    getSubtitle: () => '当前优先展示「${Pref.defaultDynamicType.label}」',
-    onTap: _showDefDynDialog,
+    value: () => Pref.defaultDynamicType,
+    items: DynamicsTabType.values.take(4),
+    onSelected: (value, setState) => GStorage.setting
+        .put(SettingBoxKey.defaultDynamicType, value.index)
+        .whenComplete(setState),
   ),
   SwitchModel(
     title: '显示动态互动内容',
@@ -1300,63 +1318,6 @@ Future<void> _showReplyDelayDialog(
   }
 }
 
-Future<void> _showReplySortDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<ReplySortType>(
-    context: context,
-    builder: (context) => SelectDialog<ReplySortType>(
-      title: '评论展示',
-      value: Pref.replySortType,
-      values: ReplySortType.values.take(2).map((e) => (e, e.title)).toList(),
-    ),
-  );
-  if (res != null) {
-    await GStorage.setting.put(SettingBoxKey.replySortType, res.index);
-    setState();
-  }
-}
-
-Future<void> _showReply2SortDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<ReplySortType>(
-    context: context,
-    builder: (context) => SelectDialog<ReplySortType>(
-      title: '二级评论展示',
-      value: Pref.reply2SortType,
-      values: ReplySortType.values.take(2).map((e) => (e, e.title)).toList(),
-    ),
-  );
-  if (res != null) {
-    await GStorage.setting.put(SettingBoxKey.reply2SortType, res.index);
-    setState();
-  }
-}
-
-Future<void> _showDefDynDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<DynamicsTabType>(
-    context: context,
-    builder: (context) => SelectDialog<DynamicsTabType>(
-      title: '动态展示',
-      value: Pref.defaultDynamicType,
-      values: DynamicsTabType.values.take(4).map((e) => (e, e.label)).toList(),
-    ),
-  );
-  if (res != null) {
-    await GStorage.setting.put(
-      SettingBoxKey.defaultDynamicType,
-      res.index,
-    );
-    setState();
-  }
-}
-
 Future<void> _showMemberTabDialog(
   BuildContext context,
   VoidCallback setState,
@@ -1600,4 +1561,8 @@ Future<void> _showStripMinDurationDialog(
   if (res == null) return;
   await Pref.setStripMinSegmentMs((res * 1000).round());
   setState();
+}
+
+void _onDocProviderChanged(bool value) {
+  AndroidHelper.updateDocProvider(PlatformDispatcher.instance.engineId!, value);
 }

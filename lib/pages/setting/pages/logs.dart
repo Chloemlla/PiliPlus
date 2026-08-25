@@ -19,7 +19,6 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:catcher_2/catcher_2.dart';
 import 'package:catcher_2/utils/log_printer.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter/material.dart';
 
 const _snackBarDisplayDuration = Duration(seconds: 1);
@@ -144,7 +143,12 @@ class _LogsPageState extends State<LogsPage> {
                 onTap: () {
                   enableLog = !enableLog;
                   GStorage.setting.put(SettingBoxKey.enableLog, enableLog);
-                  SmartDialog.showToast('已${enableLog ? '开启' : '关闭'}，重启生效');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('已${enableLog ? '开启' : '关闭'}，重启生效'),
+                      duration: _snackBarDisplayDuration,
+                    ),
+                  );
                 },
                 child: Text('${enableLog ? '关闭' : '开启'}日志'),
               ),
@@ -301,9 +305,13 @@ class _InfoCard extends StatelessWidget {
     final colorScheme = ColorScheme.of(context);
     return _card([
       Row(
-        spacing: 8,
         children: [
-          Icon(Icons.info_outline, size: 22, color: colorScheme.primary),
+          Icon(
+            Icons.info_outline,
+            size: 22,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               '相关信息',
@@ -311,6 +319,33 @@ class _InfoCard extends StatelessWidget {
               maxLines: 1,
               overflow: .ellipsis,
             ),
+          ),
+          iconButton(
+            size: 34,
+            iconSize: 22,
+            tooltip: '复制',
+            onPressed: () {
+              final report = Report(
+                '',
+                null,
+                DateTime(1970),
+                info.item.$1,
+                info.item.$2,
+                info.item.$3,
+                null,
+              ).formatInfo();
+              Utils.copyText(
+                LogRedactor.redactText('```\n$report```'),
+                needToast: false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('已将相关信息复制至剪贴板'),
+                  duration: _snackBarDisplayDuration,
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_outlined, size: 16),
           ),
           iconButton(
             size: 34,

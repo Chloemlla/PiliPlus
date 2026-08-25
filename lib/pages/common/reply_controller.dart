@@ -68,7 +68,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
       if (hasUpTop = data.hasUpTop()) {
         data.replies.insert(0, data.upTop);
       }
-      if (subjectControl?.title == ReplySortType.select.title) {
+      if (subjectControl?.title == ReplySortType.select.desc) {
         sortType.value = .select;
       }
     }

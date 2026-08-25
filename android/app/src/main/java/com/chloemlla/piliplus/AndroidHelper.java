@@ -287,6 +287,15 @@ public final class AndroidHelper {
         return null;
     }
 
+    public static void updateDocProvider(long engineId, boolean enabled) {
+        Activity activity = JniFlutterPlugin.getActivity(engineId);
+        assert activity != null;
+        final ComponentName componentName = new ComponentName(activity, BiliDocumentsProvider.class);
+        final int state = enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        activity.getPackageManager().setComponentEnabledSetting(componentName, state, PackageManager.DONT_KILL_APP);
+    }
+
     @Keep
     public static final class ToDart {
         public static volatile Runnable onUserLeaveHint;

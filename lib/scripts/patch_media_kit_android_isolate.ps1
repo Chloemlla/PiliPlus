@@ -98,7 +98,12 @@ $expectedStatus = @(
     " M media_kit/lib/src/player/native/core/initializer_isolate.dart",
     " M media_kit/lib/src/player/native/player/real.dart"
 )
-if ($statusOutput.Count -eq 0) {
+# The MD5 removal patch below touches the bundled android libs build script.
+# A cached pub checkout can already carry that edit, so it is expected state
+# for the isolate patch and must not count as a dirty worktree.
+$md5StatusEntry = " M libs/android/media_kit_libs_android_video/android/build.gradle"
+$isolateStatus = @($statusOutput | Where-Object { $_ -ne $md5StatusEntry })
+if ($isolateStatus.Count -eq 0) {
     $applyCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --check -- $PatchPath 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Failed media_kit patch apply check: $($applyCheckOutput -join [Environment]::NewLine)"
@@ -108,7 +113,7 @@ if ($statusOutput.Count -eq 0) {
         throw "Failed to apply $PatchPath`: $($applyOutput -join [Environment]::NewLine)"
     }
     $patchState = "applied"
-} elseif (@(Compare-Object $expectedStatus $statusOutput).Count -eq 0) {
+} elseif (@(Compare-Object $expectedStatus $isolateStatus).Count -eq 0) {
     $reverseCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --reverse --check -- $PatchPath 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Expected media_kit patch state failed reverse check: $($reverseCheckOutput -join [Environment]::NewLine)"
@@ -119,9 +124,11 @@ if ($statusOutput.Count -eq 0) {
 }
 
 $patchedStatus = @(& git -C $checkoutPath status --porcelain=v1 --untracked-files=all 2>&1)
+$patchedStatusExitCode = $LASTEXITCODE
+$patchedIsolateStatus = @($patchedStatus | Where-Object { $_ -ne $md5StatusEntry })
 if (
-    $LASTEXITCODE -ne 0 -or
-    @(Compare-Object $expectedStatus $patchedStatus).Count -ne 0
+    $patchedStatusExitCode -ne 0 -or
+    @(Compare-Object $expectedStatus $patchedIsolateStatus).Count -ne 0
 ) {
     throw "media_kit contains changes beyond the expected patch: $($patchedStatus -join [Environment]::NewLine)"
 }
