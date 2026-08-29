@@ -11,7 +11,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
-import 'package:material_ui/material_ui.dart';
 
 class GeetestWebviewDialog extends StatefulWidget {
   const GeetestWebviewDialog(this.gt, this.challenge, {super.key});

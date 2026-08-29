@@ -76,11 +76,12 @@ abstract final class FontUtils {
   @pragma('vm:notify-debugger-on-exception')
   static Future<String?> pickFonts() async {
     try {
-      final files = await FilePicker.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: .custom,
         allowedExtensions: _kFontExts,
       );
-      if (files.isNotEmpty) {
+      final files = result?.files;
+      if (files != null && files.isNotEmpty) {
         final dir = Directory(_kFontDir);
         if (!dir.existsSync()) {
           await dir.create(recursive: true);

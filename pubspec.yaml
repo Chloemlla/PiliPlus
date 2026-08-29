@@ -90,7 +90,7 @@ dependencies:
       ref: 7fbe3adab03d890d306b197e9244ac6f7f165391
   fixnum: ^1.1.1
   fl_chart: ^1.0.0
-  flex_seed_scheme: ^5.0.0
+  flex_seed_scheme: ^4.0.1
   flutter_displaymode: ^0.7.0
   flutter_local_notifications: ^19.0.0
   flutter_html: ^3.0.0-beta.2

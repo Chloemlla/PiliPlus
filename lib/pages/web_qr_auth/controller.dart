@@ -211,7 +211,7 @@ final class WebQrAuthController extends GetxController {
         captcha.challenge,
       );
       if (!_isCurrent(generation)) return;
-      if (result is! Map) return;
+      if (result == null) return;
       final challenge =
           _mapString(result, 'geetest_challenge') ?? captcha.challenge;
       final validate = _mapString(result, 'geetest_validate');
