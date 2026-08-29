@@ -1,4 +1,5 @@
 import 'package:pili_plus/common/skeleton/msg_feed_top.dart';
+import 'package:pili_plus/common/sliver_single_child_delegate.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -57,9 +58,12 @@ class _LikeDetailPageState extends State<LikeDetailPage> {
   ) {
     switch (loadingState) {
       case Loading():
-        return SliverList.builder(
-          itemCount: 12,
-          itemBuilder: (context, index) => const MsgFeedTopSkeleton(),
+        return const SliverPrototypeExtentList(
+          prototypeItem: MsgFeedTopSkeleton(),
+          delegate: SliverSingleChildDelegate(
+            count: 12,
+            child: MsgFeedTopSkeleton(),
+          ),
         );
       case Success(:final response):
         final items = response ?? const <MsgLikeDetailItem>[];

@@ -1,4 +1,5 @@
 import 'package:pili_plus/common/skeleton/dynamic_card.dart';
+import 'package:pili_plus/common/sliver_single_child_delegate.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_constrained_cross_axis.dart';
 import 'package:pili_plus/utils/global_data.dart';
@@ -35,16 +36,20 @@ mixin DynMixin {
 
   Widget get dynSkeleton {
     if (GlobalData().dynamicsWaterfallFlow) {
-      return SliverGrid.builder(
+      return SliverGrid(
         gridDelegate: skeDelegate,
-        itemBuilder: (_, _) => const DynamicCardSkeleton(),
-        itemCount: 10,
+        delegate: const SliverSingleChildDelegate(
+          count: 10,
+          child: DynamicCardSkeleton(),
+        ),
       );
     }
-    return SliverPrototypeExtentList.builder(
-      prototypeItem: const DynamicCardSkeleton(),
-      itemBuilder: (_, _) => const DynamicCardSkeleton(),
-      itemCount: 10,
+    return const SliverPrototypeExtentList(
+      prototypeItem: DynamicCardSkeleton(),
+      delegate: SliverSingleChildDelegate(
+        count: 10,
+        child: DynamicCardSkeleton(),
+      ),
     );
   }
 }

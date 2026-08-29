@@ -1,5 +1,6 @@
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
+import 'package:pili_plus/utils/font_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/cupertino.dart' show CupertinoThemeData;
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
@@ -39,7 +40,7 @@ abstract final class ThemeUtils {
     final fontWeight = appFontWeight == -1
         ? null
         : FontWeight.values[appFontWeight];
-    final fontFamily = Pref.appFont;
+    final fontFamily = FontUtils.fontFamily;
     final noCustomText = fontFamily == null && fontWeight == null;
     late final textStyle = TextStyle(fontWeight: fontWeight);
     ThemeData theme = ThemeData(
@@ -141,9 +142,9 @@ abstract final class ThemeUtils {
           fontFamily: fontFamily,
           fontWeight: fontWeight,
         ),
-        decoration: BoxDecoration(
-          color: Colors.grey[700]!.withValues(alpha: 0.9),
-          borderRadius: const BorderRadius.all(Radius.circular(4)),
+        decoration: const BoxDecoration(
+          color: Color(0xE6616161), // Colors.grey[700]!.withValues(alpha: 0.9)
+          borderRadius: BorderRadius.all(Radius.circular(4)),
         ),
       ),
       cupertinoOverrideTheme: CupertinoThemeData(

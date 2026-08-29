@@ -319,8 +319,7 @@ class PlPlayerController with BlockConfigMixin {
   }
 
   void enterPip({bool autoEnter = false}) {
-    if (videoPlayerController != null) {
-      final state = videoPlayerController!.state;
+    if (videoPlayerController case NativePlayer(:final state)) {
       _persistPipState(position: state.position, force: true);
       PageUtils.enterPip(
         autoEnter: autoEnter,

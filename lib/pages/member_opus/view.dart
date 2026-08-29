@@ -1,4 +1,5 @@
 import 'package:pili_plus/common/skeleton/space_opus.dart';
+import 'package:pili_plus/common/sliver_single_child_delegate.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -140,9 +141,9 @@ class _MemberOpusState extends State<MemberOpus>
     return switch (loadingState) {
       Loading() => SliverWaterfallFlow(
         gridDelegate: gridDelegate,
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => const SpaceOpusSkeleton(),
-          childCount: 10,
+        delegate: const SliverSingleChildDelegate(
+          count: 10,
+          child: SpaceOpusSkeleton(),
         ),
       ),
       Success(:final response) =>

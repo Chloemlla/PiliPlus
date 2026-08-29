@@ -1,4 +1,5 @@
 import 'package:pili_plus/common/skeleton/video_card_h.dart';
+import 'package:pili_plus/common/sliver_single_child_delegate.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/video_card/video_card_h.dart';
 import 'package:pili_plus/models/search/result.dart';
@@ -103,9 +104,11 @@ class _SearchAllPanelState
   }
 
   @override
-  Widget get buildLoading => SliverGrid.builder(
+  Widget get buildLoading => SliverGrid(
     gridDelegate: Grid.videoCardHDelegate(),
-    itemBuilder: (context, index) => const VideoCardHSkeleton(),
-    itemCount: 10,
+    delegate: const SliverSingleChildDelegate(
+      count: 10,
+      child: VideoCardHSkeleton(),
+    ),
   );
 }

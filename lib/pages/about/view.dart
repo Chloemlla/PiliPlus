@@ -16,6 +16,7 @@ import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/device_utils.dart';
@@ -77,7 +78,7 @@ class _AboutPageState extends State<AboutPage> {
         onSubmitted: (value) {
           Get.back();
           if (value.isNotEmpty) {
-            PageUtils.handleWebview(value, inApp: true);
+            PiliScheme.routePushFromUrl(value);
           }
         },
       ),

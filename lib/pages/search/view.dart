@@ -16,8 +16,8 @@ import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -36,10 +36,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    _searchController = Get.put(
-      SSearchController(_tag),
-      tag: _tag,
-    );
+    _searchController = Get.put(SSearchController(_tag), tag: _tag);
   }
 
   @override
@@ -71,8 +68,7 @@ class _SearchPageState extends State<SearchPage> {
                 ?trending,
                 _buildHistory,
                 ?rcmd,
-              ] else if (_searchController.enableTrending ||
-                  _searchController.enableSearchRcmd)
+              ] else if (trending != null || rcmd != null)
                 SliverCrossAxisGroup(
                   slivers: [
                     SliverMainAxisGroup(slivers: [?trending, ?rcmd]),
@@ -158,9 +154,7 @@ class _SearchPageState extends State<SearchPage> {
                                     style: e.isEm
                                         ? TextStyle(
                                             fontWeight: .bold,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
+                                            color: theme.colorScheme.primary,
                                           )
                                         : null,
                                   ),

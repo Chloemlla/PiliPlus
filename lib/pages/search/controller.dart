@@ -176,11 +176,9 @@ class SSearchController extends GetxController
   }
 
   // 搜索
-  Future<void> submit() async {
+  void submit() {
     if (controller.text.isEmpty) {
-      if (hintText.isNullOrEmpty) {
-        return;
-      }
+      if (hintText.isNullOrEmpty) return;
       controller.text = hintText!;
       validateUid();
     }
@@ -206,7 +204,7 @@ class SSearchController extends GetxController
     }
 
     searchFocusNode.unfocus();
-    await Get.toNamed(
+    Get.toNamed(
       '/searchResult',
       parameters: {
         'tag': tag,

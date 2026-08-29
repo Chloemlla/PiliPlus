@@ -1,4 +1,5 @@
 import 'package:pili_plus/common/skeleton/video_card_v.dart';
+import 'package:pili_plus/common/sliver_single_child_delegate.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -80,10 +81,12 @@ class _LiveAreaChildPageState extends State<LiveAreaChildPage>
     LoadingState<List<CardLiveItem>?> loadingState,
   ) {
     return switch (loadingState) {
-      Loading() => SliverGrid.builder(
+      Loading() => SliverGrid(
         gridDelegate: gridDelegate,
-        itemBuilder: (context, index) => const VideoCardVSkeleton(),
-        itemCount: 10,
+        delegate: const SliverSingleChildDelegate(
+          count: 10,
+          child: VideoCardVSkeleton(),
+        ),
       ),
       Success(:final response) => SliverMainAxisGroup(
         slivers: [
