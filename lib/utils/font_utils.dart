@@ -90,10 +90,11 @@ abstract final class FontUtils {
   @pragma('vm:notify-debugger-on-exception')
   static Future<Map<String, Uint8List>?> pickFonts() async {
     try {
-      final files = await FilePicker.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: .custom,
         allowedExtensions: _kFontExts,
       );
+      final files = result?.files;
       if (files != null && files.isNotEmpty) {
         final Map<String, Uint8List> fonts = {};
         final now = DateTime.now().millisecondsSinceEpoch.toString();
