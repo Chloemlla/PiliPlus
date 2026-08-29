@@ -1,0 +1,99 @@
+name: Sync upstream
+
+# fork-sync opens a cross-repository PR titled `chore(sync): merge upstream`,
+# whose head branch lives in the upstream repo and therefore cannot be pushed
+# to. This workflow instead performs the merge here, normalizing upstream's
+# `package:PiliPlus/` to this fork's `package:pili_plus/` so import-only
+# conflicts resolve mechanically, and pushes the result straight to main.
+#
+# pull_request_target runs with the base repo's token, so only code from the
+# base branch is executed; nothing from the PR head is ever run.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Sync PR number (blank syncs upstream main directly)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge and normalize
+    # The head-repo check matters: without it anyone could open a PR with this
+    # title and have it merged to main. The script additionally fetches the head
+    # sha from the upstream URL only, so a spoofed head cannot be fetched.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.title == 'chore(sync): merge upstream' &&
+      github.event.pull_request.head.repo.full_name == 'bggRGjQaUbCoE/PiliPlus')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml
+          cache: true
+
+      - name: Merge upstream with the fork's package name
+        id: sync
+        env:
+          SYNC_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SYNC_PR: ${{ github.event.pull_request.number || inputs.pr }}
+          SYNC_BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          node tool/sync_upstream.mjs
+
+      - name: Report unresolved conflicts
+        if: failure() && steps.sync.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/sync-conflicts.txt"
+          if [ ! -s "$report" ] || [ -z "$PR" ]; then
+            echo "no conflict report to post"
+            exit 0
+          fi
+          {
+            echo 'Automatic sync stopped: these files still conflict after'
+            echo 'normalizing `package:PiliPlus/` to `package:pili_plus/`.'
+            echo
+            cat "$report"
+            echo
+            echo "Run log: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > comment.md
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+
+      - name: Trigger build on the new main
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "${{ github.event.repository.default_branch }}"
