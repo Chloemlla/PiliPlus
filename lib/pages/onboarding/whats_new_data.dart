@@ -59,6 +59,17 @@ abstract final class WhatsNewData {
       tip: '入口不变：长按评论/弹幕或在对应菜单中选择「举报」。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.vpn_key_outlined,
+      title: 'Clash 读不到状态时说清原因',
+      subtitle: '设置页「Clash VPN 自动适配」不再只写一句读不到状态，而是给出这次缺的是什么、该在 Clash 里做什么。',
+      bullets: [
+        '按 Clash 回传的授权层级分四种情况：旧版没有伙伴接口、等待在 Clash 中确认配对、已被拒绝可撤销、证书未登记只开放基础状态。',
+        '被拒绝时不再把一份全空的状态当成读到了，改回按「VPN 是否活跃」判断，不会误报 Clash 已停止。',
+        '只开放基础状态时仍能正常跟随 Clash，只是读不到配置名与节点，文案会顺带说明怎么补。',
+      ],
+      tip: '入口：设置 → 其他设置 → Clash VPN 自动适配。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.open_in_browser_outlined,
       title: '网页举报入口',
       subtitle: '评论举报与用户举报弹窗右上角新增地球图标，可跳到 B 站官方网页举报页处理复杂情况。',

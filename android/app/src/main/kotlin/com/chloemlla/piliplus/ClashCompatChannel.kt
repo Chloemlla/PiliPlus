@@ -9,6 +9,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.edit
@@ -17,6 +18,23 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+
+/**
+ * How much of Clash's `partnerStatus` this app was granted; mirrors the provider's `accessTier`.
+ *
+ * [Basic] carries only core/tunnel state plus the auto-adapt switch — enough to pick an egress,
+ * but no profile name, node, traffic counters or runtime error.
+ */
+internal enum class ClashPartnerAccess(val wire: String) {
+    Unavailable("unavailable"),
+    Denied("denied"),
+    Basic("basic"),
+    Full("full");
+
+    /** Whether the reply actually carried status fields. */
+    val readable: Boolean
+        get() = this == Basic || this == Full
+}
 
 /**
  * Detect ClashMeta install/VPN state for zero-config traffic adaptation.
@@ -107,7 +125,8 @@ internal class ClashCompatChannel(
     private fun buildStatus(): Map<String, Any?> {
         val clashInstalled = isClashInstalled()
         val vpnActive = isVpnActive()
-        val partner = queryPartnerStatus()
+        val read = queryPartnerStatus()
+        val partner = read.values
         val partnerStatusAvailable = partner != null
         // Prefer provider truth when available so a non-Clash VPN is not treated
         // as "Clash routing". When the partner was previously reachable but is
@@ -133,6 +152,8 @@ internal class ClashCompatChannel(
                     ?: true
                 ),
             "partnerStatusAvailable" to partnerStatusAvailable,
+            "partnerAccess" to read.access.wire,
+            "partnerDeniedReason" to read.deniedReason,
             "profileName" to partner?.get("name"),
             "clashPackage" to partner?.get("package"),
             "processBound" to processBound,
@@ -220,7 +241,7 @@ internal class ClashCompatChannel(
      */
     private fun checkPartnerStatus() {
         partnerWatchRunning = false
-        val available = queryPartnerStatus() != null
+        val available = queryPartnerStatus().values != null
         val changed = lastPartnerStatusAvailable != null &&
             lastPartnerStatusAvailable != available
         lastPartnerStatusAvailable = available
@@ -253,7 +274,7 @@ internal class ClashCompatChannel(
     }
 
     private fun startPartnerWatch() {
-        lastPartnerStatusAvailable = queryPartnerStatus() != null
+        lastPartnerStatusAvailable = queryPartnerStatus().values != null
         if (lastPartnerStatusAvailable == true) {
             schedulePartnerWatch()
         }
@@ -288,45 +309,71 @@ internal class ClashCompatChannel(
         }
     }
 
-    private fun queryPartnerStatus(): Map<String, Any?>? {
-        val resolver = context.contentResolver
+    private fun queryPartnerStatus(): PartnerRead {
+        var limited: PartnerRead? = null
         for (pkg in CLASH_PACKAGES) {
             val uri = Uri.Builder()
                 .scheme("content")
                 .authority("$pkg.status")
                 .build()
             val bundle = runCatching {
-                resolver.call(uri, METHOD_PARTNER_STATUS, null, null)
+                context.contentResolver.call(uri, METHOD_PARTNER_STATUS, null, null)
             }.getOrNull() ?: continue
-            // Check apiVersion for forward compatibility. If the schema is
-            // newer than what we understand, we can still read the fields we
-            // know about (older clients already omit unknown fields gracefully).
-            val apiVersion = bundle.getInt("apiVersion", 0)
-            return mapOf(
-                "apiVersion" to apiVersion,
-                "running" to bundle.getBoolean("running", false),
-                "vpnRunning" to bundle.getBoolean("vpnRunning", false),
-                // v2: granular VPN state (0=disconnected, 1=connecting, 2=connected)
-                "vpnState" to bundle.getInt("vpnState", if (bundle.getBoolean("vpnRunning", false)) 2 else 0),
-                "partnerAppAutoAdapt" to bundle.getBoolean(
-                    "partnerAppAutoAdapt",
-                    bundle.getBoolean("piliPlusAutoAdapt", true),
-                ),
-                "piliPlusAutoAdapt" to bundle.getBoolean("piliPlusAutoAdapt", true),
-                "name" to bundle.getString("name"),
-                "package" to (bundle.getString("package") ?: pkg),
-                // v2: additional status fields
-                "mode" to bundle.getString("mode"),
-                "selectedNode" to bundle.getString("selectedNode"),
-                "upTotal" to bundle.getLong("upTotal", 0L),
-                "downTotal" to bundle.getLong("downTotal", 0L),
-                "proxyDelay" to bundle.getLong("proxyDelay", 0L),
-                "aliveProxies" to bundle.getInt("aliveProxies", 0),
-                "memoryUsage" to bundle.getLong("memoryUsage", 0L),
-                "lastError" to bundle.getString("lastError"),
-            )
+            val access = parseAccess(bundle)
+            val reason = bundle.getString(KEY_DENIED_REASON)
+            if (!access.readable) {
+                // Keep looking: another installed Clash variant may still grant status. The
+                // first explained refusal is kept so Dart can say what to do about it.
+                if (limited == null) {
+                    limited = PartnerRead(access, reason, null)
+                }
+                continue
+            }
+            return PartnerRead(access, reason, readValues(bundle, pkg))
         }
-        return null
+        return limited ?: PARTNER_UNAVAILABLE
+    }
+
+    /**
+     * apiVersion 3 reports `accessTier` outright. Older Clash builds omit it but hand back every
+     * field they have, so an unlabelled reply counts as [ClashPartnerAccess.Full]; only a Clash
+     * that answers nothing at all is [ClashPartnerAccess.Unavailable].
+     */
+    private fun parseAccess(bundle: Bundle): ClashPartnerAccess =
+        when (bundle.getString(KEY_ACCESS_TIER)) {
+            "denied" -> ClashPartnerAccess.Denied
+            "basic" -> ClashPartnerAccess.Basic
+            else -> ClashPartnerAccess.Full
+        }
+
+    private fun readValues(bundle: Bundle, pkg: String): Map<String, Any?> {
+        // Check apiVersion for forward compatibility. If the schema is
+        // newer than what we understand, we can still read the fields we
+        // know about (older clients already omit unknown fields gracefully).
+        val apiVersion = bundle.getInt("apiVersion", 0)
+        return mapOf(
+            "apiVersion" to apiVersion,
+            "running" to bundle.getBoolean("running", false),
+            "vpnRunning" to bundle.getBoolean("vpnRunning", false),
+            // v2: granular VPN state (0=disconnected, 1=connecting, 2=connected)
+            "vpnState" to bundle.getInt("vpnState", if (bundle.getBoolean("vpnRunning", false)) 2 else 0),
+            "partnerAppAutoAdapt" to bundle.getBoolean(
+                "partnerAppAutoAdapt",
+                bundle.getBoolean("piliPlusAutoAdapt", true),
+            ),
+            "piliPlusAutoAdapt" to bundle.getBoolean("piliPlusAutoAdapt", true),
+            "name" to bundle.getString("name"),
+            "package" to (bundle.getString("package") ?: pkg),
+            // v2: additional status fields
+            "mode" to bundle.getString("mode"),
+            "selectedNode" to bundle.getString("selectedNode"),
+            "upTotal" to bundle.getLong("upTotal", 0L),
+            "downTotal" to bundle.getLong("downTotal", 0L),
+            "proxyDelay" to bundle.getLong("proxyDelay", 0L),
+            "aliveProxies" to bundle.getInt("aliveProxies", 0),
+            "memoryUsage" to bundle.getLong("memoryUsage", 0L),
+            "lastError" to bundle.getString("lastError"),
+        )
     }
 
     private fun prefs(): SharedPreferences =
@@ -387,14 +434,30 @@ internal class ClashCompatChannel(
         return null
     }
 
+    /**
+     * One `partnerStatus` reply: the tier granted, why it fell short, and the fields actually
+     * handed over. [values] is null unless the tier was readable, so a refusal can never be
+     * mistaken for an all-false status.
+     */
+    private data class PartnerRead(
+        val access: ClashPartnerAccess,
+        val deniedReason: String?,
+        val values: Map<String, Any?>?,
+    )
+
     companion object {
         const val METHOD_CHANNEL = "pili_plus/clash_compat"
         const val EVENT_CHANNEL = "pili_plus/clash_compat_events"
         private const val METHOD_PARTNER_STATUS = "partnerStatus"
+        private const val KEY_ACCESS_TIER = "accessTier"
+        private const val KEY_DENIED_REASON = "deniedReason"
         private const val PREFS = "clash_partner_compat"
         private const val KEY_AUTO_ADAPT = "clash_auto_adapt"
         private const val PARTNER_WATCH_INITIAL_MS = 2000L
         private const val PARTNER_WATCH_MAX_MS = 10000L
+
+        private val PARTNER_UNAVAILABLE =
+            PartnerRead(ClashPartnerAccess.Unavailable, null, null)
 
         private val CLASH_PACKAGES = listOf(
             "com.github.metacubex.clash",

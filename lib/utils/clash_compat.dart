@@ -4,6 +4,12 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/services.dart';
 
+/// CMFA 授予 PiliPlus 的 `partnerStatus` 读取层级，对应 provider 的 `accessTier` 字段。
+///
+/// [basic] 只带内核/隧道状态与自动适配开关——足够决定要不要绕过手动代理，但读不到配置名、
+/// 节点、流量与运行错误。
+enum ClashAccess { unavailable, denied, basic, full }
+
 /// Android ClashMeta VPN full partner adapt bridge for PiliPlus.
 ///
 /// Native side binds the process to the VPN Network while auto-adapt is on
@@ -19,6 +25,8 @@ abstract final class ClashCompat {
   static bool vpnActive = false;
   static bool clashVpnRunning = false;
   static bool partnerStatusAvailable = false;
+  static ClashAccess partnerAccess = ClashAccess.unavailable;
+  static String? partnerDeniedReason;
   static bool partnerAppAutoAdapt = true;
   static bool processBound = false;
   static bool autoAdaptEnabled = true;
@@ -133,6 +141,8 @@ abstract final class ClashCompat {
     vpnActive = map['vpnActive'] == true;
     clashVpnRunning = map['clashVpnRunning'] == true;
     partnerStatusAvailable = map['partnerStatusAvailable'] == true;
+    partnerAccess = _parseAccess(map['partnerAccess'] as String?);
+    partnerDeniedReason = map['partnerDeniedReason'] as String?;
     partnerAppAutoAdapt = map['partnerAppAutoAdapt'] != false;
     processBound = map['processBound'] == true;
     if (map.containsKey('autoAdaptEnabled')) {
@@ -152,10 +162,37 @@ abstract final class ClashCompat {
     lastError = map['lastError'] as String?;
   }
 
+  static ClashAccess _parseAccess(String? wire) => switch (wire) {
+    'denied' => ClashAccess.denied,
+    'basic' => ClashAccess.basic,
+    'full' => ClashAccess.full,
+    _ => ClashAccess.unavailable,
+  };
+
+  /// 把 Clash 的机器可读 `deniedReason` 翻成用户能照着做的一句中文。
+  ///
+  /// 取值来自 CMFA 的 `PartnerAccessResolver`；未知取值原样带出，便于反馈时对照 logcat。
+  static String describeDeniedReason(String? reason) => switch (reason) {
+    'pending_user_approval' => '等待在 Clash 中确认配对：打开 Clash 主页或点击配对通知即可授权',
+    'denied_by_user' => '已在 Clash 中拒绝授权，可在 Clash 主页「伙伴应用」里撤销',
+    'signer_unverified' => 'Clash 未登记 PiliPlus 的签名证书，只开放基础状态；在「伙伴应用」里允许即可读取完整状态',
+    'not_partner' => 'Clash 没把 PiliPlus 认成伙伴应用，请更新 Clash 到支持伙伴配对的版本',
+    'no_signature' => 'Clash 读不到 PiliPlus 的签名信息，无法完成配对',
+    null => 'Clash 未说明原因',
+    _ => 'Clash 返回原因：$reason',
+  };
+
   static String statusLabel({required bool autoAdaptEnabled}) {
     if (!Platform.isAndroid) return '仅 Android 支持';
     if (!autoAdaptEnabled) return '已关闭自动适配';
     if (!clashInstalled) return '未检测到 Clash Meta';
+    if (partnerAccess == ClashAccess.denied) {
+      return '读不到 Clash 状态 · ${describeDeniedReason(partnerDeniedReason)}';
+    }
+    // 基础层足够决定出口，但配置名/节点/流量都读不到，所以顺带说明缺什么、怎么补。
+    final tierNote = partnerAccess == ClashAccess.basic
+        ? ' · ${describeDeniedReason(partnerDeniedReason)}'
+        : '';
     if (isClashVpnRouting) {
       final profile = profileName;
       final mode = clashMode;
@@ -166,17 +203,18 @@ abstract final class ClashCompat {
       final modeInfo = mode != null ? ' · $mode' : '';
       final nodeInfo = node != null && node.isNotEmpty ? ' · $node' : '';
       if (profile != null && profile.isNotEmpty) {
-        return 'VPN 已连接 · $profile$modeInfo$nodeInfo$delay$alive$bound';
+        return 'VPN 已连接 · $profile$modeInfo$nodeInfo$delay$alive$bound$tierNote';
       }
-      return 'VPN 已连接 · 流量自动经 Clash$modeInfo$nodeInfo$delay$alive$bound';
+      return 'VPN 已连接 · 流量自动经 Clash$modeInfo$nodeInfo$delay$alive$bound$tierNote';
     }
     if (partnerStatusAvailable) {
       final error = lastError;
       if (error != null && error.isNotEmpty) {
         return 'Clash 已停止 · $error';
       }
-      return 'Clash 已停止 · 等待重新开启';
+      return 'Clash 已停止 · 等待重新开启$tierNote';
     }
-    return '已安装 Clash · 等待开启 VPN';
+    // 走到这里只剩 unavailable：Clash 装着但没回伙伴接口，路由退回「VPN 是否活跃」的启发式。
+    return '已安装 Clash · 等待开启 VPN（该 Clash 版本没有伙伴状态接口，更新后可显示详情）';
   }
 }
