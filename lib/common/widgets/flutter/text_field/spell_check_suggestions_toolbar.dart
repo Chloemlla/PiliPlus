@@ -12,6 +12,8 @@ import 'package:flutter/material.dart'
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart'
     show SelectionChangedCause, SuggestionSpan;
+import 'package:material_ui/material_ui.dart'
+    hide EditableText, EditableTextState, SpellCheckSuggestionsToolbar;
 
 // The default height of the SpellCheckSuggestionsToolbar, which
 // assumes there are the maximum number of spell check suggestions available, 3.

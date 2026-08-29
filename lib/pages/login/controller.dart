@@ -19,6 +19,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:material_ui/material_ui.dart';
 
 class LoginPageController extends GetxController
     with GetSingleTickerProviderStateMixin {
@@ -119,7 +120,7 @@ class LoginPageController extends GetxController
   // 申请极验验证码
   void getCaptcha(String geeGt, String geeChallenge, VoidCallback onSuccess) {
     GeetestWebviewDialog.geetest(geeGt, geeChallenge).then((res) {
-      if (res is Map) {
+      if (res != null) {
         captchaData
           ..validate = res['geetest_validate']
           ..seccode = res['geetest_seccode']

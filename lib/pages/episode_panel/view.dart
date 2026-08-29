@@ -13,7 +13,6 @@ import 'package:pili_plus/common/widgets/stat/stat.dart';
 import 'package:pili_plus/http/fav.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/video.dart';
-import 'package:pili_plus/models/common/badge_type.dart';
 import 'package:pili_plus/models/common/episode_panel_type.dart';
 import 'package:pili_plus/models/common/stat_type.dart';
 import 'package:pili_plus/models_new/pgc/pgc_info_model/episode.dart' as pgc;
@@ -484,14 +483,36 @@ class _EpisodePanelState extends State<EpisodePanel>
                             text: DurationUtils.formatDuration(duration),
                             right: 6.0,
                             bottom: 6.0,
-                            type: PBadgeType.gray,
+                            type: .gray,
                           ),
-                        if (isCharging == true)
+                        if (widget.type == .part)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const .symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondaryContainer,
+                                borderRadius: const .only(
+                                  bottomLeft: .circular(4),
+                                  topRight: Style.imgRadius,
+                                ),
+                              ),
+                              child: Text(
+                                (index + 1).toString(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSecondaryContainer,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (isCharging == true)
                           const PBadge(
                             text: '充电专属',
                             top: 6,
                             right: 6,
-                            type: PBadgeType.error,
+                            type: .error,
                           )
                         else if (episode.badge != null)
                           PBadge(
@@ -499,9 +520,9 @@ class _EpisodePanelState extends State<EpisodePanel>
                             top: 6,
                             right: 6,
                             type: switch (episode.badge) {
-                              '预告' => PBadgeType.gray,
-                              '限免' => PBadgeType.free,
-                              _ => PBadgeType.primary,
+                              '预告' => .gray,
+                              '限免' => .free,
+                              _ => .primary,
                             },
                           ),
                       ],

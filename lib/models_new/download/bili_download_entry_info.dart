@@ -5,6 +5,7 @@ import 'package:pili_plus/pages/common/multi_select/base.dart'
     show MultiSelectData;
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/route_manager.dart';
 import 'package:flutter/material.dart';
@@ -120,6 +121,12 @@ class BiliDownloadEntryInfo with MultiSelectData {
                 SmartDialog.showToast(e.toString());
               }
             },
+          )
+        else
+          PopupMenuItem(
+            height: 38,
+            child: const Text('复制缓存路径', style: TextStyle(fontSize: 13)),
+            onTap: () => Utils.copyText(entryDirPath),
           ),
         if (ownerId case final mid?)
           PopupMenuItem(
