@@ -94,7 +94,7 @@ abstract final class FontUtils {
         type: .custom,
         allowedExtensions: _kFontExts,
       );
-      if (files.isNotEmpty) {
+      if (files != null && files.isNotEmpty) {
         final Map<String, Uint8List> fonts = {};
         final now = DateTime.now().millisecondsSinceEpoch.toString();
         await Future.wait(
