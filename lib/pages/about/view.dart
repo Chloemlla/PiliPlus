@@ -290,6 +290,56 @@ Commit Hash: ${BuildConfig.commitHash}''',
             ),
           ),
           ListTile(
+            title: const Text('卸载前备份'),
+            subtitle: Text(
+              '保存设置、视频偏好和登录信息；不包含 WebDAV 密码',
+              style: subTitleStyle,
+            ),
+            leading: const Icon(Icons.backup_outlined),
+            onTap: () async {
+              final confirmed = await showConfirmDialog(
+                context: context,
+                title: const Text('备份应用数据？'),
+                content: const Text(
+                  '备份文件包含登录信息，请妥善保管。WebDAV 密码不会写入备份文件。',
+                ),
+              );
+              if (!confirmed) return;
+              exportToLocalFile(
+                onExport: GStorage.exportAppData,
+                localFileName: () =>
+                    'app_backup_${DeviceUtils.platformName}',
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('重装后恢复'),
+            subtitle: Text(
+              '从备份文件恢复设置并导入登录信息',
+              style: subTitleStyle,
+            ),
+            leading: const Icon(Icons.restore_outlined),
+            onTap: () async {
+              final confirmed = await showConfirmDialog(
+                context: context,
+                title: const Text('恢复应用数据？'),
+                content: const Text(
+                  '备份中的设置会替换当前设置，登录信息会合并到当前账号列表。',
+                ),
+              );
+              if (!confirmed) return;
+              await importFromLocalFile<Map<String, dynamic>>(
+                onImport: (json) async {
+                  await GStorage.importAppData(json);
+                  MineController.anonymity.value = !Accounts.heartbeat.isLogin;
+                  if (Accounts.main.isLogin) {
+                    await LoginUtils.onLoginMain();
+                  }
+                },
+              );
+            },
+          ),
+          ListTile(
             title: const Text('重置所有设置'),
             leading: const Icon(Icons.settings_backup_restore_outlined),
             onTap: () => showDialog(

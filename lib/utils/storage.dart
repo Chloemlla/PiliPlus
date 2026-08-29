@@ -150,12 +150,40 @@ abstract final class GStorage {
     await replyCacheStore.trim();
   }
 
-  static String exportAllSettings() {
+  static String exportAllSettings() =>
+      Utils.jsonEncoder.convert(_settingsBackup());
+
+  static String exportAppData() {
     return Utils.jsonEncoder.convert({
       'schemaVersion': SettingsBackupValidator.currentSchemaVersion,
-      setting.name: sanitizeSettingsForExport(setting.toMap()),
-      video.name: video.toMap(),
+      'settings': _settingsBackup(),
+      'accounts': Accounts.account.toMap(),
     });
+  }
+
+  static Map<String, dynamic> _settingsBackup() => {
+    'schemaVersion': SettingsBackupValidator.currentSchemaVersion,
+    setting.name: sanitizeSettingsForExport(setting.toMap()),
+    video.name: video.toMap(),
+  };
+
+  static Future<void> importAppData(Map<String, dynamic> backup) async {
+    SettingsBackupValidator.validateSchemaVersion(backup);
+    final settings = backup['settings'];
+    final accounts = backup['accounts'];
+    if (settings is! Map || accounts is! Map) {
+      throw const FormatException('Invalid application backup');
+    }
+    final settingsMap = Map<String, dynamic>.from(settings);
+    final accountsMap = Map<dynamic, dynamic>.from(accounts);
+    SettingsBackupValidator.validateBackup(
+      settingsMap,
+      currentSettings: setting.toMap(),
+      currentVideo: video.toMap(),
+    );
+    Accounts.canonicalizeImportedAccounts(accountsMap);
+    await importAllJsonSettings(settingsMap);
+    await Accounts.importAccounts(accountsMap);
   }
 
   static Future<void> importAllSettings(String data) =>
