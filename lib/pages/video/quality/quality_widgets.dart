@@ -154,13 +154,18 @@ class QualityModeIndicator extends StatelessWidget {
     final recommendation = controller.currentRecommendation.value;
     return Row(
       children: [
-        Icon(_getModeIcon(mode), size: 18),
+        Icon(_getModeIcon(mode), color: Colors.white, size: 18),
         const SizedBox(width: 10),
-        Expanded(child: Text('模式：${mode.label}')),
+        Expanded(
+          child: Text(
+            '模式：${mode.label}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
         if (mode == QualityMode.auto && recommendation != null)
           Text(
             recommendation.qualityLabel,
-            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+            style: const TextStyle(color: Colors.white70),
           ),
       ],
     );

@@ -38,11 +38,12 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建同步了上游的举报流程改版，修复后台音频切回前台后视频画面无法恢复的问题，并让 Clash 读不到状态时说清原因。',
+      subtitle: '本构建同步了上游的举报流程改版，修复后台音频切回前台后视频画面无法恢复的问题、播放器画质自动模式在黑色菜单中黑字不可见的问题，并让 Clash 读不到状态时说清原因。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
         'Commit Hash：$commitLabel',
+        '播放器画质菜单中的「自动」模式改为浅色文字，在黑色播放器菜单背景上也清晰可见。',
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
