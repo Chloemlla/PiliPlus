@@ -37,10 +37,28 @@ const RENAME_RULES = [
     find: /package:PiliPlus\//g,
     to: 'package:pili_plus/',
   },
+  // Upstream migrated its material layer to package:material_ui; this fork
+  // stayed on Flutter's, because flex_seed_scheme 5.x returns a material_ui
+  // ColorScheme that is a different type from Flutter's.
+  {
+    path: /\.(dart|patch)$/i,
+    find: /package:material_ui\/material_ui\.dart/g,
+    to: 'package:flutter/material.dart',
+  },
   {
     path: /(^|\/)pubspec\.yaml$/,
     find: /^name:[ \t]+PiliPlus[ \t]*$/m,
     to: 'name: pili_plus',
+  },
+  {
+    path: /(^|\/)pubspec\.yaml$/,
+    find: /^  material_ui:[^\r\n]*\r?\n/m,
+    to: '',
+  },
+  {
+    path: /(^|\/)pubspec\.yaml$/,
+    find: /^  flex_seed_scheme:[^\r\n]*$/m,
+    to: '  flex_seed_scheme: ^4.0.1',
   },
 ];
 
@@ -94,12 +112,27 @@ function unmergedStages() {
 
 const gitBlob = (sha) => git(['cat-file', 'blob', sha]).stdout;
 
+function withoutImports(content) {
+  return content.replace(/^import\s+[\s\S]*?;\s*/gm, '');
+}
+
 function remergeNormalized(scratch, path, stages) {
-  const files = { base: join(scratch, 'base'), ours: join(scratch, 'ours'), theirs: join(scratch, 'theirs') };
+  const files = {
+    base: join(scratch, 'base'),
+    ours: join(scratch, 'ours'),
+    theirs: join(scratch, 'theirs'),
+  };
   // Stage 1 is missing for add/add conflicts; an empty base is the right input.
+  const ours = gitBlob(stages['2']);
+  const theirs = normalize(path, gitBlob(stages['3']));
+  if (withoutImports(ours) === withoutImports(theirs)) {
+    writeFileSync(path, ours);
+    git(['add', '--', path]);
+    return true;
+  }
   writeFileSync(files.base, stages['1'] ? normalize(path, gitBlob(stages['1'])) : '');
-  writeFileSync(files.ours, gitBlob(stages['2']));
-  writeFileSync(files.theirs, normalize(path, gitBlob(stages['3'])));
+  writeFileSync(files.ours, ours);
+  writeFileSync(files.theirs, theirs);
 
   const merged = run('git', [
     'merge-file', '-p',
@@ -170,8 +203,10 @@ function normalizeTree() {
 function refreshLockfile() {
   const pubGet = run('flutter', ['pub', 'get'], { allowFail: true });
   if (pubGet.error || pubGet.status !== 0) {
-    note('flutter pub get unavailable or failed; leaving pubspec.lock alone');
-    return false;
+    throw new Error(
+      'flutter pub get failed; refusing to commit a stale pubspec.lock. ' +
+        'Use SYNC_REFRESH_LOCK=0 only for a deliberate local dry run.',
+    );
   }
   const dirty = gitOut(['status', '--porcelain', '--', 'pubspec.lock']);
   if (!dirty) {
@@ -194,9 +229,16 @@ function main() {
   note(`fork tip ${gitOut(['rev-parse', '--short', 'HEAD'])}`);
 
   step(`Fetch upstream ${CONFIG.upstreamRef}`);
-  const target = CONFIG.headSha || `refs/heads/${CONFIG.upstreamRef}`;
-  git(['fetch', '--no-tags', CONFIG.upstreamUrl, target]);
-  const head = CONFIG.headSha || gitOut(['rev-parse', 'FETCH_HEAD']);
+  const branchRef = `refs/heads/${CONFIG.upstreamRef}`;
+  let head = CONFIG.headSha;
+  const bySha = head
+    ? git(['fetch', '--no-tags', CONFIG.upstreamUrl, head], { allowFail: true })
+    : null;
+  if (!bySha || bySha.status !== 0) {
+    // Not every server allows fetching a bare sha; the branch contains it.
+    git(['fetch', '--no-tags', CONFIG.upstreamUrl, branchRef]);
+    head = gitOut(['rev-parse', 'FETCH_HEAD']);
+  }
   note(`upstream tip ${head.slice(0, 9)}`);
 
   step('Merge upstream');
