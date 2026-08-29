@@ -94,7 +94,7 @@ class InAppMiniPlayerService {
 
     final controller = PlPlayerController.detached(isLive: isLive)
       ..volume.value = sourceController.volume.value
-      ..onlyPlayAudio.value = sourceController.onlyPlayAudio.value
+      ..onlyPlayAudio.value = sourceController.userOnlyPlayAudio
       ..videoFit.value = sourceController.videoFit.value;
 
     await controller.setDataSource(

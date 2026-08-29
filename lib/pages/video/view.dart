@@ -305,28 +305,22 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   /// 原地关闭视频轨道，不重开播放器，缓存保持热状态、后台音频零中断。
   /// mpv 的 vid=no 会停止读取视频流，视频字节不再下载。
   Future<void> _enterBackgroundAudio() async {
-    if (!_canUseBackgroundAudio || _backgroundAudioActive) return;
+    if (!_isAppInBackground || !_canUseBackgroundAudio) return;
+    if (_backgroundAudioActive) return;
 
     final ctr = videoDetailController.plPlayerController;
-    final player = ctr.videoPlayerController;
-    if (player == null) return;
+    if (ctr.videoPlayerController == null) return;
 
     _backgroundAudioActive = true;
-    ctr.setOnlyPlayAudioEnabled(true);
+    await ctr.setOnlyPlayAudioEnabled(true);
   }
 
   Future<void> _restoreForegroundVideo() async {
     if (!_backgroundAudioActive) return;
-
-    final ctr = videoDetailController.plPlayerController;
+    await videoDetailController.plPlayerController.restoreForegroundVideo();
+    // 恢复成功后才清标记：中途抛错时保留 true，下次回到前台会再试一次，
+    // 否则播放器会卡在有声音没画面的状态。
     _backgroundAudioActive = false;
-    // 返回前台时恢复视频轨道。若用户在后台期间通过通知栏手动切换了音频模式，
-    // setOnlyPlayAudioEnabled(false) 会保持当前状态（已是视频模式）。
-    ctr.setOnlyPlayAudioEnabled(false);
-    // 强制重开媒体以重新初始化视频解码器。
-    // setVideoTrack(.auto()) 在 mpv 中不可靠——vid=no 后重建视频输出管线可能失败。
-    // refreshPlayer 会重新 open 当前媒体，确保视频解码器被正确初始化。
-    await ctr.refreshPlayer(play: ctr.playerStatus.isPlaying);
   }
 
   Future<void>? playCallBack() {

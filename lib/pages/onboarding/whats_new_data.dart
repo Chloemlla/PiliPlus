@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建同步了上游 PiliPlus 的举报流程改版：举报弹窗新增网页举报入口、补充说明按举报理由决定是否必填，并整理了私信举报与私有存储开关的实现。',
+      subtitle: '本构建同步了上游的举报流程改版，修复后台音频切回前台后视频画面无法恢复的问题，并让 Clash 读不到状态时说清原因。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -57,6 +57,17 @@ abstract final class WhatsNewData {
         '未选择需要补充说明的理由时，不会再残留上一次的校验错误提示。',
       ],
       tip: '入口不变：长按评论/弹幕或在对应菜单中选择「举报」。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.play_circle_outline,
+      title: '后台音频切回前台不再黑屏',
+      subtitle: '修复切后台只听声音后回到应用时，播放器有时只有声音没有画面、需要手动重进视频的问题。',
+      bullets: [
+        '后台自动切集不再把播放源降级成纯音频流，回到前台可直接恢复视频轨道。',
+        '回前台重开媒体前会等待正在进行的换源结束，避免恢复动作被静默跳过。',
+        '恢复失败时保留状态，下次回到前台自动重试；在后台手动开启的「听视频」不再被覆盖。',
+      ],
+      tip: '需在播放器菜单开启「后台播放」后才会走后台音频流程。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.vpn_key_outlined,

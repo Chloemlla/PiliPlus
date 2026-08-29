@@ -340,7 +340,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           _pauseDueToPauseUponEnteringBackgroundMode = true;
           player.pause();
         }
-      } else {
+      } else if (state == .resumed) {
+        // 只在 resumed 恢复：Android 回到前台的顺序是 hidden → inactive → resumed，
+        // 在前两个阶段 surface 还没重新附着，此时 play() 会丢帧甚至留黑屏。
         if (_pauseDueToPauseUponEnteringBackgroundMode) {
           _pauseDueToPauseUponEnteringBackgroundMode = false;
           player?.play();

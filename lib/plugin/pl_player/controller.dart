@@ -1,5 +1,5 @@
 import 'dart:async'
-    show StreamSubscription, Timer, unawaited;
+    show Completer, StreamSubscription, TimeoutException, Timer, unawaited;
 import 'dart:convert' show ascii, utf8;
 import 'dart:io' show Platform;
 import 'dart:math' show max, min;
@@ -203,6 +203,14 @@ class PlPlayerController with BlockConfigMixin {
 
   /// 听视频
   late final RxBool onlyPlayAudio = false.obs;
+
+  /// [onlyPlayAudio] 是否由后台播放临时开启（而非用户手动选择）。
+  /// 临时状态不能改变新媒体的构建方式，否则后台切集会打开纯音频源，
+  /// 回到前台时源里没有视频流，画面永远恢复不了。
+  bool _backgroundAudioOnly = false;
+
+  /// 用户显式选择的"听视频"，不含后台播放临时关闭的视频轨。
+  bool get userOnlyPlayAudio => onlyPlayAudio.value && !_backgroundAudioOnly;
 
   /// 镜像
   late final RxBool flipX = false.obs;
@@ -614,6 +622,26 @@ class PlPlayerController with BlockConfigMixin {
 
   bool _processing = false;
   bool get processing => _processing;
+  Completer<void>? _processingCompleter;
+
+  /// 等待进行中的 [setDataSource] 结束。
+  /// [refreshPlayer] 会在 `_processing` 为真时静默返回 null，直接调用它的一方
+  /// 拿不到任何失败信号，因此恢复视频前必须先等空闲；超时则放弃等待，
+  /// 由调用方在下一次时机重试，避免调用链被卡死的 open 永久阻塞。
+  Future<void> _awaitProcessing() async {
+    final deadline = DateTime.now().add(const Duration(seconds: 8));
+    var completer = _processingCompleter;
+    while (completer != null) {
+      final remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero) return;
+      try {
+        await completer.future.timeout(remaining);
+      } on TimeoutException {
+        return;
+      }
+      completer = _processingCompleter;
+    }
+  }
 
   // offline
   bool get isFileSource => dataSource is FileSource;
@@ -659,6 +687,7 @@ class PlPlayerController with BlockConfigMixin {
             cid: cid,
           );
     final initialPosition = restoredPipPosition ?? seekTo;
+    final processingCompleter = _processingCompleter = Completer<void>();
     try {
       _processing = true;
       this.isLive = isLive;
@@ -730,6 +759,12 @@ class PlPlayerController with BlockConfigMixin {
       }
     } finally {
       _processing = false;
+      if (_processingCompleter == processingCompleter) {
+        _processingCompleter = null;
+      }
+      if (!processingCompleter.isCompleted) {
+        processingCompleter.complete();
+      }
     }
   }
 
@@ -876,7 +911,7 @@ class PlPlayerController with BlockConfigMixin {
 
     String video = dataSource.videoSource;
     if (dataSource.audioSource case final audio? when (audio.isNotEmpty)) {
-      if (onlyPlayAudio.value) {
+      if (onlyPlayAudio.value && !_backgroundAudioOnly) {
         video = audio;
       } else {
         // dely_open need provide length
@@ -1775,6 +1810,8 @@ class PlPlayerController with BlockConfigMixin {
   }
 
   void setOnlyPlayAudio() {
+    // 手动切换后音频模式即为用户的显式选择，回到前台不再自动恢复视频。
+    _backgroundAudioOnly = false;
     onlyPlayAudio.toggle();
     final player = videoPlayerController;
     if (player == null) return;
@@ -1787,15 +1824,37 @@ class PlPlayerController with BlockConfigMixin {
 
   /// 原地开关视频轨道（不重开播放器），保留 demuxer 缓存，
   /// 让前后台切换近零等待。[onlyAudio] 为 true 时仅保留音频。
-  void setOnlyPlayAudioEnabled(bool onlyAudio) {
+  /// 用户已手动选择"听视频"时不做任何改动，避免前后台切换覆盖其选择。
+  Future<void> setOnlyPlayAudioEnabled(bool onlyAudio) async {
+    if (onlyAudio) {
+      if (onlyPlayAudio.value) return;
+      _backgroundAudioOnly = true;
+    } else {
+      if (!_backgroundAudioOnly) return;
+      _backgroundAudioOnly = false;
+    }
     onlyPlayAudio.value = onlyAudio;
     final player = videoPlayerController;
     if (player == null) return;
     if (onlyAudio) {
-      player.setVideoTrack(.no());
+      await player.setVideoTrack(.no());
     } else {
-      player.setVideoTrack(.auto());
+      await player.setVideoTrack(.auto());
     }
+  }
+
+  /// 后台音频切回前台：恢复视频轨道并重开当前媒体，重新初始化视频解码器。
+  /// `setVideoTrack(.auto())` 单独用不可靠——mpv 在 `vid=no` 之后重建视频输出
+  /// 管线可能失败，所以必须重开媒体。
+  Future<void> restoreForegroundVideo() async {
+    // 必须等 setDataSource 结束：否则 refreshPlayer 撞上 `_processing` 会静默
+    // 跳过，留下有声音没画面的播放器。
+    await _awaitProcessing();
+    if (_playerCount == 0 || _videoPlayerController == null) return;
+    await setOnlyPlayAudioEnabled(false);
+    // 用户在后台通过通知栏手动选择了纯音频，尊重其选择，不重开媒体。
+    if (onlyPlayAudio.value) return;
+    await refreshPlayer(play: playerStatus.isPlaying);
   }
 
   late final Map<String, ui.Image?> previewCache = {};
