@@ -186,7 +186,8 @@ abstract final class SettingBoxKey {
       removeSafeArea = 'removeSafeArea',
       angleDegrees = 'angleDegrees',
       liveStream = 'liveStream',
-      enableDocProvider = 'enableDocProvider';
+      enableDocProvider = 'enableDocProvider',
+      upIntroSkipDuration = 'upIntroSkipDuration';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',

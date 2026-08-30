@@ -246,6 +246,17 @@ abstract final class ImprovementsGuideData {
       tip: '路径：设置 → 关于 → 应用声明。',
     ),
     ImprovementsGuidePageData(
+      icon: Icons.fast_forward_outlined,
+      title: 'UP开屏跳过',
+      subtitle: '为某个 UP 统一设置开屏（开篇）跳过时长，之后该 UP 的所有视频从头播放时自动跳过。',
+      bullets: [
+        '入口：播放页顶部「更多设置」→ UP开屏跳过。',
+        '设置按 UP 记忆，其所有视频（含多分 P）从零开始播放时都会生效。',
+        '从历史进度续播时不会再次跳过开头。',
+      ],
+      tip: '适合开头固定有片头/口播的 UP，一次设置，全部视频生效。',
+    ),
+    ImprovementsGuidePageData(
       icon: Icons.rocket_launch_outlined,
       title: '准备就绪',
       subtitle: '以上是本分支相对上游的主要增量。进入应用后即可正常使用；完整说明见仓库 README。',

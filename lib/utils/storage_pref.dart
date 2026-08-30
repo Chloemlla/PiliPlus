@@ -706,6 +706,32 @@ abstract final class Pref {
   static int get fastForBackwardDuration =>
       _setting.get(SettingBoxKey.fastForBackwardDuration, defaultValue: 10);
 
+  /// Per-UP opening-screen skip duration in seconds, keyed by owner mid.
+  /// Normalizes both MMKV (int keys) and settings-sync import (string keys).
+  static Map<int, int> get upIntroSkipDuration {
+    final raw = _setting.get(SettingBoxKey.upIntroSkipDuration);
+    if (raw is! Map || raw.isEmpty) return <int, int>{};
+    final result = <int, int>{};
+    for (final MapEntry(:key, :value) in raw.entries) {
+      final mid = int.tryParse('$key');
+      if (mid == null || value is! num || value <= 0) continue;
+      result[mid] = value.toInt();
+    }
+    return result;
+  }
+
+  static int upIntroSkipSeconds(int mid) => upIntroSkipDuration[mid] ?? 0;
+
+  static Future<void> setUpIntroSkipSeconds(int mid, int seconds) async {
+    final map = upIntroSkipDuration;
+    if (seconds <= 0) {
+      map.remove(mid);
+    } else {
+      map[mid] = seconds;
+    }
+    await _setting.put(SettingBoxKey.upIntroSkipDuration, map);
+  }
+
   static bool get recordSearchHistory =>
       _setting.get(SettingBoxKey.recordSearchHistory, defaultValue: true);
 

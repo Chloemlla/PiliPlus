@@ -357,6 +357,9 @@ class HeaderControlState extends State<HeaderControl>
   @override
   late final horizontalScreen = videoDetailCtr.horizontalScreen;
 
+  int? get _ownerMid =>
+      isFileSource ? null : introController.videoDetail.value.owner?.mid;
+
   Box setting = GStorage.setting;
 
   @override
@@ -758,6 +761,36 @@ class HeaderControlState extends State<HeaderControl>
                   descPosType: .subtitle,
                   descStyle: subTitleStyle,
                 ),
+                if (_ownerMid case final int mid?)
+                  PopupListTile<int>(
+                    dense: true,
+                    leading: const Icon(Icons.fast_forward_outlined, size: 20),
+                    title: const Text('UP开屏跳过', style: titleStyle),
+                    titleStyle: theme.textTheme.bodyLarge,
+                    value: () {
+                      final seconds = Pref.upIntroSkipSeconds(mid);
+                      final name =
+                          introController.videoDetail.value.owner?.name ??
+                          '该UP';
+                      return (
+                        seconds,
+                        '$name：${seconds <= 0 ? '关闭' : '$seconds 秒'}',
+                      );
+                    },
+                    itemBuilder: (_) => [
+                      for (final seconds in const [0, 3, 5, 10, 15, 20, 30])
+                        PopupMenuItem(
+                          value: seconds,
+                          child: Text(seconds <= 0 ? '关闭' : '$seconds 秒'),
+                        ),
+                    ],
+                    onSelected: (seconds, setState) {
+                      Pref.setUpIntroSkipSeconds(mid, seconds);
+                      setState();
+                    },
+                    descPosType: .subtitle,
+                    descStyle: subTitleStyle,
+                  ),
                 ListTile(
                   dense: true,
                   onTap: () {

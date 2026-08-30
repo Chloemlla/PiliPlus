@@ -38,7 +38,7 @@ abstract final class WhatsNewData {
     ImprovementsGuidePageData(
       icon: Icons.new_releases_outlined,
       title: '本次构建更新说明',
-      subtitle: '本构建同步了上游的举报流程改版，修复后台音频切回前台后视频画面无法恢复的问题、播放器画质自动模式在黑色菜单中黑字不可见的问题，并让 Clash 读不到状态时说清原因。',
+      subtitle: '本构建同步了上游的举报流程改版，修复后台音频切回前台后视频画面无法恢复的问题、播放器画质自动模式在黑色菜单中黑字不可见的问题，并让 Clash 读不到状态时说清原因。新增「UP开屏跳过」，可为当前 UP 的所有视频统一设置开篇自动跳过时长。',
       bullets: [
         '版本：$versionLabel',
         'Build Time：$buildTimeLabel',
@@ -47,6 +47,17 @@ abstract final class WhatsNewData {
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.fast_forward_outlined,
+      title: 'UP开屏跳过',
+      subtitle: '播放器「更多设置」里可为当前视频的 UP 统一设置开屏跳过时长，之后该 UP 的所有视频从头播放时都会自动跳过对应秒数。',
+      bullets: [
+        '按 UP 记忆设置：给某位 UP 设置后，其所有视频（含多分 P）从零开始播放时都会跳过开篇。',
+        '不影响续播：从历史进度恢复播放时不会再次跳过开头。',
+        '随时可在「更多设置 → UP开屏跳过」修改或关闭。',
+      ],
+      tip: '入口：播放页顶部「更多设置」→ UP开屏跳过。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.report_outlined,

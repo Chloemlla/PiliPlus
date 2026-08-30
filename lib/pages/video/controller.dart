@@ -759,7 +759,15 @@ class VideoDetailController extends GetxController
   }) async {
     Duration? seek = defaultST ?? playedTime;
     if (seek == .zero) seek = null;
-    seek ??= getFirstSegment();
+    if (seek == null) {
+      final candidates = <Duration>[
+        if (getFirstSegment() case final Duration first) first,
+        if (_upIntroSkipDuration() case final Duration upSkip) upSkip,
+      ];
+      if (candidates.isNotEmpty) {
+        seek = candidates.reduce((a, b) => a > b ? a : b);
+      }
+    }
     await plPlayerController.setDataSource(
       isFileSource
           ? FileSource(
@@ -812,6 +820,20 @@ class VideoDetailController extends GetxController
     }
 
     defaultST = null;
+  }
+
+  /// Opening-screen skip configured for the current video's UP, applied only
+  /// when playback starts fresh (no resume position). Null when unset.
+  Duration? _upIntroSkipDuration() {
+    if (isFileSource || !isUgc) return null;
+    final mid = Get.find<UgcIntroController>(tag: heroTag)
+        .videoDetail
+        .value
+        .owner
+        ?.mid;
+    if (mid == null) return null;
+    final seconds = Pref.upIntroSkipSeconds(mid);
+    return seconds <= 0 ? null : Duration(seconds: seconds);
   }
 
   Future<void> openInAppMiniPlayer({String? title}) async {
