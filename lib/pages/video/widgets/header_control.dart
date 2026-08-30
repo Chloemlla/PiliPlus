@@ -360,6 +360,65 @@ class HeaderControlState extends State<HeaderControl>
   int? get _ownerMid =>
       isFileSource ? null : introController.videoDetail.value.owner?.mid;
 
+  /// Sentinel menu value for the "自定义" entry; never written to storage.
+  static const int _customSkipSentinel = -1;
+
+  Future<int?> _promptCustomSkipSeconds(int mid) async {
+    final current = Pref.upIntroSkipSeconds(mid);
+    final controller = TextEditingController(
+      text: current > 0 ? '$current' : '3',
+    );
+    final key = GlobalKey<FormFieldState<String>>();
+    final result = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('自定义开屏跳过时长'),
+        content: TextFormField(
+          key: key,
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: '跳过秒数',
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            final seconds = int.tryParse(value ?? '');
+            if (seconds == null || seconds < 1 || seconds > 600) {
+              return '请输入 1-600 的整数秒数';
+            }
+            return null;
+          },
+          onFieldSubmitted: (_) => _confirmCustomSkipSeconds(key, controller),
+        ),
+        actions: [
+          TextButton(
+            onPressed: Get.back,
+            child: Text(
+              '取消',
+              style: TextStyle(color: ColorScheme.of(dialogContext).outline),
+            ),
+          ),
+          TextButton(
+            onPressed: () => _confirmCustomSkipSeconds(key, controller),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  void _confirmCustomSkipSeconds(
+    GlobalKey<FormFieldState<String>> key,
+    TextEditingController controller,
+  ) {
+    if (key.currentState?.validate() == true) {
+      Get.back(result: int.tryParse(controller.text));
+    }
+  }
+
   Box setting = GStorage.setting;
 
   @override
@@ -783,9 +842,19 @@ class HeaderControlState extends State<HeaderControl>
                           value: seconds,
                           child: Text(seconds <= 0 ? '关闭' : '$seconds 秒'),
                         ),
+                      const PopupMenuItem(
+                        value: _customSkipSentinel,
+                        child: Text('自定义'),
+                      ),
                     ],
-                    onSelected: (seconds, setState) {
-                      Pref.setUpIntroSkipSeconds(mid, seconds);
+                    onSelected: (seconds, setState) async {
+                      var effective = seconds;
+                      if (seconds == _customSkipSentinel) {
+                        final custom = await _promptCustomSkipSeconds(mid);
+                        if (custom == null) return;
+                        effective = custom;
+                      }
+                      await Pref.setUpIntroSkipSeconds(mid, effective);
                       setState();
                     },
                     descPosType: .subtitle,
