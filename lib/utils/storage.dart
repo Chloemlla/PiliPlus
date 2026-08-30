@@ -254,7 +254,26 @@ abstract final class GStorage {
 
   static Map<dynamic, dynamic> sanitizeSettingsForExport(
     Map<dynamic, dynamic> settings,
-  ) => Map<dynamic, dynamic>.of(settings)..remove(SettingBoxKey.webdavPassword);
+  ) => _jsonSafeMap(settings)..remove(SettingBoxKey.webdavPassword);
+
+  /// Recursively converts non-string map keys to strings so the result always
+  /// survives [Utils.jsonEncoder] (JSON only allows string keys). Guards the
+  /// settings export against int-keyed values such as legacy per-UP skips.
+  static Map<dynamic, dynamic> _jsonSafeMap(Map<dynamic, dynamic> map) {
+    final result = <dynamic, dynamic>{};
+    for (final entry in map.entries) {
+      result[entry.key is String ? entry.key : '${entry.key}'] =
+          _jsonSafeValue(entry.value);
+    }
+    return result;
+  }
+
+  static dynamic _jsonSafeValue(dynamic value) {
+    if (value is Map) return _jsonSafeMap(value);
+    if (value is List) return value.map(_jsonSafeValue).toList(growable: false);
+    if (value is Set) return value.map(_jsonSafeValue).toList(growable: false);
+    return value;
+  }
 
   static Future<void> migrateSettingSecrets() async {
     final webDavPassword = setting.get(SettingBoxKey.webdavPassword);

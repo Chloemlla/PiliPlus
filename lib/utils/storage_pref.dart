@@ -729,7 +729,15 @@ abstract final class Pref {
     } else {
       map[mid] = seconds;
     }
-    await _setting.put(SettingBoxKey.upIntroSkipDuration, map);
+    // Store string keys so the map survives JSON settings export; the getter
+    // still reads legacy int-keyed values from MMKV.
+    await _setting.put(
+      SettingBoxKey.upIntroSkipDuration,
+      {
+        for (final MapEntry(key: int key, value: int value) in map.entries)
+          '$key': value,
+      },
+    );
   }
 
   static bool get recordSearchHistory =>
