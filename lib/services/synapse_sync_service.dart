@@ -953,16 +953,16 @@ abstract final class SynapseSyncService {
     await box.delete(key);
   }
 
-  static bool _isSensitiveKey(String key) {
-    final normalized = key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    return normalized.contains('password') ||
-        normalized.contains('cookie') ||
-        normalized.contains('token') ||
-        normalized.contains('secret') ||
-        normalized.contains('apikey') ||
-        normalized.contains('accesskey') ||
-        normalized.contains('privatekey');
-  }
+  static bool _isSensitiveKey(String key) =>
+      _sensitiveSettingKeys.contains(key);
+
+  /// Setting-box keys that carry real credentials. Exact match: the previous
+  /// substring test also dropped the sealCookie* toggles (no credential
+  /// values), silently omitting them from sync. Credentials live in dedicated
+  /// secret stores, so only webdavPassword belongs here.
+  static const _sensitiveSettingKeys = <String>{
+    SettingBoxKey.webdavPassword,
+  };
 
   static Dio _client() {
     final token = accessToken;
