@@ -44,6 +44,7 @@ abstract final class WhatsNewData {
         'Build Time：$buildTimeLabel',
         'Commit Hash：$commitLabel',
         '播放器画质菜单中的「自动」模式改为浅色文字，在黑色播放器菜单背景上也清晰可见。',
+        '备份补齐：设置备份现在包含搜索历史，应用数据备份还包含视频书签，换机恢复不再丢失。',
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',

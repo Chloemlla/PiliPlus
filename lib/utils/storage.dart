@@ -5,6 +5,7 @@ import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models/user/danmaku_rule_adapter.dart';
 import 'package:pili_plus/models/user/info.dart';
 import 'package:pili_plus/services/crash/crash_reporter.dart';
+import 'package:pili_plus/services/video_bookmark_service.dart';
 import 'package:pili_plus/utils/android/android_mmkv_box.dart';
 import 'package:pili_plus/utils/android/android_mmkv_storage_codec.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -157,6 +158,8 @@ abstract final class GStorage {
     return Utils.jsonEncoder.convert({
       'schemaVersion': SettingsBackupValidator.currentSchemaVersion,
       'settings': _settingsBackup(),
+      if (VideoBookmarkService.isInitialized)
+        'bookmarks': VideoBookmarkService.exportAllBookmarks(),
       'accounts': Accounts.account.toMap(),
     });
   }
@@ -165,6 +168,7 @@ abstract final class GStorage {
     'schemaVersion': SettingsBackupValidator.currentSchemaVersion,
     setting.name: sanitizeSettingsForExport(setting.toMap()),
     video.name: video.toMap(),
+    'history': historyWord.toMap(),
   };
 
   static Future<void> importAppData(Map<String, dynamic> backup) async {
@@ -184,6 +188,15 @@ abstract final class GStorage {
     Accounts.canonicalizeImportedAccounts(accountsMap);
     await importAllJsonSettings(settingsMap);
     await Accounts.importAccounts(accountsMap);
+    await _importBookmarks(backup['bookmarks']);
+  }
+
+  static Future<void> _importBookmarks(Object? raw) async {
+    if (raw is! String || raw.isEmpty) return;
+    if (!VideoBookmarkService.isInitialized) {
+      if (!await VideoBookmarkService.init()) return;
+    }
+    await VideoBookmarkService.importBookmarks(raw);
   }
 
   static Future<void> importAllSettings(String data) =>
@@ -250,6 +263,10 @@ abstract final class GStorage {
         }
       },
     );
+    final history = map['history'];
+    if (history is Map && history.isNotEmpty) {
+      await historyWord.putAll(history);
+    }
   }
 
   static Map<dynamic, dynamic> sanitizeSettingsForExport(
