@@ -50,6 +50,18 @@ abstract final class WhatsNewData {
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
     ),
     const ImprovementsGuidePageData(
+      icon: Icons.push_pin_outlined,
+      title: '收藏置顶与排序',
+      subtitle: '评论收藏夹与视频收藏夹支持置顶和自由拖拽排序，排序状态本地保存，并可导出、导入。',
+      bullets: [
+        '评论收藏夹：收藏的评论可置顶，长按拖拽调整顺序。',
+        '视频收藏夹：收藏夹列表和收藏夹内的视频都可置顶、拖拽排序。',
+        '本地保存：置顶与排序作为本地覆盖层，刷新或重新登录后依然保留。',
+        '可导出/导入：排序状态可导出为 JSON 或剪贴板，换机导入即恢复。',
+      ],
+      tip: '入口：评论收藏页与收藏夹页右上角「排序」按钮。',
+    ),
+    const ImprovementsGuidePageData(
       icon: Icons.fast_forward_outlined,
       title: 'UP开屏跳过',
       subtitle: '播放器「更多设置」里可为当前视频的 UP 统一设置开屏跳过时长，之后该 UP 的所有视频从头播放时都会自动跳过对应秒数。',

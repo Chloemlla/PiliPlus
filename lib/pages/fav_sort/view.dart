@@ -1,15 +1,13 @@
-import 'package:pili_plus/common/widgets/reorder_mixin.dart';
-import 'package:pili_plus/http/fav.dart';
-import 'package:pili_plus/http/loading_state.dart';
-import 'package:pili_plus/models_new/fav/fav_detail/media.dart';
+import 'package:pili_plus/common/widgets/favorite_sort_page.dart';
 import 'package:pili_plus/pages/fav_detail/controller.dart';
 import 'package:pili_plus/pages/fav_detail/widget/fav_video_card.dart';
-import 'package:pili_plus/utils/extension/iterable_ext.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
+/// Local pin + drag-sort overlay for videos inside a favorite folder. The
+/// display order (pinned first) is persisted through
+/// [GStorage.favoriteOrderStore] per folder and can be exported/restored.
 class FavSortPage extends StatefulWidget {
   const FavSortPage({super.key, required this.favDetailController});
 
@@ -19,112 +17,33 @@ class FavSortPage extends StatefulWidget {
   State<FavSortPage> createState() => _FavSortPageState();
 }
 
-class _FavSortPageState extends State<FavSortPage> with ReorderMixin {
-  FavDetailController get _favDetailController => widget.favDetailController;
-
-  late List<FavDetailItemModel> sortList = List<FavDetailItemModel>.from(
-    _favDetailController.loadingState.value.data!,
-  );
-  List<String> sort = <String>[];
-
-  void onLoadMore() {
-    if (_favDetailController.isEnd) {
-      return;
-    }
-    _favDetailController.onLoadMore().whenComplete(() {
-      try {
-        if (_favDetailController.loadingState.value case Success(
-          :final response,
-        )) {
-          sortList.addAll(response!.skip(sortList.length));
-          if (mounted) {
-            setState(() {});
-          }
-        }
-      } catch (_) {}
-    });
-  }
-
+class _FavSortPageState extends State<FavSortPage> {
   @override
   Widget build(BuildContext context) {
-    return SimpleScaffold(
-      appBar: AppBar(
-        title: Text('排序: ${_favDetailController.folderInfo.value.title}'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (sort.isEmpty) {
-                Get.back();
-                return;
-              }
-              FavHttp.sortFav(
-                mediaId: _favDetailController.mediaId,
-                sort: sort.join(','),
-              ).then((res) {
-                if (res.isSuccess) {
-                  SmartDialog.showToast('排序完成');
-                  _favDetailController.loadingState.value = Success(sortList);
-                  if (mounted) {
-                    Get.back();
-                  }
-                } else {
-                  res.toast();
-                }
-              });
-            },
-            child: const Text('完成'),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: _buildBody,
-    );
-  }
-
-  void onReorderItem(int oldIndex, int newIndex) {
-    final oldItem = sortList[oldIndex];
-    final newItem = sortList.getOrNull(
-      oldIndex > newIndex ? newIndex - 1 : newIndex, // might be Negative
-    );
-    sort.add(
-      '${newItem == null ? '0:0' : '${newItem.id}:${newItem.type}'}:${oldItem.id}:${oldItem.type}',
-    );
-
-    sortList.insert(newIndex, sortList.removeAt(oldIndex));
-
-    setState(() {});
-  }
-
-  Widget get _buildBody {
-    final child = ReorderableListView.builder(
-      onReorderItem: onReorderItem,
-      proxyDecorator: proxyDecorator,
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding:
-          MediaQuery.viewPaddingOf(context).copyWith(top: 0) +
-          const EdgeInsets.only(bottom: 100),
-      itemCount: sortList.length,
-      itemBuilder: (context, index) {
-        final item = sortList[index];
+    final controller = widget.favDetailController;
+    return FavoriteSortPage(
+      title: '排序: ${controller.folderInfo.value.title}',
+      scope: controller.scope,
+      store: GStorage.favoriteOrderStore,
+      allIds: controller.orderedItems.map(FavDetailController.itemId).toList(),
+      itemBuilder: (context, id) {
+        final item = controller.orderedItems.firstWhere(
+          (item) => FavDetailController.itemId(item) == id,
+        );
         return SizedBox(
-          key: ValueKey(item.id),
           height: 110,
           child: FavVideoCardH(item: item),
         );
       },
+      onExport: () => Utils.jsonEncoder.convert(
+        GStorage.favoriteOrderStore.exportState(controller.scope),
+      ),
+      onImport: (json) async {
+        await GStorage.favoriteOrderStore.importState(controller.scope, json);
+      },
+      onChanged: controller.loadingState.refresh,
+      exportFileName: 'fav_video_order',
+      exportTitle: '视频排序状态',
     );
-    if (!_favDetailController.isEnd) {
-      return NotificationListener<ScrollEndNotification>(
-        onNotification: (notification) {
-          final metrics = notification.metrics;
-          if (metrics.pixels >= metrics.maxScrollExtent - 300) {
-            onLoadMore();
-          }
-          return false;
-        },
-        child: child,
-      );
-    }
-    return child;
   }
 }

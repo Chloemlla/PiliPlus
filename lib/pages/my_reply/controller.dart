@@ -5,15 +5,20 @@ import 'dart:typed_data';
 import 'package:fixnum/fixnum.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
+import 'package:pili_plus/utils/storage/favorite_order_store.dart';
 import 'package:pili_plus/utils/storage/favorite_reply_store.dart';
 import 'package:protobuf/protobuf.dart';
 
 final class MyReplyController {
-  MyReplyController(this._store);
+  MyReplyController(this._store, this._orderStore);
 
   static const _jsonEncoder = JsonEncoder.withIndent('    ');
 
+  /// Local pin + sort overlay scope for favorited comments.
+  static const String scope = 'reply';
+
   final FavoriteReplyStore _store;
+  final FavoriteOrderStore _orderStore;
   final List<ReplyInfo> _replies = <ReplyInfo>[];
 
   int _invalidStoredCount = 0;
@@ -24,6 +29,12 @@ final class MyReplyController {
   int get count => _replies.length;
 
   int get invalidStoredCount => _invalidStoredCount;
+
+  /// Ids in the current display order (pinned first).
+  List<String> get displayIds =>
+      _replies.map((reply) => reply.id.toString()).toList();
+
+  bool isPinned(String id) => _orderStore.isPinned(scope, id);
 
   void reload() {
     final replies = <ReplyInfo>[];
@@ -41,16 +52,41 @@ final class MyReplyController {
       }
     }
     replies.sort(_newestFirst);
+    final ordered = _orderStore.displayOrder(
+      scope,
+      replies.map((reply) => reply.id.toString()),
+    );
+    final byId = {
+      for (final reply in replies) reply.id.toString(): reply,
+    };
     _replies
       ..clear()
-      ..addAll(replies);
+      ..addAll([for (final id in ordered) byId[id]!]);
     _invalidStoredCount = invalidCount;
   }
 
+  Future<void> togglePin(String id) async {
+    if (_orderStore.isPinned(scope, id)) {
+      await _orderStore.unpin(scope, id);
+    } else {
+      await _orderStore.pin(scope, id, displayIds);
+    }
+    reload();
+  }
+
+  Future<void> applyDrag(int oldIndex, int newIndex) async {
+    await _orderStore.applyDrag(scope, oldIndex, newIndex, displayIds);
+    reload();
+  }
+
   String exportJson() {
-    return _jsonEncoder.convert(
-      _replies.map((reply) => reply.toProto3Json()).toList(),
-    );
+    final current = _replies.map((reply) => reply.id.toString()).toSet();
+    return _jsonEncoder.convert({
+      'version': 1,
+      'pinned': _orderStore.pinned(scope).where(current.contains).toList(),
+      'order': displayIds,
+      'replies': _replies.map((reply) => reply.toProto3Json()).toList(),
+    });
   }
 
   Future<void> delete(String id) async {
@@ -60,15 +96,27 @@ final class MyReplyController {
 
   Future<void> clear() async {
     await _store.clear();
+    await _orderStore.clearScope(scope);
     _replies.clear();
     _invalidStoredCount = 0;
   }
 
   Future<FavoriteReplyImportSummary> importJson(Object? value) async {
-    if (value is! List) {
-      throw const FormatException('导入内容必须是评论列表');
+    if (value is List) {
+      return _importReplyList(value);
     }
+    if (value is Map) {
+      final replies = value['replies'];
+      if (replies is! List) {
+        throw const FormatException('导入内容必须是评论列表');
+      }
+      await _orderStore.importState(scope, value);
+      return _importReplyList(replies);
+    }
+    throw const FormatException('导入内容必须是评论列表');
+  }
 
+  Future<FavoriteReplyImportSummary> _importReplyList(List<dynamic> value) async {
     final parsed = <String, ({ReplyInfo reply, Uint8List data})>{};
     var invalidCount = 0;
     var duplicateCount = 0;

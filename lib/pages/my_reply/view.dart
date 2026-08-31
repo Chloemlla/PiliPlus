@@ -5,6 +5,7 @@ import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
 import 'package:pili_plus/pages/my_reply/controller.dart';
+import 'package:pili_plus/pages/my_reply/sort_page.dart';
 import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/id_utils.dart';
@@ -31,7 +32,10 @@ class _MyReplyState extends State<MyReply> with DynMixin {
   @override
   void initState() {
     super.initState();
-    _controller = MyReplyController(GStorage.favoriteReplyStore)..reload();
+    _controller = MyReplyController(
+      GStorage.favoriteReplyStore,
+      GStorage.favoriteOrderStore,
+    )..reload();
     if (_controller.invalidStoredCount > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -51,6 +55,11 @@ class _MyReplyState extends State<MyReply> with DynMixin {
       appBar: AppBar(
         title: Text('收藏的评论（${_controller.count}）'),
         actions: [
+          IconButton(
+            tooltip: '置顶与排序',
+            onPressed: _controller.count == 0 ? null : _openSortPage,
+            icon: const Icon(Icons.sort),
+          ),
           IconButton(
             tooltip: '清空收藏',
             onPressed: _controller.count == 0 ? null : _clearFavorites,
@@ -78,13 +87,18 @@ class _MyReplyState extends State<MyReply> with DynMixin {
                     gridDelegate: dynGridDelegate,
                     delegate: SliverChildBuilderDelegate(
                       childCount: _controller.count,
-                      (context, index) => ReplyItemGrpc(
-                        replyLevel: 0,
-                        needDivider: false,
-                        replyItem: replies[index],
-                        replyReply: _replyReply,
-                        onDelete: (reply, _) => _onDelete(reply),
-                        onCheckReply: _onCheckReply,
+                      (context, index) => _wrapPinBadge(
+                        ReplyItemGrpc(
+                          replyLevel: 0,
+                          needDivider: false,
+                          replyItem: replies[index],
+                          replyReply: _replyReply,
+                          onDelete: (reply, _) => _onDelete(reply),
+                          onCheckReply: _onCheckReply,
+                        ),
+                        pinned: _controller.isPinned(
+                          replies[index].id.toString(),
+                        ),
                       ),
                     ),
                   ),
@@ -227,6 +241,43 @@ class _MyReplyState extends State<MyReply> with DynMixin {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openSortPage() async {
+    await Get.to(
+      () => MyReplySortPage(
+        controller: _controller,
+        onChanged: () {
+          _controller.reload();
+          if (mounted) setState(() {});
+        },
+      ),
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Widget _wrapPinBadge(Widget child, {required bool pinned}) {
+    if (!pinned) return child;
+    final scheme = ColorScheme.of(context);
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: scheme.surface.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: scheme.primary, width: 0.5),
+            ),
+            child: Icon(Icons.push_pin, size: 14, color: scheme.primary),
+          ),
+        ),
+      ],
     );
   }
 

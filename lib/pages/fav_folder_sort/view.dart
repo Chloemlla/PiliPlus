@@ -1,14 +1,13 @@
-import 'package:pili_plus/common/widgets/reorder_mixin.dart';
-import 'package:pili_plus/http/fav.dart';
-import 'package:pili_plus/http/loading_state.dart';
-import 'package:pili_plus/models_new/fav/fav_folder/list.dart';
+import 'package:pili_plus/common/widgets/favorite_sort_page.dart';
+import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/pages/fav/video/controller.dart';
-import 'package:pili_plus/pages/fav/video/widgets/item.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 
+/// Local pin + drag-sort overlay for the favorite folder list. The display
+/// order (pinned first) is persisted through [GStorage.favoriteOrderStore] and
+/// can be exported/restored.
 class FavFolderSortPage extends StatefulWidget {
   const FavFolderSortPage({super.key, required this.favController});
 
@@ -18,79 +17,50 @@ class FavFolderSortPage extends StatefulWidget {
   State<FavFolderSortPage> createState() => _FavFolderSortPageState();
 }
 
-class _FavFolderSortPageState extends State<FavFolderSortPage>
-    with ReorderMixin {
-  FavController get _favController => widget.favController;
-
-  late List<FavFolderInfo> sortList = List<FavFolderInfo>.from(
-    _favController.loadingState.value.data!,
-  );
-
+class _FavFolderSortPageState extends State<FavFolderSortPage> {
   @override
   Widget build(BuildContext context) {
-    return SimpleScaffold(
-      appBar: AppBar(
-        title: const Text('收藏夹排序'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              final res = await FavHttp.sortFavFolder(
-                sort: sortList.map((item) => item.id).join(','),
-              );
-              if (res.isSuccess) {
-                SmartDialog.showToast('排序完成');
-                _favController.loadingState.value = Success(sortList);
-                if (mounted) {
-                  Get.back();
-                }
-              } else {
-                res.toast();
-              }
-            },
-            child: const Text('完成'),
+    final controller = widget.favController;
+    return FavoriteSortPage(
+      title: '收藏夹排序',
+      scope: FavController.scope,
+      store: GStorage.favoriteOrderStore,
+      allIds: controller.orderedFolders.map(FavController.folderId).toList(),
+      itemBuilder: (context, id) {
+        final folder = controller.orderedFolders.firstWhere(
+          (folder) => FavController.folderId(folder) == id,
+        );
+        return ListTile(
+          dense: true,
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: NetworkImgLayer(
+              width: 56,
+              height: 40,
+              src: folder.cover,
+            ),
           ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: _buildBody,
-    );
-  }
-
-  void onReorderItem(int oldIndex, int newIndex) {
-    if (oldIndex == 0 || newIndex == 0) {
-      SmartDialog.showToast('默认收藏夹不支持排序');
-      return;
-    }
-
-    sortList.insert(newIndex, sortList.removeAt(oldIndex));
-
-    setState(() {});
-  }
-
-  Widget get _buildBody {
-    return ReorderableListView.builder(
-      onReorderItem: onReorderItem,
-      proxyDecorator: proxyDecorator,
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: sortList.length,
-      padding:
-          MediaQuery.viewPaddingOf(context).copyWith(top: 0) +
-          const EdgeInsets.only(bottom: 100),
-      itemBuilder: (context, index) {
-        final item = sortList[index];
-        final key = item.id.toString();
-        return SizedBox(
-          key: Key(key),
-          height: 110,
-          child: FavVideoItem(
-            heroTag: key,
-            item: item,
-            onLongPress: index == 0
-                ? () => SmartDialog.showToast('默认收藏夹不支持排序')
-                : null,
+          title: Text(
+            folder.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            '${folder.mediaCount}个内容',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         );
       },
+      onExport: () => Utils.jsonEncoder.convert(
+        GStorage.favoriteOrderStore.exportState(FavController.scope),
+      ),
+      onImport: (json) async {
+        await GStorage.favoriteOrderStore.importState(FavController.scope, json);
+      },
+      onChanged: controller.loadingState.refresh,
+      exportFileName: 'fav_folder_order',
+      exportTitle: '收藏夹排序状态',
     );
   }
 }

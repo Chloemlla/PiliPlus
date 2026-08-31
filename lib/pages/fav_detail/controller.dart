@@ -38,7 +38,9 @@ mixin BaseFavController
     );
     if (res.isSuccess) {
       loadingState
-        ..value.data!.removeAt(index)
+        ..value.data!.removeWhere(
+          (item) => item.id == id && item.type == type,
+        )
         ..refresh();
       updateCount?.call(1);
       SmartDialog.showToast('取消收藏');
@@ -82,6 +84,24 @@ class FavDetailController
   final Rx<FavFolderInfo> folderInfo = FavFolderInfo().obs;
   final RxBool _isOwner = false.obs;
   final Rx<FavOrderType> order = FavOrderType.mtime.obs;
+
+  /// Local pin + sort overlay scope for videos inside this folder.
+  String get scope => 'favDetail:$mediaId';
+
+  /// Stable identity for a favorite item (oid + type, as the cloud sort uses).
+  static String itemId(FavDetailItemModel item) => '${item.id}:${item.type}';
+
+  /// Currently loaded items in display order (pinned first).
+  List<FavDetailItemModel> get orderedItems {
+    final data = loadingState.value.dataOrNull;
+    if (data == null || data.isEmpty) return data ?? const <FavDetailItemModel>[];
+    final ordered = GStorage.favoriteOrderStore.displayOrder(
+      scope,
+      data.map(itemId),
+    );
+    final byId = {for (final item in data) itemId(item): item};
+    return [for (final id in ordered) byId[id]!];
+  }
 
   @override
   bool get isOwner => _isOwner.value;

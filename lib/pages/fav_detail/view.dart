@@ -476,37 +476,45 @@ class _FavDetailPageState extends State<FavDetailPage> with GridMixin {
       Loading() => gridSkeleton,
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverGrid.builder(
-                gridDelegate: gridDelegate,
-                itemBuilder: (context, index) {
-                  if (index == response.length) {
-                    _favDetailController.onLoadMore();
-                    return Container(
-                      height: 60,
-                      alignment: Alignment.center,
-                      child: Text(
-                        _favDetailController.isEnd ? '没有更多了' : '加载中...',
-                        style: TextStyle(
-                          color: theme.colorScheme.outline,
-                          fontSize: 13,
-                        ),
-                      ),
-                    );
-                  }
-                  FavDetailItemModel item = response[index];
-                  return FavVideoCardH(
-                    item: item,
-                    index: index,
-                    ctr: _favDetailController,
-                  );
-                },
-                itemCount: response.length + 1,
-              )
+            ? _buildGrid(response, theme)
             : HttpError(onReload: _favDetailController.onReload),
       Error(:final errMsg) => HttpError(
         errMsg: errMsg,
         onReload: _favDetailController.onReload,
       ),
     };
+  }
+
+  Widget _buildGrid(
+    List<FavDetailItemModel> response,
+    ThemeData theme,
+  ) {
+    final ordered = _favDetailController.orderedItems;
+    return SliverGrid.builder(
+      gridDelegate: gridDelegate,
+      itemBuilder: (context, index) {
+        if (index == ordered.length) {
+          _favDetailController.onLoadMore();
+          return Container(
+            height: 60,
+            alignment: Alignment.center,
+            child: Text(
+              _favDetailController.isEnd ? '没有更多了' : '加载中...',
+              style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontSize: 13,
+              ),
+            ),
+          );
+        }
+        FavDetailItemModel item = ordered[index];
+        return FavVideoCardH(
+          item: item,
+          index: index,
+          ctr: _favDetailController,
+        );
+      },
+      itemCount: ordered.length + 1,
+    );
   }
 }

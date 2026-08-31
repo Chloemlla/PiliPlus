@@ -51,41 +51,49 @@ class _FavVideoPageState extends State<FavVideoPage>
       Loading() => gridSkeleton,
       Success(:final response) =>
         response != null && response.isNotEmpty
-            ? SliverGrid.builder(
-                gridDelegate: gridDelegate,
-                itemBuilder: (BuildContext context, int index) {
-                  if (index == response.length - 1) {
-                    _favController.onLoadMore();
-                  }
-                  final item = response[index];
-                  String heroTag = Utils.makeHeroTag(item.fid);
-                  return FavVideoItem(
-                    heroTag: heroTag,
-                    item: item,
-                    onTap: () async {
-                      final res = await Get.toNamed(
-                        '/favDetail',
-                        arguments: item,
-                        parameters: {
-                          'heroTag': heroTag,
-                          'mediaId': item.id.toString(),
-                        },
-                      );
-                      if (res == true) {
-                        _favController.loadingState
-                          ..value.data!.removeAt(index)
-                          ..refresh();
-                      }
-                    },
-                  );
-                },
-                itemCount: response.length,
-              )
+            ? _buildGrid(response)
             : HttpError(onReload: _favController.onReload),
       Error(:final errMsg) => HttpError(
         errMsg: errMsg,
         onReload: _favController.onReload,
       ),
     };
+  }
+
+  Widget _buildGrid(List<FavFolderInfo> response) {
+    final folders = _favController.orderedFolders;
+    return SliverGrid.builder(
+      gridDelegate: gridDelegate,
+      itemBuilder: (BuildContext context, int index) {
+        if (index == folders.length - 1) {
+          _favController.onLoadMore();
+        }
+        final item = folders[index];
+        String heroTag = Utils.makeHeroTag(item.fid);
+        return FavVideoItem(
+          heroTag: heroTag,
+          item: item,
+          onTap: () async {
+            final res = await Get.toNamed(
+              '/favDetail',
+              arguments: item,
+              parameters: {
+                'heroTag': heroTag,
+                'mediaId': item.id.toString(),
+              },
+            );
+            if (res == true) {
+              _favController.loadingState
+                ..value.data!.removeWhere(
+                  (folder) =>
+                      FavController.folderId(folder) == FavController.folderId(item),
+                )
+                ..refresh();
+            }
+          },
+        );
+      },
+      itemCount: folders.length,
+    );
   }
 }

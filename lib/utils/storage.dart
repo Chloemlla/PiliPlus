@@ -17,6 +17,7 @@ import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/set_int_adapter.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/settings_backup_validator.dart';
+import 'package:pili_plus/utils/storage/favorite_order_store.dart';
 import 'package:pili_plus/utils/storage/favorite_reply_migration.dart';
 import 'package:pili_plus/utils/storage/favorite_reply_store.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -41,6 +42,7 @@ abstract final class GStorage {
   static late final WatchProgressStore watchProgressStore;
   static late final ReplyCacheStore replyCacheStore;
   static late final FavoriteReplyStore favoriteReplyStore;
+  static late final FavoriteOrderStore favoriteOrderStore;
 
   static Future<void> init() async {
     Hive.init(path.join(appSupportDirPath, 'hive'));
@@ -96,6 +98,7 @@ abstract final class GStorage {
       Accounts.init(),
     ]);
     settingsStore = SettingsStore(setting, video);
+    favoriteOrderStore = FavoriteOrderStore(localCache);
     await migrateSettingSecrets();
 
     // Large progress box opens after critical prefs so first frame can use Pref sooner.

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -7,6 +8,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
 import 'package:pili_plus/pages/my_reply/controller.dart';
+import 'package:pili_plus/utils/storage/favorite_order_store.dart';
 import 'package:pili_plus/utils/storage/favorite_reply_store.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 
@@ -33,7 +35,10 @@ void main() {
       orderStore: localCache,
       maxFavoriteEntries: 2,
     );
-    controller = MyReplyController(store)..reload();
+    controller = MyReplyController(
+      store,
+      FavoriteOrderStore(localCache),
+    )..reload();
   });
 
   tearDown(() async {
@@ -141,6 +146,62 @@ void main() {
       controller.importJson({'id': '1'}),
       throwsFormatException,
     );
+  });
+
+  test('pin brings a comment to the top and export includes state', () async {
+    await controller.importJson([
+      _replyJson(id: 1, ctime: 10),
+      _replyJson(id: 2, ctime: 20),
+      _replyJson(id: 3, ctime: 30),
+    ]);
+
+    await controller.togglePin('2');
+    expect(controller.replies.map((reply) => reply.id.toInt()), [2, 3, 1]);
+    expect(controller.isPinned('2'), isTrue);
+
+    final exported = jsonDecode(controller.exportJson()) as Map<String, dynamic>;
+    expect(exported['pinned'], ['2']);
+    expect((exported['replies'] as List).length, 3);
+
+    await controller.togglePin('2');
+    expect(controller.isPinned('2'), isFalse);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [2, 3, 1]);
+  });
+
+  test('drag reorders comments and flips pin across the pinned boundary',
+      () async {
+    await controller.importJson([
+      _replyJson(id: 1, ctime: 10),
+      _replyJson(id: 2, ctime: 20),
+      _replyJson(id: 3, ctime: 30),
+    ]);
+    await controller.togglePin('3');
+
+    await controller.applyDrag(1, 2);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
+
+    await controller.applyDrag(0, 2);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2, 3]);
+    expect(controller.isPinned('1'), isTrue);
+    expect(controller.isPinned('3'), isFalse);
+  });
+
+  test('new-format export/import restores pin and order state', () async {
+    await controller.importJson([
+      _replyJson(id: 1, ctime: 10),
+      _replyJson(id: 2, ctime: 20),
+      _replyJson(id: 3, ctime: 30),
+    ]);
+    await controller.togglePin('3');
+    await controller.applyDrag(1, 2);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
+
+    final exported = jsonDecode(controller.exportJson());
+    final restored = MyReplyController(store, FavoriteOrderStore(localCache));
+    await restored.importJson(exported);
+
+    expect(restored.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
+    expect(restored.isPinned('3'), isTrue);
   });
 }
 
