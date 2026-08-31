@@ -23,7 +23,7 @@ base class FavoriteOrderStore {
     if (raw is List) {
       return raw.map((item) => item.toString()).toList();
     }
-    return const <String>[];
+    return <String>[];
   }
 
   /// The persisted full display order (ids, pinned first).
