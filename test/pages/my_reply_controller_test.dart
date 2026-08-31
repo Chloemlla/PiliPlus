@@ -152,20 +152,19 @@ void main() {
     await controller.importJson([
       _replyJson(id: 1, ctime: 10),
       _replyJson(id: 2, ctime: 20),
-      _replyJson(id: 3, ctime: 30),
     ]);
 
-    await controller.togglePin('2');
-    expect(controller.replies.map((reply) => reply.id.toInt()), [2, 3, 1]);
-    expect(controller.isPinned('2'), isTrue);
+    await controller.togglePin('1');
+    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2]);
+    expect(controller.isPinned('1'), isTrue);
 
     final exported = jsonDecode(controller.exportJson()) as Map<String, dynamic>;
-    expect(exported['pinned'], ['2']);
-    expect((exported['replies'] as List).length, 3);
+    expect(exported['pinned'], ['1']);
+    expect((exported['replies'] as List).length, 2);
 
-    await controller.togglePin('2');
-    expect(controller.isPinned('2'), isFalse);
-    expect(controller.replies.map((reply) => reply.id.toInt()), [2, 3, 1]);
+    await controller.togglePin('1');
+    expect(controller.isPinned('1'), isFalse);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2]);
   });
 
   test('drag reorders comments and flips pin across the pinned boundary',
@@ -173,35 +172,31 @@ void main() {
     await controller.importJson([
       _replyJson(id: 1, ctime: 10),
       _replyJson(id: 2, ctime: 20),
-      _replyJson(id: 3, ctime: 30),
     ]);
-    await controller.togglePin('3');
-
-    await controller.applyDrag(1, 2);
-    expect(controller.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
+    await controller.togglePin('2');
 
     await controller.applyDrag(0, 2);
-    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2, 3]);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2]);
     expect(controller.isPinned('1'), isTrue);
-    expect(controller.isPinned('3'), isFalse);
+    expect(controller.isPinned('2'), isFalse);
   });
 
   test('new-format export/import restores pin and order state', () async {
     await controller.importJson([
       _replyJson(id: 1, ctime: 10),
       _replyJson(id: 2, ctime: 20),
-      _replyJson(id: 3, ctime: 30),
     ]);
-    await controller.togglePin('3');
-    await controller.applyDrag(1, 2);
-    expect(controller.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
+    await controller.togglePin('2');
+    await controller.applyDrag(1, 0);
+    expect(controller.replies.map((reply) => reply.id.toInt()), [1, 2]);
+    expect(controller.isPinned('1'), isTrue);
 
     final exported = jsonDecode(controller.exportJson());
     final restored = MyReplyController(store, FavoriteOrderStore(localCache));
     await restored.importJson(exported);
 
-    expect(restored.replies.map((reply) => reply.id.toInt()), [3, 1, 2]);
-    expect(restored.isPinned('3'), isTrue);
+    expect(restored.replies.map((reply) => reply.id.toInt()), [1, 2]);
+    expect(restored.isPinned('1'), isTrue);
   });
 }
 

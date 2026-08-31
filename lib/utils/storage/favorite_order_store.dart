@@ -83,9 +83,9 @@ base class FavoriteOrderStore {
   ) async {
     final current = displayOrder(scope, availableIds);
     if (oldIndex < 0 || oldIndex >= current.length) return;
+    final id = current.removeAt(oldIndex);
     if (newIndex < 0) newIndex = 0;
     if (newIndex > current.length) newIndex = current.length;
-    final id = current.removeAt(oldIndex);
     current.insert(newIndex, id);
     final pinnedCount = pinned(scope).length;
     await _save(scope, current, current.take(pinnedCount).toList());

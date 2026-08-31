@@ -67,7 +67,7 @@ void main() {
 
   test('stale ids from deletes are filtered out of the display', () async {
     await store.pin(scope, 'b', ['a', 'b', 'c']);
-    expect(store.displayOrder(scope, ['a', 'c']), ['b', 'a', 'c']);
+    expect(store.displayOrder(scope, ['a', 'c']), ['a', 'c']);
   });
 
   test('export/import round-trips pin and order state', () async {
