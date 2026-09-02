@@ -94,7 +94,6 @@ RAW_PAGE_WRITE_BASELINE = {
     "lib/pages/common/dyn/common_dyn_page.dart": 1,
     "lib/pages/danmaku_block/view.dart": 1,
     "lib/pages/fav_detail/controller.dart": 1,
-    "lib/pages/follow/child/child_controller.dart": 1,
     "lib/pages/history/base_controller.dart": 1,
     "lib/pages/history/controller.dart": 1,
     "lib/pages/later/base_controller.dart": 1,

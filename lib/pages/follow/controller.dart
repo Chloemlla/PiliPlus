@@ -4,8 +4,6 @@ import 'package:pili_plus/models/common/follow_order_type.dart';
 import 'package:pili_plus/models/member/tags.dart';
 import 'package:pili_plus/pages/follow/child/child_controller.dart';
 import 'package:pili_plus/utils/accounts.dart';
-import 'package:pili_plus/utils/storage.dart';
-import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -33,7 +31,7 @@ class FollowController extends GetxController with GetTickerProviderStateMixin {
         Get.find<FollowChildController>(tag: '$tag${e.tagid}').onReload();
       } catch (_) {}
     }
-    GStorage.setting.put(SettingBoxKey.followOrderType, type.index);
+    Pref.followOrderType = type;
   }
 
   @override

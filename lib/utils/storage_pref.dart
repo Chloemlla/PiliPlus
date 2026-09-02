@@ -1199,6 +1199,9 @@ abstract final class Pref {
         defaultValue: FollowOrderType.def.index,
       )];
 
+  static set followOrderType(FollowOrderType type) =>
+      _setting.put(SettingBoxKey.followOrderType, type.index);
+
   static bool get enableImgMenu =>
       _setting.get(SettingBoxKey.enableImgMenu, defaultValue: false);
 
