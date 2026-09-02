@@ -59,9 +59,7 @@ class _PlDanmakuState extends State<PlDanmaku> {
         _plDanmakuController.initFileDmIfNeeded();
       } else {
         _plDanmakuController.queryDanmaku(
-          PlDanmakuController.calcSegment(
-            playerController.positionInMilliseconds,
-          ),
+          DmUtils.calcSegment(playerController.positionInMilliseconds),
         );
       }
     }

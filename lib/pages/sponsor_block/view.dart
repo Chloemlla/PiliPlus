@@ -1,12 +1,12 @@
 import 'package:pili_plus/common/widgets/pair.dart';
 import 'package:pili_plus/http/constants.dart';
-import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/sponsor_block.dart';
 import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
 import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
 import 'package:pili_plus/models_new/sponsor_block/user_info.dart';
 import 'package:pili_plus/pages/setting/slide_color_picker.dart';
+import 'package:pili_plus/utils/accounts/account_manager/account_mgr.dart';
 import 'package:pili_plus/utils/filtering_text.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -329,7 +329,7 @@ class _SponsorBlockPageState extends State<SponsorBlockPage> {
                     Get.back();
                     _blockServer = HttpString.sponsorBlockBaseUrl;
                     setting.put(SettingBoxKey.blockServer, _blockServer);
-                    Request.accountManager.blockServer = _blockServer;
+                    AccountManager.blockServer = _blockServer;
                     (context as Element).markNeedsBuild();
                   },
                   child: const Text('重置'),
@@ -348,7 +348,7 @@ class _SponsorBlockPageState extends State<SponsorBlockPage> {
                     Get.back();
                     _blockServer = _textController.text;
                     setting.put(SettingBoxKey.blockServer, _blockServer);
-                    Request.accountManager.blockServer = _blockServer;
+                    AccountManager.blockServer = _blockServer;
                     _checkServerStatus();
                     _getUserInfo();
                     (context as Element).markNeedsBuild();

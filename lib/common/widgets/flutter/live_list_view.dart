@@ -4,21 +4,18 @@
 
 // ignore_for_file: prefer_initializing_formals
 
-import 'package:pili_plus/common/widgets/sliver/sliver_constrained_cross_axis.dart';
 import 'package:flutter/foundation.dart' show precisionErrorTolerance;
 import 'package:flutter/rendering.dart'
     show
-        RenderSliverList,
+        SliverGeometry,
         SliverConstraints,
         SliverMultiBoxAdaptorParentData,
-        RenderSliverMultiBoxAdaptor,
-        SliverGeometry;
+        RenderSliverList;
 import 'package:flutter/widgets.dart';
 
-class ChatListView extends ListView {
-  ChatListView.separated({
+class LiveListView extends ListView {
+  LiveListView.separated({
     super.key,
-    required this.maxExtent,
     super.scrollDirection,
     super.controller,
     super.primary,
@@ -41,32 +38,26 @@ class ChatListView extends ListView {
     super.restorationId,
     super.clipBehavior,
     super.hitTestBehavior,
-  }) : super.separated(reverse: true);
-
-  final double maxExtent;
+  }) : super.separated();
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    return CenteredSliverConstrainedCrossAxis(
-      maxExtent: maxExtent,
-      sliver: ChatSliverList(delegate: childrenDelegate),
-    );
+    return LiveSliverList(delegate: childrenDelegate);
   }
 }
 
-class ChatSliverList extends SliverList {
-  const ChatSliverList({super.key, required super.delegate});
+class LiveSliverList extends SliverList {
+  const LiveSliverList({super.key, required super.delegate});
 
   @override
-  RenderChatSliverList createRenderObject(BuildContext context) {
+  RenderSliverList createRenderObject(BuildContext context) {
     final element = context as SliverMultiBoxAdaptorElement;
-    return RenderChatSliverList(childManager: element);
+    return RenderLiveSliverList(childManager: element);
   }
 }
 
-class RenderChatSliverList extends RenderSliverList
-    with ExtendedRenderObjectMixin {
-  RenderChatSliverList({required super.childManager});
+class RenderLiveSliverList extends RenderSliverList {
+  RenderLiveSliverList({required super.childManager});
 
   @override
   void performLayout() {
@@ -93,9 +84,6 @@ class RenderChatSliverList extends RenderSliverList
         return;
       }
     }
-
-    ///
-    handleCloseToTrailingBegin();
 
     RenderBox? leadingChildWithLayout, trailingChildWithLayout;
 
@@ -169,30 +157,6 @@ class RenderChatSliverList extends RenderSliverList
     }
 
     assert(childScrollOffset(firstChild!)! > -precisionErrorTolerance);
-
-    if (scrollOffset < precisionErrorTolerance) {
-      while (indexOf(firstChild!) > 0) {
-        final double earliestScrollOffset = childScrollOffset(firstChild!)!;
-
-        earliestUsefulChild = insertAndLayoutLeadingChild(
-          childConstraints,
-          parentUsesSize: true,
-        );
-        assert(earliestUsefulChild != null);
-        final double firstChildScrollOffset =
-            earliestScrollOffset - paintExtentOf(firstChild!);
-        final childParentData =
-            firstChild!.parentData! as SliverMultiBoxAdaptorParentData;
-        childParentData.layoutOffset = 0.0;
-
-        if (firstChildScrollOffset < -precisionErrorTolerance) {
-          geometry = SliverGeometry(
-            scrollOffsetCorrection: -firstChildScrollOffset,
-          );
-          return;
-        }
-      }
-    }
 
     assert(earliestUsefulChild == firstChild);
     assert(childScrollOffset(earliestUsefulChild!)! <= scrollOffset);
@@ -275,10 +239,6 @@ class RenderChatSliverList extends RenderSliverList
 
     assert(debugAssertChildListIsNonEmptyAndContiguous());
     final double estimatedMaxScrollOffset;
-
-    ///
-    endScrollOffset = handleCloseToTrailingEnd(endScrollOffset);
-
     if (reachedEnd) {
       estimatedMaxScrollOffset = endScrollOffset;
     } else {
@@ -294,23 +254,18 @@ class RenderChatSliverList extends RenderSliverList
             endScrollOffset - childScrollOffset(firstChild!)!,
       );
     }
-    final double firstChildScrollOffset = childScrollOffset(firstChild!)!;
-    double paintExtent = calculatePaintOffset(
+    final double paintExtent = calculatePaintOffset(
       constraints,
-      from: firstChildScrollOffset,
+      from: childScrollOffset(firstChild!)!,
       to: endScrollOffset,
     );
     final double cacheExtent = calculateCacheOffset(
       constraints,
-      from: firstChildScrollOffset,
+      from: childScrollOffset(firstChild!)!,
       to: endScrollOffset,
     );
     final double targetEndScrollOffsetForPaint =
         constraints.scrollOffset + constraints.remainingPaintExtent;
-
-    ///
-    paintExtent += _closeToTrailingDistance;
-
     geometry = SliverGeometry(
       scrollExtent: estimatedMaxScrollOffset,
       paintExtent: paintExtent,
@@ -326,30 +281,5 @@ class RenderChatSliverList extends RenderSliverList
       childManager.setDidUnderflow(true);
     }
     childManager.didFinishLayout();
-  }
-}
-
-const double kChatListPadding = 14.0;
-
-/// from https://github.com/fluttercandies/extended_list
-mixin ExtendedRenderObjectMixin on RenderSliverMultiBoxAdaptor {
-  void handleCloseToTrailingBegin() {
-    _closeToTrailingDistance = 0.0;
-  }
-
-  double handleCloseToTrailingEnd(double endScrollOffset) {
-    final extent = constraints.remainingPaintExtent - kChatListPadding;
-    if (endScrollOffset < extent) {
-      _closeToTrailingDistance = extent - endScrollOffset;
-      return extent;
-    }
-    return endScrollOffset;
-  }
-
-  double _closeToTrailingDistance = 0.0;
-
-  @override
-  double? childScrollOffset(RenderObject child) {
-    return (super.childScrollOffset(child) ?? 0.0) + _closeToTrailingDistance;
   }
 }

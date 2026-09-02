@@ -620,7 +620,7 @@ class LoginPageController extends GetxController
       SmartDialog.showToast("登录失败: cookie缺少必要字段");
       return;
     }
-    await Future.wait([account.onChange(), AnonymousAccount().delete()]);
+    await Future.wait([?account.onChange(), AnonymousAccount().delete()]);
     for (int i = 0; i < AccountType.values.length; i++) {
       if (Accounts.accountMode[i].mid == account.mid) {
         Accounts.accountMode[i] = account;

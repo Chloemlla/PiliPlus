@@ -85,17 +85,17 @@ class LoginAccount extends Account {
   bool _hasDelete = false;
 
   @override
-  Future<void> delete() async {
-    assert(_hasDelete = true);
-    await Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
+  Future<void> delete() {
+    _hasDelete = true;
     AccountSecretStore.delete(secretKey);
+    return Future.wait([cookieJar.deleteAll(), _box.delete(_midStr)]);
   }
 
   @override
-  Future<void> onChange() async {
-    assert(!_hasDelete);
+  Future<void>? onChange() {
+    if (_hasDelete) return null;
     persistSecret();
-    await _box.put(secretKey, this);
+    return _box.put(secretKey, this);
   }
 
   void persistSecret() {

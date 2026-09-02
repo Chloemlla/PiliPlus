@@ -6,9 +6,7 @@ import 'package:pili_plus/common/widgets/button/more_btn.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/http/loading_state.dart';
-import 'package:pili_plus/models/common/follow_order_type.dart';
 import 'package:pili_plus/models_new/follow/list.dart';
-import 'package:pili_plus/pages/common/fab_mixin.dart';
 import 'package:pili_plus/pages/follow/child/child_controller.dart';
 import 'package:pili_plus/pages/follow/controller.dart';
 import 'package:pili_plus/pages/follow/widgets/follow_item.dart';
@@ -40,11 +38,7 @@ class FollowChildPage extends StatefulWidget {
 }
 
 class _FollowChildPageState extends State<FollowChildPage>
-    with
-        AutomaticKeepAliveClientMixin,
-        SingleTickerProviderStateMixin,
-        BaseFabMixin,
-        LazyFabMixin {
+    with AutomaticKeepAliveClientMixin {
   late String _tag;
   late FollowChildController _followController;
 
@@ -84,7 +78,7 @@ class _FollowChildPageState extends State<FollowChildPage>
     super.build(context);
     final colorScheme = ColorScheme.of(context);
     final padding = MediaQuery.viewPaddingOf(context);
-    Widget child = Padding(
+    return Padding(
       padding: EdgeInsets.only(left: padding.left, right: padding.right),
       child: refreshIndicator(
         onRefresh: _followController.onRefresh,
@@ -109,35 +103,6 @@ class _FollowChildPageState extends State<FollowChildPage>
         ),
       ),
     );
-    if (widget.onSelect != null ||
-        (widget.controller?.isOwner == true && widget.tagid == null)) {
-      return ScaffoldLayout(
-        body: fabAnimWrapper(child: child),
-        fab: SlideTransition(
-          position: fabAnimation,
-          child: Padding(
-            padding: .only(
-              right: kFloatingActionButtonMargin + padding.right,
-              bottom: kFloatingActionButtonMargin + padding.bottom,
-            ),
-            child: FloatingActionButton.extended(
-              onPressed: () => _followController
-                ..setOrderType(
-                  _followController.orderType.value == FollowOrderType.def
-                      ? FollowOrderType.attention
-                      : FollowOrderType.def,
-                )
-                ..onReload(),
-              icon: const Icon(Icons.format_list_bulleted, size: 20),
-              label: Obx(
-                () => Text(_followController.orderType.value.title),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return child;
   }
 
   Widget _buildBody(LoadingState<List<FollowItemModel>?> loadingState) {

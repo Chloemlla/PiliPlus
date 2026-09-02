@@ -48,6 +48,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
+const int _kMaxChatCount = 500;
+const int _kTrimCount = _kMaxChatCount + 50;
+const int _kSafeTrimIndex = 200;
+
 class LiveRoomController extends GetxController {
   LiveRoomController(this.heroTag);
   final String heroTag;
@@ -142,6 +146,20 @@ class LiveRoomController extends GetxController {
     }
     return const SizedBox.shrink();
   });
+
+  int chatSimpleIndex = 0;
+  int _trimDmIndex = 0;
+  void _trimDm() {
+    final trimCount = messages.length - _trimDmIndex;
+    if (trimCount > _kTrimCount) {
+      final endIndex = messages.length - _kMaxChatCount;
+      final canTrim = (chatSimpleIndex - endIndex) > _kSafeTrimIndex;
+      if (canTrim) {
+        messages.fillRange(_trimDmIndex, endIndex);
+        _trimDmIndex = endIndex;
+      }
+    }
+  }
 
   StreamSubscription? _sizeSub;
 
@@ -524,6 +542,8 @@ class LiveRoomController extends GetxController {
   }
 
   void addDm(dynamic msg, [DanmakuContentItem<DanmakuExtra>? item]) {
+    _trimDm();
+
     if (plPlayerController.showDanmaku) {
       if (item != null && plPlayerController.enableShowLiveDanmaku.value) {
         danmakuController?.addDanmaku(item);
@@ -715,7 +735,7 @@ class LiveRoomController extends GetxController {
             ? const Duration(milliseconds: 400)
             : PlatformUtils.isDesktop
             ? const Duration(milliseconds: 350)
-            : const Duration(milliseconds: 500),
+            : const Duration(milliseconds: 400),
       ),
     );
   }

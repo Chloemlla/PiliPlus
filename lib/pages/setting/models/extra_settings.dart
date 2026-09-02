@@ -29,7 +29,6 @@ import 'package:pili_plus/pages/setting/models/model.dart';
 import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
 import 'package:pili_plus/pages/setting/widgets/slider_dialog.dart';
 import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
-import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
@@ -924,7 +923,7 @@ Future<void> audioNormalization(
                 Get.back();
                 GStorage.setting.put(key, param);
                 if (!fallback &&
-                    PlPlayerController.loudnormRegExp.hasMatch(param)) {
+                    AudioNormalization.loudnormRegExp.hasMatch(param)) {
                   audioNormalization(context, setState, fallback: true);
                 }
                 setState();

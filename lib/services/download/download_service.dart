@@ -14,10 +14,10 @@ import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
 import 'package:pili_plus/models_new/video/video_detail/data.dart';
 import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
-import 'package:pili_plus/pages/danmaku/controller.dart';
 import 'package:pili_plus/services/download/bounded_task_queue.dart';
 import 'package:pili_plus/services/download/download_manager.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/danmaku_utils.dart';
 import 'package:pili_plus/utils/extension/file_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
@@ -320,8 +320,7 @@ class DownloadService extends GetxService {
         if (isUpdate && danmakuSegmentDir.existsSync()) {
           await danmakuSegmentDir.delete(recursive: true);
         }
-        final seg = (entry.totalTimeMilli / PlDanmakuController.segmentLength)
-            .ceil();
+        final seg = (entry.totalTimeMilli / DmUtils.segLength).ceil();
         if (seg <= 0) {
           return true;
         }
