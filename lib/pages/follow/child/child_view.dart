@@ -14,7 +14,6 @@ import 'package:pili_plus/pages/follow_type/follow_same/view.dart';
 import 'package:pili_plus/pages/share/view.dart' show UserModel;
 import 'package:pili_plus/utils/utils.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:flutter/material.dart';
 
 class FollowChildPage extends StatefulWidget {

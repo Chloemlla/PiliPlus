@@ -9,6 +9,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUpAll(() {
+    AccountManager.blockServer = 'https://block.invalid';
+  });
+
   test('cookie-load failure rejects the request once', () async {
     final adapter = _ResponseAdapter(statusCode: 200);
     final dio = _createDio(
@@ -91,7 +95,7 @@ Dio _createDio(_ResponseAdapter adapter, LoginAccount account) {
   );
   return dio
     ..httpClientAdapter = adapter
-    ..interceptors.add(AccountManager(blockServer: 'https://block.invalid'));
+    ..interceptors.add(AccountManager());
 }
 
 Future<List<Object>> _captureZoneErrors(Future<void> Function() body) async {
