@@ -834,7 +834,9 @@ class VideoDetailController extends GetxController
         ?.mid;
     if (mid == null) return null;
     final seconds = Pref.upIntroSkipSeconds(mid);
-    return seconds <= 0 ? null : Duration(seconds: seconds);
+    return seconds <= 0
+        ? null
+        : Duration(milliseconds: (seconds * 1000).round());
   }
 
   Future<void> openInAppMiniPlayer({String? title}) async {

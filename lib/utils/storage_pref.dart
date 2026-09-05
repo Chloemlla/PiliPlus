@@ -705,34 +705,35 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.fastForBackwardDuration, defaultValue: 10);
 
   /// Per-UP opening-screen skip duration in seconds, keyed by owner mid.
+  /// Values carry at most two decimal places; 0 / absent means disabled.
   /// Normalizes both MMKV (int keys) and settings-sync import (string keys).
-  static Map<int, int> get upIntroSkipDuration {
+  static Map<int, double> get upIntroSkipDuration {
     final raw = _setting.get(SettingBoxKey.upIntroSkipDuration);
-    if (raw is! Map || raw.isEmpty) return <int, int>{};
-    final result = <int, int>{};
+    if (raw is! Map || raw.isEmpty) return <int, double>{};
+    final result = <int, double>{};
     for (final MapEntry(:key, :value) in raw.entries) {
       final mid = int.tryParse('$key');
       if (mid == null || value is! num || value <= 0) continue;
-      result[mid] = value.toInt();
+      result[mid] = (value * 100).round() / 100;
     }
     return result;
   }
 
-  static int upIntroSkipSeconds(int mid) => upIntroSkipDuration[mid] ?? 0;
+  static double upIntroSkipSeconds(int mid) => upIntroSkipDuration[mid] ?? 0;
 
-  static Future<void> setUpIntroSkipSeconds(int mid, int seconds) async {
+  static Future<void> setUpIntroSkipSeconds(int mid, double seconds) async {
     final map = upIntroSkipDuration;
     if (seconds <= 0) {
       map.remove(mid);
     } else {
-      map[mid] = seconds;
+      map[mid] = (seconds * 100).round() / 100;
     }
     // Store string keys so the map survives JSON settings export; the getter
     // still reads legacy int-keyed values from MMKV.
     await _setting.put(
       SettingBoxKey.upIntroSkipDuration,
       {
-        for (final MapEntry(key: int key, value: int value) in map.entries)
+        for (final MapEntry(key: int key, value: double value) in map.entries)
           '$key': value,
       },
     );

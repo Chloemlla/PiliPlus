@@ -362,15 +362,36 @@ class HeaderControlState extends State<HeaderControl>
       isFileSource ? null : introController.videoDetail.value.owner?.mid;
 
   /// Sentinel menu value for the "自定义" entry; never written to storage.
-  static const int _customSkipSentinel = -1;
+  static const double _customSkipSentinel = -1;
 
-  Future<int?> _promptCustomSkipSeconds(int mid) async {
+  static const List<double> _skipPresetSeconds = [0, 3, 5, 10, 15, 20, 30];
+
+  static String _formatSkipSeconds(double seconds) {
+    if (seconds <= 0) return '关闭';
+    final whole = seconds.roundToDouble();
+    if (whole == seconds) return '${whole.toInt()} 秒';
+    var text = seconds.toStringAsFixed(2);
+    while (text.endsWith('0')) {
+      text = text.substring(0, text.length - 1);
+    }
+    if (text.endsWith('.')) {
+      text = text.substring(0, text.length - 1);
+    }
+    return '$text 秒';
+  }
+
+  static String _skipSecondsInputText(double seconds) {
+    final whole = seconds.roundToDouble();
+    return whole == seconds ? '${whole.toInt()}' : '$seconds';
+  }
+
+  Future<double?> _promptCustomSkipSeconds(int mid) async {
     final current = Pref.upIntroSkipSeconds(mid);
     final controller = TextEditingController(
-      text: current > 0 ? '$current' : '3',
+      text: current > 0 ? _skipSecondsInputText(current) : '3',
     );
     final key = GlobalKey<FormFieldState<String>>();
-    final result = await showDialog<int>(
+    final result = await showDialog<double>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('自定义开屏跳过时长'),
@@ -378,15 +399,19 @@ class HeaderControlState extends State<HeaderControl>
           key: key,
           controller: controller,
           autofocus: true,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: '跳过秒数',
             border: OutlineInputBorder(),
           ),
           validator: (value) {
-            final seconds = int.tryParse(value ?? '');
-            if (seconds == null || seconds < 1 || seconds > 600) {
-              return '请输入 1-600 的整数秒数';
+            final text = value?.trim() ?? '';
+            if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(text)) {
+              return '请输入时长，最多两位小数';
+            }
+            final seconds = double.tryParse(text);
+            if (seconds == null || seconds < 0.1 || seconds > 600) {
+              return '请输入 0.1-600 的时长';
             }
             return null;
           },
@@ -416,7 +441,7 @@ class HeaderControlState extends State<HeaderControl>
     TextEditingController controller,
   ) {
     if (key.currentState?.validate() == true) {
-      Get.back(result: int.tryParse(controller.text));
+      Get.back(result: double.tryParse(controller.text));
     }
   }
 
@@ -835,7 +860,7 @@ class HeaderControlState extends State<HeaderControl>
                   descStyle: subTitleStyle,
                 ),
                 if (_ownerMid case final int mid?)
-                  PopupListTile<int>(
+                  PopupListTile<double>(
                     dense: true,
                     leading: const Icon(Icons.fast_forward_outlined, size: 20),
                     title: const Text('UP开屏跳过', style: titleStyle),
@@ -845,16 +870,13 @@ class HeaderControlState extends State<HeaderControl>
                       final name =
                           introController.videoDetail.value.owner?.name ??
                           '该UP';
-                      return (
-                        seconds,
-                        '$name：${seconds <= 0 ? '关闭' : '$seconds 秒'}',
-                      );
+                      return (seconds, '$name：${_formatSkipSeconds(seconds)}');
                     },
                     itemBuilder: (_) => [
-                      for (final seconds in const [0, 3, 5, 10, 15, 20, 30])
+                      for (final seconds in _skipPresetSeconds)
                         PopupMenuItem(
                           value: seconds,
-                          child: Text(seconds <= 0 ? '关闭' : '$seconds 秒'),
+                          child: Text(_formatSkipSeconds(seconds)),
                         ),
                       const PopupMenuItem(
                         value: _customSkipSentinel,
