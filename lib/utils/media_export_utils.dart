@@ -123,9 +123,7 @@ abstract final class MediaExportUtils {
         return;
       }
       final audio = _selectAudio(audioList);
-      final qaDesc = audio.id == null
-          ? null
-          : AudioQuality.fromCode(audio.id!).desc;
+      final qaDesc = AudioQuality.fromCode(audio.id).desc;
       await _download(
         dialogTitle: '下载音频',
         url: VideoUtils.getCdnUrl(audio.playUrls, isAudio: true),
@@ -143,7 +141,7 @@ abstract final class MediaExportUtils {
   /// 与播放/缓存一致：优先设置中的默认音质
   static AudioItem _selectAudio(List<AudioItem> audioList) {
     final preferAudioQa = Pref.defaultAudioQa;
-    final audioIds = audioList.map((e) => e.id!).toList();
+    final audioIds = audioList.map((e) => e.id).toList();
     int target = audioIds.findClosestTarget(
       (e) => e <= preferAudioQa,
       (a, b) => a > b ? a : b,
