@@ -17,6 +17,7 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/web_cookie_sync.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:collection/collection.dart';
+import 'package:pili_plus/utils/linux_cookie_manager.dart';
 import 'package:crypto/crypto.dart' show Digest;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' as web;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -156,7 +157,9 @@ abstract final class LoginUtils {
 
     return Future.wait([
       SynapseSyncService.disableForLogout(),
-      if (!Platform.isLinux)
+      if (Platform.isLinux)
+        LinuxCookieManager.deleteAllCookies()
+      else
         web.CookieManager.instance(
           webViewEnvironment: webViewEnvironment,
         ).deleteAllCookies(),

@@ -8,6 +8,7 @@ import 'package:pili_plus/plugin/pl_player/widgets/play_pause_btn.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/theme_utils.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -74,12 +75,13 @@ class _BottomControlState extends State<BottomControl> with HeaderMixin {
                 color: Colors.white,
               ),
               onTap: () {
-                if (liveRoomCtr.isLogin) {
+                if (kDebugMode || liveRoomCtr.isLogin) {
                   Get.toNamed(
                     '/liveDmBlockPage',
                     parameters: {
                       'roomId': liveRoomCtr.roomId.toString(),
                     },
+                    arguments: liveRoomCtr,
                   );
                 } else {
                   SmartDialog.showToast('账号未登录');

@@ -6,6 +6,7 @@ import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/video.dart';
 import 'package:pili_plus/models/common/video/audio_quality.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
 import 'package:pili_plus/models/video/play/url.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
@@ -54,7 +55,7 @@ abstract final class MediaExportUtils {
         bvid: ctr.bvid,
         epid: ctr.epId,
         seasonId: ctr.seasonId,
-        qn: ctr.currentVideoQa.value?.code,
+        qn: ctr.currentVideoQa.value?.code ?? VideoQuality.high1080.code,
         fnval: 1,
         tryLook: ctr.plPlayerController.tryLook,
         videoType: ctr.actualVideoType,
@@ -105,6 +106,7 @@ abstract final class MediaExportUtils {
           bvid: ctr.bvid,
           epid: ctr.epId,
           seasonId: ctr.seasonId,
+          qn: ctr.currentVideoQa.value?.code ?? VideoQuality.high1080.code,
           tryLook: ctr.plPlayerController.tryLook,
           videoType: ctr.actualVideoType,
         );

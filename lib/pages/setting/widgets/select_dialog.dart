@@ -4,6 +4,7 @@ import 'package:pili_plus/http/browser_ua.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/video.dart';
 import 'package:pili_plus/models/common/video/cdn_type.dart';
+import 'package:pili_plus/models/common/video/video_quality.dart';
 import 'package:pili_plus/models/common/video/video_type.dart';
 import 'package:pili_plus/models/video/play/url.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
@@ -131,6 +132,7 @@ class _CdnSelectDialogState extends State<CdnSelectDialog> {
     final result = await VideoHttp.videoUrl(
       cid: 196018899,
       bvid: 'BV1fK4y1t7hj',
+      qn: VideoQuality.high1080.code,
       tryLook: false,
       videoType: VideoType.ugc,
     );

@@ -7,6 +7,7 @@ import 'package:pili_plus/pages/later_search/controller.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/request_utils.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,8 @@ class LaterSearchPage extends StatefulWidget {
 class _LaterSearchPageState
     extends CommonSearchPageState<LaterSearchPage, LaterData, LaterItemModel>
     with GridMixin {
+  late final enablePlayAll = Pref.enablePlayAll;
+
   @override
   final LaterSearchController controller = Get.put(
     LaterSearchController(),
@@ -79,15 +82,17 @@ class _LaterSearchPageState
               cover: item.pic,
               title: item.title,
               dimension: item.dimension,
-              extraArguments: {
-                'oid': item.aid,
-                'sourceType': SourceType.watchLater,
-                'count': controller.count,
-                'favTitle': '稍后再看',
-                'mediaId': controller.mid,
-                'desc': false,
-                'isContinuePlaying': index != 0,
-              },
+              extraArguments: enablePlayAll
+                  ? {
+                      'oid': item.aid,
+                      'sourceType': SourceType.watchLater,
+                      'count': controller.count,
+                      'favTitle': '稍后再看',
+                      'mediaId': controller.mid,
+                      'desc': false,
+                      'isContinuePlaying': index != 0,
+                    }
+                  : const {'viewLater': true},
             );
           },
         );
