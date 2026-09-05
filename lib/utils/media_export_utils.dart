@@ -127,7 +127,7 @@ abstract final class MediaExportUtils {
       await _download(
         dialogTitle: '下载音频',
         url: VideoUtils.getCdnUrl(audio.playUrls, isAudio: true),
-        fileName: '${_fileTitle(ctr)}${qaDesc == null ? '' : '[$qaDesc]'}.m4a',
+        fileName: '${_fileTitle(ctr)}[$qaDesc].m4a',
         isAudio: true,
       );
     } catch (e) {
