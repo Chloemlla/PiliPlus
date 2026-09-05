@@ -315,7 +315,6 @@ Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Sea
 - 持续 **merge upstream**，在保留本分支特性的前提下吸收上游修复
 - 单测扩展：MMKV、密钥 store、崩溃归档/过滤、Web QR 场景、网络策略、播放器 stream error、settings backup、bounded task queue 等
 - `tool/check_import_boundaries.py`：导入边界检查
-- 仓库内 Trellis 任务流 / 规格（`.trellis/`，默认本地）支撑 AI 协作开发
 - 分析器警告清理、局部 UI 与数据安全修缮
 
 ---

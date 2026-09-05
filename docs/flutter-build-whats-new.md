@@ -1,8 +1,6 @@
 # Flutter Build Whats-New Guide
 
-> Tracked mirror of the Trellis frontend code-spec.
-> Local AI path: `.trellis/spec/frontend/flutter-build-whats-new.md`
-> (`.trellis/` is gitignored; keep this file in sync when the contract changes.)
+> Tracked frontend code-spec for the in-app “本次更新说明” feature.
 
 ## Rule
 
@@ -28,7 +26,7 @@ Update `WhatsNewData.pages` in the **same change set** when the commit changes:
 
 Content rewrite is optional for:
 
-- pure docs under `.trellis/` or process-only notes
+- pure docs or process-only notes
 - CI-only workflow tweaks with no app binary behavior change
 - formatting-only diffs
 - lockfile churn with no runtime path change
