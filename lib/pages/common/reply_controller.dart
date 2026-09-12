@@ -17,7 +17,9 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
-  final RxInt count = (-1).obs;
+  ReplyController({int count = -1}) : count = RxInt(count);
+
+  late final RxInt count;
 
   late final Rx<ReplySortType> sortType;
   late Mode mode;

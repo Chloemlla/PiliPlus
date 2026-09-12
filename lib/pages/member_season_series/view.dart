@@ -1,4 +1,6 @@
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/member/contribute_type.dart';
@@ -9,7 +11,6 @@ import 'package:pili_plus/pages/member_season_series/widget/season_series_card.d
 import 'package:pili_plus/pages/member_video/view.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:flutter/material.dart';
 
 class SeasonSeriesPage extends StatefulWidget {
@@ -46,6 +47,7 @@ class _SeasonSeriesPageState extends State<SeasonSeriesPage>
   Widget build(BuildContext context) {
     super.build(context);
     return CustomScrollView(
+      physics: platformAlwaysClampingPhysics,
       slivers: [
         SliverPadding(
           padding: EdgeInsets.only(

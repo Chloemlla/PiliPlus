@@ -4,6 +4,7 @@ import 'dart:math' show max;
 
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
+import 'package:pili_plus/common/widgets/emote_tooltip.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
@@ -454,6 +455,13 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.showDecorate,
     defaultVal: true,
     onChanged: (value) => PendantAvatar.showDecorate = value,
+  ),
+  SwitchModel(
+    title: '点击表情显示 Tooltip',
+    leading: const Icon(Icons.emoji_emotions_outlined),
+    setKey: SettingBoxKey.enableEmoteTooltip,
+    defaultVal: false,
+    onChanged: (value) => enableEmoteTooltip = value,
   ),
   SwitchModel(
     title: '显示粉丝勋章',

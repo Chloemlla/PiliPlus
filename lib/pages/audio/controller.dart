@@ -38,6 +38,7 @@ import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/connectivity_utils.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
@@ -641,7 +642,7 @@ class AudioController extends GetxController
             child: const Text('其它app打开', style: TextStyle(fontSize: 14)),
             onPressed: () {
               Get.back();
-              PageUtils.launchURL(audioUrl);
+              PiliAndroidHelper.openUrl(audioUrl);
             },
           ),
           if (PlatformUtils.isMobile)

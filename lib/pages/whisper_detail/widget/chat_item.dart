@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/emote_tooltip.dart';
 import 'package:pili_plus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/image_viewer/hero.dart';
@@ -13,7 +14,6 @@ import 'package:pili_plus/grpc/bilibili/im/interfaces/v1.pb.dart'
 import 'package:pili_plus/grpc/bilibili/im/type.pb.dart' show Msg, MsgType;
 import 'package:pili_plus/http/search.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
-import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
@@ -687,14 +687,21 @@ class ChatItem extends StatelessWidget {
           final emoji = emojiMap[matchStr];
           if (emoji != null) {
             final size = emoji['size'];
+            final url = emoji['url'];
             children.add(
               WidgetSpan(
                 rawText: matchStr,
-                child: NetworkImgLayer(
-                  width: size,
-                  height: size,
-                  src: emoji['url'],
-                  type: ImageType.emote,
+                child: emoteTooltipBuilder(
+                  url: url,
+                  emote: matchStr,
+                  triggerMode: .tap,
+                  colorScheme: theme.colorScheme,
+                  child: NetworkImgLayer(
+                    width: size,
+                    height: size,
+                    src: url,
+                    type: .emote,
+                  ),
                 ),
               ),
             );

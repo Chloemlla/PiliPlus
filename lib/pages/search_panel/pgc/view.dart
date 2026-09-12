@@ -1,6 +1,5 @@
 import 'package:pili_plus/common/skeleton/media_bangumi.dart';
 import 'package:pili_plus/common/sliver_single_child_delegate.dart';
-import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/models/search/result.dart';
 import 'package:pili_plus/pages/search_panel/controller.dart';
 import 'package:pili_plus/pages/search_panel/pgc/widgets/item.dart';
@@ -48,11 +47,11 @@ class _SearchPgcPanelState
 
   late final gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
     maxCrossAxisExtent: Grid.smallCardWidth * 2,
-    mainAxisExtent: 160,
+    mainAxisExtent: 158,
   );
 
   @override
-  Widget buildList(ThemeData theme, List<SearchPgcItemModel> list) {
+  Widget buildList(List<SearchPgcItemModel> list) {
     return SliverGrid.builder(
       gridDelegate: gridDelegate,
       itemBuilder: (BuildContext context, int index) {
@@ -67,11 +66,7 @@ class _SearchPgcPanelState
 
   @override
   Widget get buildLoading => SliverGrid(
-    gridDelegate: SliverGridDelegateWithExtentAndRatio(
-      mainAxisSpacing: 2,
-      maxCrossAxisExtent: Grid.smallCardWidth * 2,
-      childAspectRatio: Style.aspectRatio * 1.5,
-    ),
+    gridDelegate: gridDelegate,
     delegate: const SliverSingleChildDelegate(
       count: 10,
       child: MediaPgcSkeleton(),

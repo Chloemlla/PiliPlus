@@ -6,6 +6,7 @@ import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/main.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
+import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -65,7 +66,7 @@ class _GeetestWebviewDialogState extends State<GeetestWebviewDialog> {
       if (data.startsWith('(') && data.endsWith(')')) {
         final Map<String, dynamic> config;
         try {
-          config = jsonDecode(data.substring(1, data.length - 1));
+          config = jsonDecode(data.substring1);
         } catch (e) {
           return Error(e.toString());
         }

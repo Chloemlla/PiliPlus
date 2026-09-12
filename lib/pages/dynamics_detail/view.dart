@@ -2,12 +2,18 @@ import 'dart:math';
 
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
+import 'package:pili_plus/common/widgets/flutter/dyn_tab_bar.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
+import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/pair.dart';
+import 'package:pili_plus/common/widgets/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:pili_plus/common/widgets/scroll_behavior.dart'
     show NoOverscrollIndicator;
-import 'package:pili_plus/common/widgets/scroll_physics.dart';
+import 'package:pili_plus/common/widgets/scroll_physics.dart'
+    show ReloadScrollPhysics, platformAlwaysClampingPhysics;
 import 'package:pili_plus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
 import 'package:pili_plus/common/widgets/tap_region_surface.dart';
@@ -17,15 +23,16 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/reply/reply_option_type.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/pages/common/dyn/common_dyn_page.dart';
-import 'package:pili_plus/pages/common/dyn/reaction/controller.dart';
-import 'package:pili_plus/pages/common/dyn/reaction/view.dart';
+import 'package:pili_plus/pages/common/dyn/like_list/controller.dart';
+import 'package:pili_plus/pages/common/dyn/like_list/view.dart';
+import 'package:pili_plus/pages/common/dyn/repost_list/controller.dart';
+import 'package:pili_plus/pages/common/dyn/repost_list/view.dart';
 import 'package:pili_plus/pages/dynamics/widgets/author_panel.dart';
 import 'package:pili_plus/pages/dynamics/widgets/dynamic_panel.dart';
 import 'package:pili_plus/pages/dynamics_create/view.dart';
 import 'package:pili_plus/pages/dynamics_detail/controller.dart';
 import 'package:pili_plus/pages/dynamics_repost/view.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
-import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/num_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -34,9 +41,6 @@ import 'package:pili_plus/utils/share_utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
-import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:flutter/material.dart';
 
 const Set<TargetPlatform> _kDesktopPlatforms = <TargetPlatform>{
@@ -56,7 +60,8 @@ class _DynamicDetailPageState
     extends CommonDynPageMultiState<DynamicDetailPage> {
   @override
   late final DynamicDetailController controller;
-  late final DynReactController _reactController;
+  late final DynRepostController _repostController;
+  late final DynLikeController _likeController;
 
   late final RxBool _isRefreshing = false.obs;
 
@@ -82,14 +87,17 @@ class _DynamicDetailPageState
     if (args['viewComment'] ?? false) {
       WidgetsBinding.instance.addPostFrameCallback(_jumpToComment);
     }
-    controller = Get.putOrFind(DynamicDetailController.new, tag: id);
     final stat = item.modules.moduleStat;
-    controller.count.value = stat?.comment?.count ?? -1;
-    _reactController = Get.put(
-      DynReactController(
-        id,
-        count: (stat?.like?.count ?? -1) + (stat?.forward?.count ?? -1),
-      ),
+    controller = Get.putOrFind<DynamicDetailController>(
+      () => DynamicDetailController(count: stat?.comment?.count ?? -1),
+      tag: id,
+    );
+    _repostController = Get.putOrFind<DynRepostController>(
+      () => DynRepostController(id, count: stat?.forward?.count ?? -1),
+      tag: id,
+    );
+    _likeController = Get.putOrFind<DynLikeController>(
+      () => DynLikeController(id, count: stat?.like?.count ?? -1),
       tag: id,
     );
   }
@@ -287,9 +295,9 @@ class _DynamicDetailPageState
   Widget _buildTabBar() {
     return SizedBox(
       height: 40,
-      child: TabBar(
+      child: DynTabBar(
         padding: .zero,
-        isScrollable: true,
+        // isScrollable: true,
         indicatorSize: .tab,
         tabAlignment: .start,
         controller: tabController,
@@ -305,62 +313,76 @@ class _DynamicDetailPageState
               }
               switch (value) {
                 case 0:
-                  _onRefresh(controller.onRefresh());
+                  _onRefresh(_repostController.onRefresh());
                 case 1:
-                  _onRefresh(_reactController.onRefresh());
+                  _onRefresh(controller.onRefresh());
+                case 2:
+                  _onRefresh(_likeController.onRefresh());
               }
             } else if (positions.length > 1) {
               positions.elementAt(1).jumpTo(0);
             }
           }
         },
-        tabs: [
-          Tab(
-            child: Obx(() {
-              final count = controller.count.value;
-              return Text(
-                '${DynType.reply.label}${count < 0 ? '' : ' ${NumUtils.numFormat(count)}'}',
-              );
-            }),
-          ),
-          Tab(
-            child: Obx(() {
-              final count = _reactController.count.value;
-              return Text(
-                '${DynType.reaction.label}${count < 0 ? '' : ' ${NumUtils.numFormat(count)}'}',
-              );
-            }),
-          ),
-        ],
+        tabs: DynType.values
+            .map(
+              (e) => Tab(
+                child: Obx(() {
+                  final count = switch (e) {
+                    .repost => _repostController.count.value,
+                    .reply => controller.count.value,
+                    .like => _likeController.count.value,
+                  };
+                  return Text(
+                    '${e.label}${count < 0 ? '' : ' ${NumUtils.numFormat(count)}'}',
+                  );
+                }),
+              ),
+            )
+            .toList(),
       ),
     );
   }
 
   Widget _buildTabBody([bool isPortrait = true]) {
-    final reply = CustomScrollView(
+    Widget reply = CustomScrollView(
       key: const PageStorageKey(DynType.reply),
-      physics: ReloadScrollPhysics(controller: controller),
+      physics: ReloadScrollPhysics(
+        controller: controller,
+        parent: isPortrait ? platformAlwaysClampingPhysics : null,
+      ),
       slivers: [
         buildReplyHeader(isPortrait),
         Obx(() => replyList(controller.loadingState.value)),
       ],
     );
+    if (!isPortrait) {
+      reply = refreshIndicator(onRefresh: controller.onRefresh, child: reply);
+    }
+
     final child = TabBarView(
       controller: tabController,
       hitTestBehavior: .translucent,
       physics: const NeverScrollableScrollPhysics(),
       horizontalDragGestureRecognizer:
           CustomHorizontalDragGestureRecognizer.new,
-      children: [
-        isPortrait
-            ? reply
-            : refreshIndicator(onRefresh: controller.onRefresh, child: reply),
-        DynReactPage(
-          isPortrait: isPortrait,
-          id: controller.dynItem.idStr,
-          controller: _reactController,
-        ),
-      ],
+      children: DynType.values
+          .map(
+            (e) => switch (e) {
+              .repost => DynRepostPage(
+                isPortrait: isPortrait,
+                id: controller.dynItem.idStr,
+                controller: _repostController,
+              ),
+              .reply => reply,
+              .like => DynLikePage(
+                isPortrait: isPortrait,
+                id: controller.dynItem.idStr,
+                controller: _likeController,
+              ),
+            },
+          )
+          .toList(),
     );
     if (isPortrait) {
       return Stack(
@@ -372,7 +394,7 @@ class _DynamicDetailPageState
             right: 0,
             top: displacement,
             child: Obx(
-              () => _RefreshIndicator(isRefreshing: _isRefreshing.value),
+              () => RefreshIndicator_(isRefreshing: _isRefreshing.value),
             ),
           ),
         ],
@@ -655,92 +677,5 @@ class _DynamicDetailPageState
       final position = PrimaryScrollController.of(context).position;
       position.jumpTo(position.maxScrollExtent);
     } catch (_) {}
-  }
-}
-
-class _RefreshIndicator extends StatefulWidget {
-  const _RefreshIndicator({
-    required this.isRefreshing,
-  });
-
-  final bool isRefreshing;
-
-  @override
-  State<_RefreshIndicator> createState() => _RefreshIndicatorState();
-}
-
-class _RefreshIndicatorState extends State<_RefreshIndicator>
-    with TickerProviderStateMixin {
-  late final AnimationController _scaleController;
-  late final AnimationController _progressController;
-  late Color _color;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _progressController = AnimationController(
-      vsync: this,
-      duration: CircularProgressIndicator.defaultAnimationDuration,
-    );
-  }
-
-  @override
-  void dispose() {
-    _scaleController.dispose();
-    _progressController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(_RefreshIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isRefreshing != widget.isRefreshing) {
-      if (widget.isRefreshing) {
-        _scaleController.value = 1;
-        _progressController
-          ..value = 0.0
-          ..repeat();
-      } else {
-        _scaleController.reverse();
-        _progressController.stop();
-      }
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final colorScheme = ColorScheme.of(context);
-    _color = colorScheme.isDark
-        ? colorScheme.onInverseSurface
-        : colorScheme.surface;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scaleController,
-      child: Center(
-        child: SizedBox.square(
-          dimension: 40,
-          child: Material(
-            type: .circle,
-            elevation: 2.0,
-            color: _color,
-            child: Padding(
-              padding: const .all(6),
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                controller: _progressController,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

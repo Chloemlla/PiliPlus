@@ -20,6 +20,7 @@ import 'package:pili_plus/pages/dynamics_repost/view.dart';
 import 'package:pili_plus/pages/video/reply/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/services/service_locator.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/id_utils.dart';
@@ -139,7 +140,7 @@ class PgcIntroController extends CommonIntroController {
             child: const Text('其它app打开', style: TextStyle(fontSize: 14)),
             onPressed: () {
               Get.back();
-              PageUtils.launchURL(videoUrl);
+              PiliAndroidHelper.openUrl(videoUrl);
             },
           ),
           if (PlatformUtils.isMobile)

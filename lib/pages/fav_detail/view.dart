@@ -4,6 +4,7 @@ import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
+import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:pili_plus/http/fav.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/fav_order_type.dart';
@@ -20,7 +21,7 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class FavDetailPage extends StatefulWidget {
   const FavDetailPage({super.key});
@@ -204,6 +205,23 @@ class _FavDetailPageState extends State<FavDetailPage> with GridMixin {
                 icon: const Icon(Icons.share),
               );
       }),
+      Builder(
+        builder: (context) => PopupMenuButton<bool>(
+          icon: _favDetailController.pageDesc
+              ? const Icon(MdiIcons.sortNumericDescending)
+              : const Icon(MdiIcons.sortNumericAscending),
+          initialValue: _favDetailController.pageDesc,
+          tooltip: '页码顺序',
+          onSelected: (value) {
+            _favDetailController.updatePageOrder(value);
+            (context as Element).markNeedsBuild();
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: false, child: Text('正序')),
+            PopupMenuItem(value: true, child: Text('倒序')),
+          ],
+        ),
+      ),
       Obx(
         () {
           return PopupMenuButton<FavOrderType>(

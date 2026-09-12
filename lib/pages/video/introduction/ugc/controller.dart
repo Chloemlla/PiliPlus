@@ -29,6 +29,7 @@ import 'package:pili_plus/pages/video/reply/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
@@ -42,9 +43,9 @@ import 'package:pili_plus/utils/share_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
 class UgcIntroController extends CommonIntroController with ReloadMixin {
   late final RxBool expand;
@@ -320,7 +321,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
             ),
             onTap: () {
               Get.back();
-              PageUtils.launchURL(videoUrl);
+              PiliAndroidHelper.openUrl(videoUrl);
             },
           ),
           if (PlatformUtils.isMobile)

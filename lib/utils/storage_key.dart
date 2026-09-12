@@ -187,7 +187,8 @@ abstract final class SettingBoxKey {
       angleDegrees = 'angleDegrees',
       liveStream = 'liveStream',
       enableDocProvider = 'enableDocProvider',
-      upIntroSkipDuration = 'upIntroSkipDuration';
+      upIntroSkipDuration = 'upIntroSkipDuration',
+      enableEmoteTooltip = 'enableEmoteTooltip';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',
