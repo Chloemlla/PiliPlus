@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
-import 'package:pili_plus/common/widgets/flutter/dyn_tab_bar.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/flutter/text_field/controller.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
@@ -295,9 +294,9 @@ class _DynamicDetailPageState
   Widget _buildTabBar() {
     return SizedBox(
       height: 40,
-      child: DynTabBar(
+      child: TabBar(
         padding: .zero,
-        // isScrollable: true,
+        isScrollable: true,
         indicatorSize: .tab,
         tabAlignment: .start,
         controller: tabController,
