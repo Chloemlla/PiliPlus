@@ -6,6 +6,7 @@ import 'package:pili_plus/http/search.dart';
 import 'package:pili_plus/models/search/suggest.dart';
 import 'package:pili_plus/models_new/search/search_rcmd/data.dart';
 import 'package:pili_plus/models_new/search/search_trending/data.dart';
+import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
@@ -176,17 +177,23 @@ class SSearchController extends GetxController
   }
 
   // 搜索
-  void submit() {
+  Future<void> submit() async {
     if (controller.text.isEmpty) {
       if (hintText.isNullOrEmpty) return;
       controller.text = hintText!;
       validateUid();
     }
 
+    final text = controller.text;
+
+    if (await PiliScheme.routePushFromUrl(text, selfHandle: true)) {
+      return;
+    }
+
     if (recordSearchHistory.value) {
       historyList
-        ..remove(controller.text)
-        ..insert(0, controller.text);
+        ..remove(text)
+        ..insert(0, text);
       if (historyList.length > BaseSearchController.maxSearchHistory) {
         historyList.removeRange(
           BaseSearchController.maxSearchHistory,
@@ -196,7 +203,7 @@ class SSearchController extends GetxController
       Persistence.background(
         Future.wait([
           GStorage.historyWord.put('cacheList', historyList.toList()),
-          SearchHistoryStore.upsert(controller.text),
+          SearchHistoryStore.upsert(text),
         ]),
         label: 'search history add',
       );
@@ -208,7 +215,7 @@ class SSearchController extends GetxController
       '/searchResult',
       parameters: {
         'tag': tag,
-        'keyword': controller.text,
+        'keyword': text,
       },
       arguments: {
         'initIndex': initIndex,

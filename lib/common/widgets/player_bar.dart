@@ -29,7 +29,7 @@ import 'package:flutter/material.dart';
 class PlayerBar extends MultiChildRenderObjectWidget {
   const PlayerBar({
     super.key,
-    super.children,
+    required super.children,
   }) : assert(
          children.length == 2,
          'PlayerBar requires exactly two children: left and right controls.',

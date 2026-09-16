@@ -194,24 +194,26 @@ class VideoCardH extends StatelessWidget {
               overflow: .clip,
             ),
           ),
-          const SizedBox(height: 3),
-          Row(
-            spacing: 8,
-            children: [
-              Flexible(
-                child: StatWidget(
-                  type: .play,
-                  value: videoItem.stat.view,
+          if (videoItem.isLive != true) ...[
+            const SizedBox(height: 3),
+            Row(
+              spacing: 8,
+              children: [
+                Flexible(
+                  child: StatWidget(
+                    type: .play,
+                    value: videoItem.stat.view,
+                  ),
                 ),
-              ),
-              Flexible(
-                child: StatWidget(
-                  type: .danmaku,
-                  value: videoItem.stat.danmu,
+                Flexible(
+                  child: StatWidget(
+                    type: .danmaku,
+                    value: videoItem.stat.danmu,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
