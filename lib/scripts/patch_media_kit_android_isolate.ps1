@@ -1,13 +1,12 @@
 $ErrorActionPreference = "Stop"
 
 $RepositoryRootPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
-$MediaKitRevision = "deac6b62569584b6a5e28e6c60c187a0a7281b3a"
+$MediaKitRevision = "b0187daeb076cbe29c3d332f0626cca5a34f1624"
 $PatchPath = Join-Path $PSScriptRoot "media_kit_android_isolate.patch"
-$Md5PatchPath = Join-Path $PSScriptRoot "media_kit_android_md5.patch"
 $PackageConfigPath = Join-Path $RepositoryRootPath ".dart_tool/package_config.json"
 $LockPath = Join-Path $RepositoryRootPath "pubspec.lock"
 
-foreach ($path in @($PackageConfigPath, $LockPath, $PatchPath, $Md5PatchPath)) {
+foreach ($path in @($PackageConfigPath, $LockPath, $PatchPath)) {
     if (-not (Test-Path -LiteralPath $path)) {
         throw "Required media_kit patch input not found: $path"
     }
@@ -98,12 +97,7 @@ $expectedStatus = @(
     " M media_kit/lib/src/player/native/core/initializer_isolate.dart",
     " M media_kit/lib/src/player/native/player/real.dart"
 )
-# The MD5 removal patch below touches the bundled android libs build script.
-# A cached pub checkout can already carry that edit, so it is expected state
-# for the isolate patch and must not count as a dirty worktree.
-$md5StatusEntry = " M libs/android/media_kit_libs_android_video/android/build.gradle"
-$isolateStatus = @($statusOutput | Where-Object { $_ -ne $md5StatusEntry })
-if ($isolateStatus.Count -eq 0) {
+if ($statusOutput.Count -eq 0) {
     $applyCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --check -- $PatchPath 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Failed media_kit patch apply check: $($applyCheckOutput -join [Environment]::NewLine)"
@@ -113,7 +107,7 @@ if ($isolateStatus.Count -eq 0) {
         throw "Failed to apply $PatchPath`: $($applyOutput -join [Environment]::NewLine)"
     }
     $patchState = "applied"
-} elseif (@(Compare-Object $expectedStatus $isolateStatus).Count -eq 0) {
+} elseif (@(Compare-Object $expectedStatus $statusOutput).Count -eq 0) {
     $reverseCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --reverse --check -- $PatchPath 2>&1)
     if ($LASTEXITCODE -ne 0) {
         throw "Expected media_kit patch state failed reverse check: $($reverseCheckOutput -join [Environment]::NewLine)"
@@ -125,32 +119,11 @@ if ($isolateStatus.Count -eq 0) {
 
 $patchedStatus = @(& git -C $checkoutPath status --porcelain=v1 --untracked-files=all 2>&1)
 $patchedStatusExitCode = $LASTEXITCODE
-$patchedIsolateStatus = @($patchedStatus | Where-Object { $_ -ne $md5StatusEntry })
 if (
     $patchedStatusExitCode -ne 0 -or
-    @(Compare-Object $expectedStatus $patchedIsolateStatus).Count -ne 0
+    @(Compare-Object $expectedStatus $patchedStatus).Count -ne 0
 ) {
     throw "media_kit contains changes beyond the expected patch: $($patchedStatus -join [Environment]::NewLine)"
-}
-
-# Apply MD5 removal patch to media_kit_libs_android_video
-$md5PatchPathFull = Join-Path $checkoutPath "libs/android/media_kit_libs_android_video/android/build.gradle"
-if (Test-Path -LiteralPath $md5PatchPathFull) {
-    $md5ApplyCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --check -- $Md5PatchPath 2>&1)
-    if ($LASTEXITCODE -eq 0) {
-        $md5ApplyOutput = @(& git -C $checkoutPath apply --unidiff-zero --whitespace=nowarn -- $Md5PatchPath 2>&1)
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to apply $Md5PatchPath`: $($md5ApplyOutput -join [Environment]::NewLine)"
-        }
-        Write-Host "$Md5PatchPath applied to media_kit@$MediaKitRevision"
-    } else {
-        $md5ReverseCheckOutput = @(& git -C $checkoutPath apply --unidiff-zero --reverse --check -- $Md5PatchPath 2>&1)
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "$Md5PatchPath already applied to media_kit@$MediaKitRevision"
-        } else {
-            throw "$Md5PatchPath neither applies cleanly nor appears already applied."
-        }
-    }
 }
 
 $initializerPath = Join-Path $packagePath "lib/src/player/native/core/initializer.dart"
@@ -163,8 +136,8 @@ $realPlayer = Get-Content -Raw -Encoding UTF8 -LiteralPath $realPlayerPath
 foreach ($marker in @(
     "import 'dart:io';",
     'if\s*\(Platform\.isAndroid\)\s*\{\s*return InitializerIsolate\.create\(',
-    'static Future<void> dispose\(MPV mpv, Pointer<mpv_handle> handle\)',
-    'InitializerIsolate\.dispose\(mpv, handle\)'
+    'static Future<void> dispose\(Pointer<generated\.mpv_handle> ctx\)',
+    'await InitializerIsolate\.dispose\(ctx\)'
 )) {
     if ($initializer -notmatch $marker) {
         throw "Patched media_kit initializer is missing expected marker: $marker"
@@ -175,26 +148,30 @@ if ([regex]::Matches($initializer, 'Platform\.isAndroid').Count -ne 2) {
 }
 
 foreach ($marker in @(
-    'else if \(message != null\)',
-    'final shutdown = _disposeCompleters\.remove\(handle\.address\)',
-    'static Future<void> dispose\(MPV mpv, Pointer<mpv_handle> handle\)',
-    'mpv\.mpv_wakeup\(handle\)',
+    'static Future<void> dispose\(Pointer<generated\.mpv_handle> handle\)',
+    'int\? handleAddress;',
+    'final shutdown = handleAddress == null',
+    'static final _disposeCompleters = HashMap<int, Completer<void>>\(\);',
+    'return shutdown\.future;',
+    # Disposal only finishes because the isolate sends null after leaving its
+    # loop, so both halves of that handshake are pinned here.
     'while \(!disposed\)',
-    'mpv\.mpv_wait_event\(handle, kReleaseMode \? 1 : 0\.1\)',
-    'if \(event == nullptr\) break',
     'port\.send\(null\)',
-    'static final _disposeCompleters'
+    'mpv\.mpv_wakeup\(handle\)'
 )) {
     if ($initializerIsolate -notmatch $marker) {
         throw "Patched media_kit initializer isolate is missing expected marker: $marker"
     }
 }
 
-if ($realPlayer -notmatch 'await Initializer\.dispose\(mpv, ctx\)') {
+if ($realPlayer -notmatch 'await Initializer\.dispose\(ctx\)') {
     throw "Patched media_kit real player is missing awaited initializer disposal."
 }
 if ($realPlayer -notmatch 'mpv\.mpv_terminate_destroy\(ctx\)') {
     throw "Patched media_kit real player is missing context destruction."
+}
+if ($realPlayer -match 'Timer\(const Duration\(seconds: 5\)') {
+    throw "Patched media_kit real player still destroys the context on a timer."
 }
 
 Write-Host "$PatchPath $patchState to media_kit@$MediaKitRevision"
