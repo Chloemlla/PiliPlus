@@ -54,7 +54,7 @@ jobs:
 
       - name: Build Windows
         run: |
-          fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json,no-pub"
+          fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json,no-pub" --skip-clean
 
       - name: Prepare Upload
         run: |

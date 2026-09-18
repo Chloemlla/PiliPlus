@@ -42,6 +42,11 @@ jobs:
         shell: pwsh
         run: lib/scripts/patch.ps1 iOS
 
+      # patch.ps1 adds gt3_flutter_plugin to pubspec.yaml, and the build below
+      # runs with --no-pub, so the plugin set has to be re-resolved here.
+      - name: Resolve patched dependencies
+        run: flutter pub get
+
       - name: Build iOS
         run: |
           flutter build ios --release --no-codesign --no-pub --dart-define-from-file=pili_release.json
