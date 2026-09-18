@@ -12,7 +12,6 @@ import 'package:pili_plus/models_new/space/space_archive/data.dart';
 import 'package:pili_plus/models_new/space/space_archive/episodic_button.dart';
 import 'package:pili_plus/models_new/space/space_archive/item.dart';
 import 'package:pili_plus/pages/common/common_list_controller.dart';
-import 'package:pili_plus/pages/member/controller.dart';
 import 'package:pili_plus/utils/extension/dimension_ext.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
@@ -24,7 +23,6 @@ class MemberVideoCtr
     extends CommonListController<SpaceArchiveData, SpaceArchiveItem>
     with ReloadMixin {
   MemberVideoCtr({
-    required this.heroTag,
     required this.type,
     required this.mid,
     required this.seasonId,
@@ -33,7 +31,6 @@ class MemberVideoCtr
     this.title,
   }) : isVideo = type == .video;
 
-  final String? heroTag;
   final ContributeType type;
   final bool isVideo;
   int? seasonId;
@@ -52,20 +49,11 @@ class MemberVideoCtr
   String? fromViewAid;
   final RxBool _isLocating = false.obs;
   bool get isLocating => _isLocating.value;
-  void setIsLocating(bool value, {bool isOnlyInnerScroll = true}) {
+  // The pinned extended_nested_scroll_view has no `onlyInnerScroll` setter: it
+  // lives on the dev head, which the fork cannot take because it migrated to
+  // package:material_ui.
+  void setIsLocating(bool value) {
     _isLocating.value = value;
-    if (isOnlyInnerScroll) {
-      onlyInnerScroll = value;
-    }
-  }
-
-  set onlyInnerScroll(bool value) {
-    final state = Get.find<MemberController>(tag: heroTag)
-        .scrollKey
-        .currentState;
-    if (state != null && state.mounted) {
-      state.onlyInnerScroll = value;
-    }
   }
 
   bool isLoadPrevious = false;
@@ -107,9 +95,6 @@ class MemberVideoCtr
     next = data.next;
     if (page == 0 || isLoadPrevious) {
       hasPrev = data.hasPrev;
-      if (isLoadPrevious && hasPrev != true) {
-        onlyInnerScroll = false;
-      }
     }
     if (page == 0 || !isLoadPrevious) {
       if ((isVideo ? data.hasNext == false : data.next == 0) ||

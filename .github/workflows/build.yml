@@ -106,9 +106,50 @@ jobs:
       - name: Test
         run: flutter test
 
+  release_meta:
+    name: Resolve Release Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      name: ${{ steps.tag.outputs.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: tag
+        shell: pwsh
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          $tag = $env:INPUT_TAG
+
+          if (-not $tag) {
+            $versionLine = Get-Content -Path pubspec.yaml -Encoding UTF8 |
+              Where-Object { $_ -match '^\s*version:' } |
+              Select-Object -First 1
+
+            if ($versionLine -notmatch '^\s*version:\s*([^\+\s]+)') {
+              Write-Error "pubspec.yaml version is invalid: $versionLine"
+              exit 1
+            }
+            $versionName = $Matches[1]
+
+            $shortHash = (git rev-parse --short=9 HEAD).Trim()
+            $tag = "v$versionName-$shortHash"
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "name=PiliPlus $($tag -replace '^v', '')"
+
   android:
     name: Release Android
-    needs: quality
+    needs: [quality, release_meta]
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_android == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -201,29 +242,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
         shell: bash
-
-      - name: Set release metadata
-        shell: pwsh
-        run: |
-          $versionLine = Get-Content -Path pubspec.yaml -Encoding UTF8 |
-            Where-Object { $_ -match '^\s*version:' } |
-            Select-Object -First 1
-
-          if (-not $versionLine) {
-            Write-Error 'pubspec.yaml version not found'
-            exit 1
-          }
-
-          if ($versionLine -notmatch '^\s*version:\s*([^\+\s]+)') {
-            Write-Error "pubspec.yaml version is invalid: $versionLine"
-            exit 1
-          }
-
-          $versionName = $Matches[1]
-          $shortHash = (git rev-parse --short=9 HEAD).Trim()
-
-          Add-Content -Path $env:GITHUB_ENV -Value "pilipili_VERSION_NAME=$versionName"
-          Add-Content -Path $env:GITHUB_ENV -Value "pilipili_SHORT_HASH=$shortHash"
 
       - name: Write key
         shell: bash
@@ -353,9 +371,9 @@ jobs:
           draft: false
           make_latest: true
           generate_release_notes: true
-          tag_name: "v${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
+          tag_name: ${{ needs.release_meta.outputs.tag }}
           prerelease: false
-          name: "PiliPlus-android ${{ env.pilipili_VERSION_NAME }}-${{ env.pilipili_SHORT_HASH }}"
+          name: ${{ needs.release_meta.outputs.name }}
           files: PiliPlus_android_*.apk
 
       - name: Upload Android arm64-v8a
@@ -380,37 +398,41 @@ jobs:
           path: PiliPlus_android_*_x86_64.apk
 
   ios:
-    needs: quality
-    if: ${{ (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_ios == 'true' }}
+    needs: [quality, release_meta]
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_ios == 'true' }}
     uses: ./.github/workflows/ios.yml
     permissions:
       contents: write
     with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+      tag: ${{ github.event_name != 'pull_request' && needs.release_meta.outputs.tag || '' }}
+      name: ${{ needs.release_meta.outputs.name }}
 
   mac:
-    needs: quality
-    if: ${{ github.event.inputs.build_mac == 'true' }}
+    needs: [quality, release_meta]
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_mac == 'true' }}
     uses: ./.github/workflows/mac.yml
     permissions:
       contents: write
     with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+      tag: ${{ github.event_name != 'pull_request' && needs.release_meta.outputs.tag || '' }}
+      name: ${{ needs.release_meta.outputs.name }}
 
   win_x64:
-    needs: quality
-    if: ${{ (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_win_x64 == 'true' }}
+    needs: [quality, release_meta]
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_win_x64 == 'true' }}
     uses: ./.github/workflows/win_x64.yml
     permissions:
       contents: write
     with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+      tag: ${{ github.event_name != 'pull_request' && needs.release_meta.outputs.tag || '' }}
+      name: ${{ needs.release_meta.outputs.name }}
 
   linux_x64:
-    needs: quality
-    if: ${{ github.event.inputs.build_linux_x64 == 'true' }}
+    needs: [quality, release_meta]
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.repository == 'Chloemlla/PiliPlus') || github.event.inputs.build_linux_x64 == 'true' }}
     uses: ./.github/workflows/linux_x64.yml
     permissions:
       contents: write
     with:
-      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || '' }}
+      tag: ${{ github.event_name != 'pull_request' && needs.release_meta.outputs.tag || '' }}
+      name: ${{ needs.release_meta.outputs.name }}

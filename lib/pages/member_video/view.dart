@@ -73,7 +73,6 @@ class _MemberVideoState extends State<MemberVideo>
     super.initState();
     _controller = Get.put(
       MemberVideoCtr(
-        heroTag: widget.heroTag,
         type: widget.type,
         mid: widget.mid,
         seasonId: widget.seasonId,
@@ -178,10 +177,7 @@ class _MemberVideoState extends State<MemberVideo>
                             ..loadingState.value = LoadingState.loading()
                             ..queryData();
                         } else {
-                          _controller.setIsLocating(
-                            true,
-                            isOnlyInnerScroll: false,
-                          );
+                          _controller.setIsLocating(true);
                           _jumpToIndex(locatedIndex);
                         }
                       },
