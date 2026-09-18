@@ -47,6 +47,11 @@ endfunction()
 
 add_compile_options(/utf-8)
 
+# flutter_local_notifications_windows 1.0.3 compiles against
+# <experimental/coroutine>, which MSVC 14.51 rejects; this reaches the plugin
+# targets added by generated_plugins.cmake below.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
