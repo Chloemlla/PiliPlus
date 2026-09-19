@@ -25,41 +25,38 @@
 
 <br/>
 
-## 适配平台
-
-- [x] Android
-- [x] iOS
-- [x] Pad
-- [x] Windows
-- [x] Linux
-
-[![Packaging status](https://repology.org/badge/vertical-allrepos/piliplus.svg)](https://repology.org/project/piliplus/versions)
-
-
-
-## 本分支（Chloemlla/main）相对上游的改进
+## ⚡ 本分支改进特性
 
 > 仓库：[Chloemlla/PiliPlus](https://github.com/Chloemlla/PiliPlus)  
 > 上游参考：[bggRGjQaUbCoE/PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) · 更早：[orz12/PiliPalaX](https://github.com/orz12/PiliPalaX) / [guozhigq/pilipala](https://github.com/guozhigq/pilipala)  
-> 对比基线：截至 2026-07-31 已合入 `upstream/main` 的 `e89241109`；审计时本仓库 `main` 为 0 个落后、约 165 个分支增量，后续提交在此基础上继续累积
+> 对比基线：截至 2026-09-19，本仓库 `main` = `b8a077a0d`，上游 `upstream/main` = `a85ae21c0`；领先 355 个提交、落后 0（即已包含全部上游提交）
 > 本文按**功能模块**汇总本分支相对上游的主要改进：用户可见行为、关键实现入口、平台范围与工程保障。  
 > **不是**完整 changelog / 提交列表；上游已有的通用能力见下文 `feat` / `功能` 清单。
 
-### 0. 总览
+### 特性一览
 
-| 模块 | 平台 | 用户侧收益 | 关键入口 |
-|------|------|------------|----------|
-| Seal 外部下载委托 | Android | 多 P、登录 Cookie 与空降助手去广告统一走 Seal 队列 | `SealDownloadUtils` / `SealDownloadChannel` |
-| B 站网页二维码授权 | Android | 扫网页登录码授权本机账号 | `WebQrAuthPage` / `WebQrAuthHttp` / `QrScannerActivity` |
-| 崩溃捕获与历史 | Android + Flutter | 可过滤噪声、本地查看/分享崩溃 | `CrashReporter` / `lumen-crash` |
-| MMKV 热存储 | Android | 设置/进度/缓存更快，大箱懒加载 | `AndroidMmkvBackedBox` |
-| 密钥旁路与隐私 | 全平台（部分 Android） | Cookie/密钥不再明文落库；复制 Cookie 需系统验证 | `AccountSecretStore` / `AndroidCredentialAuth` |
-| 媒体导出 / 系统媒体控件 | 多平台 / Android | 内置导出 + 静默即时通知 + 可拖动 MediaSession 进度 | `MediaExportUtils` / `NativeMediaService` |
-| 评论与设置可用性 | 全平台 | 独立评论收藏、日期恢复、选择过滤防崩与搜索定位高亮 | `FavoriteReplyStore` / `SettingsSearchPage` |
-| 剪贴板视频链接 | 移动端 | 识别 bilibili / b23 链接并可选自动打开 | `ClipboardVideoLinkHandler` |
-| 首启说明 / 权限 / 更新源 | 全平台（权限仅 Android） | 首装分支说明、开源声明、逐构建更新说明与权限引导 | `StartupOverlayCoordinator` / `WhatsNewGuideService` |
-| Clash VPN 自动适配 | Android | 与配套 Clash Meta 协作，VPN 切换时自动刷新网络路径 | `ClashCompat` / `Request` |
-| CI / Baseline Profile | 工程 | 冷启 profile 生成、校验与发布流硬化 | `:baselineprofile` / `.github/workflows/build.yml` |
+| 特性 | 说明 |
+|------|------|
+| 下载委托 Seal（Android） | 视频详情菜单的「下载视频 / 下载音频」改由 [Seal](https://github.com/Chloemlla/Seal)（yt-dlp）解析、排队与落盘，支持多 P 批量与登录 Cookie 透传，并可按空降助手标记剥离广告后输出连续成品；离线缓存仍走应用内下载服务，两者互不替代。 |
+| 播放列表导入与导出 | 收藏夹、稍后再看、追番追剧可导出为 JSON / M3U8，导入前校验版本与条目字段并展示预览，单条失效链接不会中断整批。 |
+| 批量下载管理 | 下载任务集中展示等待 / 进行中 / 完成 / 失败 / 取消状态，支持批量开始、暂停、重试与删除；任务与播放器页面解耦，切换页面不丢进度。 |
+| 视频书签与时间戳 | 可在播放位置创建带标题与备注的书签，支持编辑、删除与跳转，书签按视频聚合；入口在播放页「更多设置」与「我的视频标记」。 |
+| UP 开屏跳过 | 为单个 UP 设置统一的开屏跳过时长（0.1–600 秒，支持两位小数），该 UP 的视频从头播放时自动跳过；从历史进度续播不会重复跳过。 |
+| 观看统计 | 按天 / 周 / 月聚合观看时长与视频数量，数据只来自本地观看记录，聚合阶段对重复记录去重。 |
+| 持久化画中画（Android） | 画中画状态跨页面导航保留，保存视频、分 P、播放位置、标题与封面；播放器关闭、播放完成或退出画中画后清理过期状态。 |
+| 直播关键词提醒 | 关注的直播间出现指定关键词时发送系统通知，轮询带节流与去重，点击通知进入对应直播间。 |
+| 直播更新进度通知（Android） | 后台播放直播且未开启画中画时，创建带进度条与播放控制的前台常驻通知；Android 16 上以 Live Update 样式呈现，OEM 缺少接口时降级而不崩溃。 |
+| B 站网页二维码授权（Android） | 用本机已登录账号扫描或识别 B 站官方网页登录二维码完成网页端授权，支持相机扫码、相册识别与粘贴链接，授权请求附着账号 Cookie；扫码实现为 CameraX + Google ML Kit（barcode-scanning），不再依赖华为 Scan Kit / HMS Core。 |
+| 崩溃捕获、过滤与历史 | 跨 Flutter 与 Android 记录可复盘的故障并过滤 media-kit / 网络等不可操作诊断；本地历史含列表、系统信息、堆栈与近期事件，可分享。 |
+| Android MMKV 热存储 | 设置、缓存、观看进度与评论等热路径改用 MMKV，大箱懒加载并设 LRU 上限；迁移或解码失败时不会用过期 Hive 快照覆盖新数据，MMKV 不可用时回落 Hive。 |
+| 密钥旁路与隐私保护 | 账号 cookies / accessKey 与 WebDAV 密码迁出明文存储，改为独立加密旁路文件；Android 复制登录 Cookie 需通过锁屏 / PIN 验证；日志与崩溃上下文经 LogRedactor 脱敏。 |
+| 系统媒体控件与内置导出 | MediaSession + 前台媒体通知支持播放、暂停、上下首、倍速、弹幕、循环与睡眠定时，已知真实时长时通知栏可显示并拖动进度条；内置导出可将视频 MP4 直链与 DASH 音频导出为文件。 |
+| 剪贴板视频链接（移动端） | 识别剪贴板中的 B 站视频链接（含 b23.tv 短链），设置项默认关闭；已在视频页时再次打开会二次确认，并带节流与会话内去重。 |
+| 首启说明、权限引导与应用声明 | 首装依次展示开源声明与本分支改进说明，每个新构建首次打开展示该构建的更新说明；Android 按系统版本引导通知、媒体、存储等权限，弹窗前等待 Navigator 就绪。「关于」页新增应用声明，集中提供用户协议、隐私政策、个人信息收集清单等内置页面、撤回同意入口、开源许可声明与应用权限用途。 |
+| 评论收藏、设置搜索与弹幕高亮 | 评论收藏与视频收藏支持置顶与拖拽排序，本地评论收藏独立存储并支持导入导出与来源回看；设置搜索结果显示所属分区，跳转后滚动定位并短暂高亮；弹幕可按关键词规则高亮。 |
+| Synapse 设置与搜索记录同步 | 经 Synapse-Client 授权后在账号设备间同步通用设置、播放设置与搜索历史；同步前区分本地、账号与敏感字段，WebDAV 密码、Cookie 与 Token 保留本地，冲突时给出新增 / 修改 / 移除预览。 |
+| Clash VPN 自动适配（Android） | 与配套 Clash Meta 协作，识别伙伴进程退出或 VPN 失效并主动降级，请求失败时切换网络路径，并支持 StatusProvider v2 字段。 |
+| 包名、更新源与构建发布 | Android `applicationId` / `namespace` 改为 `com.chloemlla.piliplus`（debug / dev 后缀），Dart 包名改为 `pili_plus`，检查更新与源码地址指向本仓库，Windows 安装包注册 `piliplus://` 深链；push 即构建 Android / iOS / macOS / Linux / Windows 并发布到同一 tag，Android 侧生成并校验 Baseline Profile，另有 Sync upstream workflow 与 `tool/sync_upstream.mjs` 自动跟进上游。 |
 
 ---
 
@@ -335,6 +332,18 @@ Seal 联调文档：[third-party-call-guide.md](https://github.com/Chloemlla/Sea
 - 若与上游行为冲突，以本仓库 `main` 与对应实现/commit 为准。
 
 ---
+
+## 适配平台
+
+- [x] Android
+- [x] iOS
+- [x] Pad
+- [x] Windows
+- [x] Linux
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/piliplus.svg)](https://repology.org/project/piliplus/versions)
+
+
 
 ## refactor
 
