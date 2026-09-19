@@ -142,6 +142,7 @@ class SSearchController extends GetxController
     if (searchSuggestion) {
       subInit();
       searchSuggestList = <SearchSuggestItem>[].obs;
+      if (text != null) onValueChanged(text);
     }
 
     if (enableSearchRcmd) {
@@ -213,34 +214,32 @@ class SSearchController extends GetxController
     searchFocusNode.unfocus();
     Get.toNamed(
       '/searchResult',
-      parameters: {
-        'tag': tag,
-        'keyword': text,
-      },
-      arguments: {
-        'initIndex': initIndex,
-        'fromSearch': true,
-      },
-    );
-    searchFocusNode.requestFocus();
-    if (PlatformUtils.isDesktop) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        controller.selection = TextSelection.collapsed(
-          offset: controller.text.length,
-        );
-      });
-    }
+      parameters: {'tag': tag, 'keyword': text},
+      arguments: {'initIndex': initIndex, 'fromSearch': true},
+    )?.then((val) {
+      searchFocusNode.requestFocus();
+      if (PlatformUtils.isDesktop) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          controller.selection = TextSelection.collapsed(
+            offset: controller.text.length,
+          );
+        });
+      }
+      if (val is bool && val) {
+        onValueChanged(text);
+      }
+    });
   }
 
   Future<void> queryRecommendList() async {
     recommendData.value = await SearchHttp.searchRecommend();
   }
 
-  void onClickKeyword(String keyword) {
+  void onClickKeyword(String keyword, {bool clearSuggest = true}) {
     controller.text = keyword;
     validateUid();
 
-    if (searchSuggestion) searchSuggestList.clear();
+    if (searchSuggestion && clearSuggest) searchSuggestList.clear();
     submit();
   }
 

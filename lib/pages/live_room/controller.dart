@@ -1,5 +1,6 @@
 import 'dart:async' show Timer, StreamSubscription;
 import 'dart:convert' show jsonDecode;
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:pili_plus/common/widgets/dialog/report.dart';
@@ -29,6 +30,7 @@ import 'package:pili_plus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/tcp/live.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/connectivity_utils.dart';
 import 'package:pili_plus/utils/danmaku_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
@@ -285,7 +287,7 @@ class LiveRoomController extends GetxController {
           codecIndex: codecIndex,
           liveUrlIndex: liveUrlIndex,
         ),
-        if (isLogin && !isLoaded.value) _fetchBlockRules(),
+        if (!isLoaded.value && Accounts.heartbeat.isLogin) _fetchBlockRules(),
       ]);
       isLoaded.value = true;
     } else {
@@ -653,8 +655,10 @@ class LiveRoomController extends GetxController {
           );
           break;
         case 'SUPER_CHAT_MESSAGE' when showSuperChat:
-          final item = SuperChatItem.fromJson(obj['data']);
+          final item = SuperChatItem.fromJson(obj['data'], roomId);
           superChatMsg.insert(0, item);
+          addDm(item);
+          if (Platform.isAndroid && AndroidHelper.isPipMode) return;
           if (plPlayerController.showDanmaku &&
               (isFullScreen || plPlayerController.isDesktopPip)) {
             fsSC.value = item.copyWith(
@@ -664,7 +668,6 @@ class LiveRoomController extends GetxController {
               ),
             );
           }
-          addDm(item);
           break;
         // case 'SUPER_CHAT_MESSAGE_DELETE' when showSuperChat:
         //   if (obj['roomid'] == roomId) {

@@ -3,10 +3,12 @@ import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/http/user.dart';
+import 'package:pili_plus/pages/common/publish/publish_route.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
 import 'package:flutter/material.dart';
 
 const _iconSize = 20.0;
@@ -17,24 +19,24 @@ void imageSaveDialog({
   dynamic aid,
   String? bvid,
 }) {
-  SmartDialog.show(
-    animationType: .centerScale_otherSlide,
-    builder: (context) {
-      final colorScheme = ColorScheme.of(context);
-      final imgWidth = MediaQuery.sizeOf(context).shortestSide - 16;
-      final height = imgWidth / Style.aspectRatio16x9;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Style.safeSpace),
-        child: DecoratedBox(
-          decoration: _ImageDecoration(
-            imageHeight: height,
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.all(Style.imgRadius),
-          ),
-          child: SizedBox(
+  Get.key.currentState!.push(
+    PublishRoute(
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final colorScheme = ColorScheme.of(context);
+        final imgWidth = MediaQuery.sizeOf(context).shortestSide - 16;
+        final height = imgWidth / Style.aspectRatio16x9;
+        return Center(
+          child: Container(
             width: imgWidth,
+            margin: const .symmetric(horizontal: Style.safeSpace),
+            decoration: _ImageDecoration(
+              imageHeight: height,
+              color: colorScheme.surface,
+              borderRadius: const .all(Style.imgRadius),
+            ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: .min,
               children: [
                 IgnorePointer(
                   child: NetworkImgLayer(
@@ -42,11 +44,11 @@ void imageSaveDialog({
                     quality: 100,
                     width: imgWidth,
                     height: height,
-                    borderRadius: const BorderRadius.vertical(top: Style.imgRadius),
+                    borderRadius: const .vertical(top: Style.imgRadius),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  padding: const .fromLTRB(12, 10, 8, 10),
                   child: Row(
                     children: [
                       if (title != null)
@@ -66,7 +68,7 @@ void imageSaveDialog({
                           iconSize: _iconSize,
                           tooltip: '稍后再看',
                           onPressed: () => {
-                            SmartDialog.dismiss(),
+                            Get.back(),
                             UserHttp.toViewLater(aid: aid, bvid: bvid),
                           },
                           icon: const Icon(Icons.watch_later_outlined),
@@ -77,7 +79,7 @@ void imageSaveDialog({
                             iconSize: _iconSize,
                             tooltip: '分享',
                             onPressed: () {
-                              SmartDialog.dismiss();
+                              Get.back();
                               ImageUtils.onShareImg(cover);
                             },
                             icon: const Icon(Icons.share),
@@ -87,7 +89,7 @@ void imageSaveDialog({
                             iconSize: 18,
                             tooltip: '复制链接',
                             onPressed: () {
-                              SmartDialog.dismiss();
+                              Get.back();
                               Utils.copyText(cover);
                             },
                             icon: const Icon(Icons.copy),
@@ -100,7 +102,7 @@ void imageSaveDialog({
                               cover,
                             ]);
                             if (saveStatus) {
-                              SmartDialog.dismiss();
+                              Get.back();
                             }
                           },
                           icon: const Icon(Icons.download),
@@ -112,9 +114,14 @@ void imageSaveDialog({
               ],
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) =>
+          ScaleTransition(
+            scale: animation,
+            child: child,
+          ),
+    ),
   );
 }
 
@@ -144,12 +151,12 @@ class _ImageDecoration extends Decoration {
     }
     return other is _ImageDecoration &&
         other.color == color &&
-        other.imageHeight == imageHeight &&
-        other.borderRadius == borderRadius;
+        other.borderRadius == borderRadius &&
+        imageHeight == other.imageHeight;
   }
 
   @override
-  int get hashCode => Object.hash(color, imageHeight, borderRadius);
+  int get hashCode => Object.hash(color, borderRadius, imageHeight);
 
   @override
   bool hitTest(Size size, Offset position, {TextDirection? textDirection}) {

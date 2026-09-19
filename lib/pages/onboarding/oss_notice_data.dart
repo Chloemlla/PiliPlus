@@ -355,13 +355,6 @@ abstract final class OssNoticeData {
       url: 'https://pub.dev/packages/screen_retriever',
     ),
     OssCredit(
-      name: 'desktop_webview_window',
-      author: 'MixinNetwork / Predidit fork',
-      description: 'Linux 桌面 WebView 窗口。',
-      license: 'Apache-2.0',
-      url: 'https://github.com/Predidit/linux_webview_window',
-    ),
-    OssCredit(
       name: 'webdav_client',
       author: 'wgh136 等',
       description: 'WebDAV 备份/恢复客户端。',

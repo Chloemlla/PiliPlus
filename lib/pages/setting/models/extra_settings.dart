@@ -988,7 +988,9 @@ void _showDownPathDialog(BuildContext context, VoidCallback setState) {
           onPressed: () async {
             Get.back();
             final path = await FilePicker.getDirectoryPath(
-              initialDirectory: downloadPath,
+              initialDirectory: Directory(downloadPath).existsSync()
+                  ? downloadPath
+                  : null,
             );
             if (path == null || path == downloadPath) return;
             downloadPath = path;

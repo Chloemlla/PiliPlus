@@ -8,6 +8,7 @@ import 'package:pili_plus/models/common/theme/theme_color_type.dart';
 import 'package:pili_plus/models/common/theme/theme_type.dart';
 import 'package:pili_plus/pages/home/view.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
+import 'package:pili_plus/pages/setting/slide_color_picker.dart';
 import 'package:pili_plus/pages/setting/widgets/popup_item.dart';
 import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
@@ -60,11 +61,18 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
     Get.updateMyAppTheme();
   }
 
+  late ThemeData theme;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    TextStyle titleStyle = theme.textTheme.titleMedium!;
-    TextStyle subTitleStyle = theme.textTheme.labelMedium!.copyWith(
+    final titleStyle = theme.textTheme.titleMedium!;
+    final subTitleStyle = theme.textTheme.labelMedium!.copyWith(
       color: theme.colorScheme.outline,
     );
     final size = MediaQuery.sizeOf(context);
@@ -143,51 +151,7 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
             ),
           Padding(
             padding: padding + const .all(12),
-            child: Obx(
-              () => AnimatedHeightWidgetExt(
-                expand: !ctr.dynamicColor.value,
-                duration: const Duration(milliseconds: 200),
-                child: Wrap(
-                  alignment: .center,
-                  spacing: 22,
-                  runSpacing: 18,
-                  children: colorThemeTypes.mapIndexed(
-                    (i, e) {
-                      return GestureDetector(
-                        behavior: .opaque,
-                        onTap: () {
-                          ctr.currentColor.value = i;
-                          GStorage.setting
-                              .put(SettingBoxKey.customColor, i)
-                              .whenComplete(Get.updateMyAppTheme);
-                        },
-                        child: Column(
-                          spacing: 3,
-                          children: [
-                            ColorPalette(
-                              colorScheme: e.color.asColorSchemeSeed(
-                                _dynamicSchemeVariant,
-                                theme.brightness,
-                              ),
-                              selected: ctr.currentColor.value == i,
-                            ),
-                            Text(
-                              e.label,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: ctr.currentColor.value != i
-                                    ? theme.colorScheme.outline
-                                    : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ).toList(),
-                ),
-              ),
-            ),
+            child: Obx(_buildColorPanel),
           ),
           Padding(
             padding: padding,
@@ -215,6 +179,109 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                     .toList(),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _selectCustomColor(int value) {
+    ctr.currentColor.value = value;
+    GStorage.setting
+        .put(SettingBoxKey.customColor, value)
+        .whenComplete(Get.updateMyAppTheme);
+  }
+
+  Widget _buildColorPanel() {
+    final currentColor = ctr.currentColor.value;
+    return AnimatedHeightWidgetExt(
+      expand: !ctr.dynamicColor.value,
+      duration: const Duration(milliseconds: 200),
+      child: Wrap(
+        spacing: 22,
+        runSpacing: 18,
+        alignment: .center,
+        children: [
+          Builder(
+            builder: (context) {
+              final isCurr = currentColor > colorThemeTypes.length;
+              final color = isCurr
+                  ? Color(currentColor)
+                  : colorThemeTypes[currentColor].color;
+              return GestureDetector(
+                behavior: .opaque,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      clipBehavior: .hardEdge,
+                      contentPadding: const .symmetric(vertical: 16),
+                      title: const Text('Color Picker'),
+                      content: SlideColorPicker(
+                        color: color,
+                        onChanged: (Color? color) {
+                          if (color != null) {
+                            _selectCustomColor(color.toARGB32());
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
+                child: Column(
+                  spacing: 3,
+                  children: [
+                    ColorPalette(
+                      colorScheme: color.asColorSchemeSeed(
+                        _dynamicSchemeVariant,
+                        theme.brightness,
+                      ),
+                      selected: isCurr,
+                    ),
+                    Text(
+                      '自定义',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isCurr
+                            ? null
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          ...colorThemeTypes.mapIndexed(
+            (i, e) {
+              final color = e.color;
+              final isCurr = currentColor == i;
+              return GestureDetector(
+                behavior: .opaque,
+                onTap: () {
+                  _selectCustomColor(i);
+                },
+                child: Column(
+                  spacing: 3,
+                  children: [
+                    ColorPalette(
+                      colorScheme: color.asColorSchemeSeed(
+                        _dynamicSchemeVariant,
+                        theme.brightness,
+                      ),
+                      selected: isCurr,
+                    ),
+                    Text(
+                      e.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isCurr ? null : theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

@@ -1017,6 +1017,19 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     );
   }
   Timer? _wakeLockTimer;
+  void _stopWakeLockTimer() {
+    _wakeLockTimer?.cancel();
+    _wakeLockTimer = null;
+  }
+
+  void _stopWakeLock() {
+    WakelockPlus.disable();
+    videoPlayerServiceHandler?.onStatusChange(
+      playerStatus.value,
+      isBuffering.value,
+      isLive,
+    );
+  }
 
   /// 播放事件监听
   void _startListeners(NativePlayer player) {
@@ -1027,8 +1040,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       stream.playing.listen((bool playing) {
         _watchPlaybackActive = playing;
         if (playing) {
-          _wakeLockTimer?.cancel();
-          _wakeLockTimer = null;
+          _stopWakeLockTimer();
           WakelockPlus.enable();
 
           if (_isAutoEnterPip) {
@@ -1039,23 +1051,23 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
             }
           }
           playerStatus.value = .playing;
+
+          videoPlayerServiceHandler?.onStatusChange(
+            .playing,
+            isBuffering.value,
+            isLive,
+          );
         } else {
+          _disableAutoEnterPip();
+          playerStatus.value = .paused;
+
           _wakeLockTimer?.cancel();
           _wakeLockTimer = Timer(
             const Duration(milliseconds: 500),
-            WakelockPlus.disable,
+            _stopWakeLock,
           );
-
-          _disableAutoEnterPip();
-          playerStatus.value = .paused;
         }
         _handleWatchPlaybackState();
-
-        videoPlayerServiceHandler?.onStatusChange(
-          playerStatus.value,
-          isBuffering.value,
-          isLive,
-        );
 
         for (final element in _statusListeners) {
           element(playing ? .playing : .paused);
@@ -1080,6 +1092,12 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
           makeHeartBeat(-1, type: .completed);
           _finishWatchStatsSession();
           _clearPipState();
+
+          _wakeLockTimer?.cancel();
+          _wakeLockTimer = Timer(
+            const Duration(milliseconds: 500),
+            _stopWakeLock,
+          );
         }
       }),
 
@@ -1108,11 +1126,15 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       stream.buffering.listen((bool buffering) {
         isBuffering.value = buffering;
         _handleWatchPlaybackState();
-        videoPlayerServiceHandler?.onStatusChange(
-          playerStatus.value,
-          buffering,
-          isLive,
-        );
+        final playerStatus = this.playerStatus.value;
+        if (!playerStatus.isCompleted) {
+          _stopWakeLockTimer();
+          videoPlayerServiceHandler?.onStatusChange(
+            playerStatus,
+            buffering,
+            isLive,
+          );
+        }
       }),
       stream.log.listen(((PlayerLog log) {
           if (log.level == 'error' || log.level == 'fatal') {
@@ -1729,7 +1751,6 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     _keyboardSpeedTimer?.cancel();
     _finishWatchStatsSession();
     _clearPipState();
-    _wakeLockTimer?.cancel();
     // _position.close();
     // _playerEventSubs?.cancel();
     // _sliderPosition.close();
@@ -1750,9 +1771,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     _removeListeners();
     _positionListeners.clear();
     _statusListeners.clear();
-    if (playerStatus.isPlaying) {
-      WakelockPlus.disable();
-    }
+    _stopWakeLockTimer();
+    WakelockPlus.disable();
     if (kDebugMode) {
       debugPrint('dispose player');
     }
