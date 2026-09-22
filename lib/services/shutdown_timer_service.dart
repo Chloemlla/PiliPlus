@@ -6,7 +6,6 @@ import 'dart:io' show exit;
 import 'package:pili_plus/models/common/enum_with_label.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/widgets/menu_row.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
-import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/theme_utils.dart';

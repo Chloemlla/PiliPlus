@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:pili_plus/models/common/video/video_type.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/data_source.dart';
-import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -335,15 +334,23 @@ class _MiniPlayerWindowState extends State<_MiniPlayerWindow> {
               height: 31,
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Obx(() {
-                  final isPlaying =
-                      widget.entry.controller.playerStatus.isPlaying;
-                  return _iconButton(
-                    tooltip: isPlaying ? '暂停' : '播放',
-                    icon: isPlaying ? Icons.pause : Icons.play_arrow,
-                    onPressed: _togglePlay,
-                  );
-                }),
+                // playerStatus is a plain enum now (upstream's PlaybackState
+                // refactor), so the play state comes from media_kit's stream to
+                // keep this rebuild reactive.
+                child: StreamBuilder<bool>(
+                  stream: widget.entry.controller.videoPlayerController?.stream
+                      .playing,
+                  initialData:
+                      widget.entry.controller.playerStatus.isPlaying,
+                  builder: (context, snapshot) {
+                    final isPlaying = snapshot.data ?? false;
+                    return _iconButton(
+                      tooltip: isPlaying ? '暂停' : '播放',
+                      icon: isPlaying ? Icons.pause : Icons.play_arrow,
+                      onPressed: _togglePlay,
+                    );
+                  },
+                ),
               ),
             ),
             Obx(() {

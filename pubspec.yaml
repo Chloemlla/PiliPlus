@@ -21,7 +21,7 @@ version: 2.1.4+1
 
 environment:
   sdk: ">=3.13.0"
-  flutter: 3.47.4
+  flutter: 3.47.5
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -143,8 +143,6 @@ dependencies:
   protobuf: ^6.0.0
   re_highlight: ^0.0.3
   saver_gallery: ^5.0.2
-  screen_brightness_android: ^2.1.6
-  screen_brightness_ios: ^2.1.4
   screen_brightness_platform_interface: ^2.1.0
   screen_retriever: ^0.2.0
   share_plus: ^13.1.0

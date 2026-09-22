@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
@@ -205,7 +207,7 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel>
     behavior: HitTestBehavior.opaque,
     onTap: () {
       setState(() => _expanded = true);
-      Future.delayed(_durtion, () {
+      Timer(_durtion, () {
         if (mounted) {
           focusNode.requestFocus();
         }

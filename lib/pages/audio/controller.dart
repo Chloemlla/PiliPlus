@@ -34,6 +34,7 @@ import 'package:pili_plus/pages/video/introduction/ugc/widgets/triple_mixin.dart
 import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/models/heart_beat_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
+import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -94,6 +95,14 @@ class AudioController extends GetxController
 
   late double speed = 1.0;
 
+  void setSpeed(double value) {
+    if (player case final player?) {
+      speed = value;
+      player.setRate(value);
+      _updatePlaybackState();
+    }
+  }
+
   late final Rx<PlayRepeat> playMode = Pref.audioPlayMode.obs;
 
   final _heartbeatThrottle = AudioHeartbeatThrottle();
@@ -114,6 +123,15 @@ class AudioController extends GetxController
   late final RxDouble desktopVolume = RxDouble(Pref.desktopVolume);
 
   Timer? _statusTimer;
+
+  void _startStatusTimer() {
+    _statusTimer?.cancel();
+    _statusTimer = Timer(
+      const Duration(milliseconds: 500),
+      _updatePlaybackState,
+    );
+  }
+
   void _stopStatusTimer() {
     _statusTimer?.cancel();
     _statusTimer = null;
@@ -258,6 +276,7 @@ class AudioController extends GetxController
 
   Future<void> onSeek(Duration duration) async {
     final target = duration.inSeconds;
+    _updatePlaybackState(position: duration);
     await player?.seek(duration);
     if (_heartbeatThrottle.resetForBackwardSeek(target)) {
       await makeHeartBeat(target, type: .status, force: true);
@@ -409,6 +428,18 @@ class AudioController extends GetxController
     _start = null;
   }
 
+  PlayerStatus _playerStatus = .paused;
+  void _updatePlaybackState({Duration? position, String? debugLabel}) {
+    videoPlayerServiceHandler?.onUpdateState(
+      _playerStatus,
+      false,
+      false,
+      position: position ?? player!.state.position,
+      speed: speed,
+      debugLabel: debugLabel,
+    );
+  }
+
   Future<void> _initPlayerIfNeeded() async {
     if (_hasInit) return;
     _hasInit = true;
@@ -436,6 +467,9 @@ class AudioController extends GetxController
         if (isDragging) return;
         final seconds = position.inSeconds;
         if (seconds != this.position.value) {
+          if (seconds == 0 && _playerStatus.isPlaying) {
+            _updatePlaybackState(position: position);
+          }
           this.position.value = seconds;
           _videoDetailController?.playedTime = position;
           videoPlayerServiceHandler?.onPositionChange(position);
@@ -451,19 +485,13 @@ class AudioController extends GetxController
       stream.playing.listen((playing) {
         if (playing) {
           animController.forward();
+          _playerStatus = .playing;
           _stopStatusTimer();
-          videoPlayerServiceHandler?.onStatusChange(.playing, false, false);
+          _updatePlaybackState();
         } else {
           animController.reverse();
-          _statusTimer?.cancel();
-          _statusTimer = Timer(
-            const Duration(milliseconds: 500),
-            () => videoPlayerServiceHandler?.onStatusChange(
-              .paused,
-              false,
-              false,
-            ),
-          );
+          _playerStatus = .paused;
+          _startStatusTimer();
         }
         if (playing) {
           final pos = position.value;
@@ -472,21 +500,17 @@ class AudioController extends GetxController
           }
         }
       }),
-      stream.buffering.listen((buffering) {
-        if (buffering && !player!.state.completed) _stopStatusTimer();
+      stream.buffering.listen((bool buffering) {
+        if (!_playerStatus.isCompleted) {
+          _stopStatusTimer();
+          _updatePlaybackState();
+        }
       }),
       stream.completed.listen((completed) {
         _videoDetailController?.playedTime = player!.state.duration;
         if (completed) {
-          _statusTimer?.cancel();
-          _statusTimer = Timer(
-            const Duration(milliseconds: 500),
-            () => videoPlayerServiceHandler?.onStatusChange(
-              .completed,
-              false,
-              false,
-            ),
-          );
+          _playerStatus = .completed;
+          _startStatusTimer();
           makeHeartBeat(-1, type: .completed);
           if (shutdownTimerService.isWaiting) {
             shutdownTimerService.handleWaiting();
@@ -804,13 +828,6 @@ class AudioController extends GetxController
         _updateCurrItem(audioItem);
       }
     });
-  }
-
-  void setSpeed(double speed) {
-    if (player case final player?) {
-      this.speed = speed;
-      player.setRate(speed);
-    }
   }
 
   @override

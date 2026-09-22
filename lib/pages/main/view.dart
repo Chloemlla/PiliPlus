@@ -12,7 +12,6 @@ import 'package:pili_plus/models/common/nav_bar_config.dart';
 import 'package:pili_plus/pages/home/view.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/plugin/pl_player/controller.dart';
-import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/clipboard_video_link_handler.dart';
@@ -71,7 +70,7 @@ class _MainAppState extends PopScopeState<MainApp>
         _handleTray();
       }
     }
-    if (PlatformUtils.isMobile || Platform.isLinux || Platform.isWindows) {
+    if (!Platform.isMacOS) {
       PiliScheme.init();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {

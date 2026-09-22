@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/http/fav.dart';
 import 'package:pili_plus/http/loading_state.dart';
@@ -227,7 +229,7 @@ class FavDetailController
     final res = await FavHttp.cleanFav(mediaId: mediaId);
     if (res.isSuccess) {
       SmartDialog.showToast('清除成功');
-      Future.delayed(const Duration(milliseconds: 200), onReload);
+      Timer(const Duration(milliseconds: 200), onReload);
     } else {
       res.toast();
     }

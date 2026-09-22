@@ -49,6 +49,13 @@ Future<VideoPlayerServiceHandler> initAudioService() {
   );
 }
 
+typedef _StatusConfig = (
+  PlayerStatus status,
+  bool isBuffering,
+  bool isLive,
+  double speed,
+);
+
 class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   static final List<MediaItem> _item = [];
 
@@ -144,7 +151,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> pause() async {
-    await (onPause?.call() ?? PlPlayerController.pauseIfExists());
+    await (onPause?.call() ??
+        PlPlayerController.pauseIfExists() ??
+        Future.syncValue(null));
     // player.pause();
   }
 
@@ -155,7 +164,8 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     // consistent until the player reports the new position.
     _noteOptimisticPosition(position);
     await (onSeek?.call(position) ??
-        PlPlayerController.seekToIfExists(position, isSeek: false));
+        PlPlayerController.seekToIfExists(position, isSeek: false) ??
+        Future.syncValue(null));
     // await player.seekTo(position);
   }
 
@@ -338,10 +348,32 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     _lastBuffered = buffered;
   }
 
-  void setPlaybackState(PlayerStatus status, bool isBuffering, bool isLive) {
+  Duration? _lastPos;
+  _StatusConfig? _lastConfig;
+  void onUpdateState(
+    PlayerStatus status,
+    bool isBuffering,
+    bool isLive, {
+    required Duration position,
+    required double speed,
+    String? debugLabel,
+  }) {
     if (!enableBackgroundPlay || _item.isEmpty || !_hasPlaybackTarget) {
       return;
     }
+
+    if (onPlay != null && debugLabel == 'onVideoPaused') return;
+
+    final newConfig = (status, isBuffering, isLive, speed);
+    if (_lastConfig == newConfig) {
+      if (_lastPos != null) {
+        final pos = position.inSeconds;
+        final lastPos = _lastPos!.inSeconds;
+        _lastPos = position;
+        if (pos == lastPos && pos != 0) return;
+      }
+    }
+    _lastConfig = newConfig;
 
     _lastStatus = status;
     _lastBuffering = isBuffering;
@@ -379,48 +411,67 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     }
 
     final AudioProcessingState processingState;
-    if (status.isCompleted) {
-      processingState = AudioProcessingState.completed;
-    } else if (isBuffering) {
-      processingState = AudioProcessingState.buffering;
-    } else {
-      processingState = AudioProcessingState.ready;
+    final bool playing;
+    switch (status) {
+      case .completed:
+        playing = false;
+        processingState = .completed;
+      case .playing:
+        playing = true;
+        processingState = isBuffering ? .buffering : .ready;
+      case .paused:
+        playing = isBuffering;
+        processingState = isBuffering ? .buffering : .ready;
     }
+    _updateState(
+      processingState,
+      playing,
+      isLive,
+      position: position,
+      speed: speed,
+    );
+  }
 
-    final playing = status.isPlaying || isBuffering;
+  void _updateState(
+    AudioProcessingState state,
+    bool playing,
+    bool isLive, {
+    required Duration position,
+    required double speed,
+  }) {
     playbackState.add(
       playbackState.value.copyWith(
-        processingState: isBuffering
-            ? AudioProcessingState.buffering
-            : processingState,
+        processingState: state,
+        updatePosition: position,
+        speed: speed,
         controls: [
           if (!isLive)
             const MediaControl(
               androidIcon: 'drawable/ic_player_rewind_10s',
               label: 'Rewind',
-              action: MediaAction.rewind,
+              action: .rewind,
             ),
           if (playing)
             const MediaControl(
               androidIcon: 'drawable/ic_player_pause',
               label: 'Pause',
-              action: MediaAction.pause,
+              action: .pause,
             )
           else
             const MediaControl(
               androidIcon: 'drawable/ic_player_play',
               label: 'Play',
-              action: MediaAction.play,
+              action: .play,
             ),
           if (!isLive)
             const MediaControl(
               androidIcon: 'drawable/ic_player_fast_forward_10s',
               label: 'Fast Forward',
-              action: MediaAction.fastForward,
+              action: .fastForward,
             ),
         ],
         playing: playing,
-        systemActions: const {MediaAction.seek},
+        systemActions: const {.seek},
       ),
     );
     if (Platform.isAndroid &&
@@ -461,13 +512,6 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     });
     _lastPushedPosition = _lastPosition;
     _lastNativePositionPush = DateTime.now();
-  }
-
-  void onStatusChange(PlayerStatus status, bool isBuffering, isLive) {
-    if (!enableBackgroundPlay) return;
-
-    if (_item.isEmpty) return;
-    setPlaybackState(status, isBuffering, isLive);
   }
 
   void onVideoDetailChange(
@@ -646,6 +690,8 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     }
     mediaItem.add(null);
     _item.clear();
+    _lastPos = null;
+    _lastConfig = null;
     /**
      * if (playbackState.processingState == AudioProcessingState.idle &&
             previousState?.processingState != AudioProcessingState.idle) {
