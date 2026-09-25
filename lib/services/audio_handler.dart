@@ -664,12 +664,16 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       return;
     }
     if (_item.isNotEmpty) {
+      setMediaItem(_item.last);
       playbackState.add(
         playbackState.value.copyWith(processingState: .ready, playing: false),
       );
-      setMediaItem(_item.last);
-      stop();
     }
+  }
+
+  void clearIfNeeded() {
+    if (!enableBackgroundPlay) return;
+    if (_item.isEmpty) clear();
   }
 
   void clear() {
@@ -698,9 +702,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
           await AudioService._stop();
         }
      */
-    playbackState
-      ..add(PlaybackState(processingState: .completed, playing: false))
-      ..add(PlaybackState(processingState: .idle, playing: false));
+    if (playbackState.value.processingState == .idle) {
+      playbackState.add(PlaybackState(processingState: .completed));
+    }
+    playbackState.add(PlaybackState(processingState: .idle));
   }
 
   void clearControlCallbacks() {
