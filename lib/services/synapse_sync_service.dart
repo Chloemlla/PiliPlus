@@ -14,6 +14,7 @@ import 'package:pili_plus/models/search/search_history_entry.dart';
 import 'package:pili_plus/services/crash/crash_breadcrumbs.dart';
 import 'package:pili_plus/services/synapse_account_sync.dart';
 import 'package:pili_plus/services/synapse_device_report.dart';
+import 'package:pili_plus/services/synapse_ip_verification.dart';
 import 'package:pili_plus/services/startup_overlay_coordinator.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
@@ -115,6 +116,10 @@ abstract final class SynapseSyncService {
     SettingBoxKey.synapseSyncBoundMid,
     SettingBoxKey.synapseDeviceId,
     SettingBoxKey.synapseDeviceTracked,
+    // 首访闸门的指纹是「本机」的身份，令牌绑定 (指纹, IP) 且只有 40 分钟：
+    // 同步到另一台设备只会让两边互相把对方的令牌判成指纹不匹配。
+    SettingBoxKey.synapseFingerprint,
+    SettingBoxKey.synapseIpVerificationToken,
     SettingBoxKey.synapseSyncRevision,
     SettingBoxKey.synapseLastSyncedAt,
     SettingBoxKey.synapseSettingsUpdatedAt,
@@ -515,6 +520,9 @@ abstract final class SynapseSyncService {
     if (_syncInProgress) return;
     _syncInProgress = true;
     try {
+      // 先把首访闸门的令牌拿到手（干净 IP 由服务端直接签发），省掉一次必然的 403。
+      // 拿不到也不致命：真正的请求被拦下时拦截器还会握手一次。
+      await SynapseIpVerification.ensureSession();
       final remote = await fetchSnapshot();
       await applyRemote(remote, SynapseSyncChoice.merge);
     } finally {
@@ -972,6 +980,7 @@ abstract final class SynapseSyncService {
         'Synapse 会话已失效，请重新授权',
       );
     }
+    final provider = _providerBaseUri(_parseBaseUrl(baseUrl));
     final syncBaseUrl = _syncBaseUri(_parseBaseUrl(baseUrl));
     return Dio(BaseOptions(
       baseUrl: syncBaseUrl.toString().endsWith('/')
@@ -985,7 +994,17 @@ abstract final class SynapseSyncService {
       },
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 15),
-    ));
+    ))
+      ..interceptors.add(
+        // 首访闸门：带指纹/令牌，403 时握手一次再重放。挂在同步客户端上而不是
+        // 全局，保证只影响 Synapse 传输层。
+        SynapseIpVerification.interceptor(
+          providerBaseUrl: () => provider.toString().replaceFirst(RegExp(r'/+$'), ''),
+          identityHeaders: () => _clientIdentity().requestHeaders,
+          userAgent: () =>
+              'PiliPlus/${BuildConfig.versionName} (${_clientIdentity().platform})',
+        ),
+      );
   }
 
   static Uri _parseBaseUrl(String value) {
@@ -1024,19 +1043,53 @@ abstract final class SynapseSyncService {
     return path == '/' ? '' : path;
   }
 
+  /// Synapse 的「设备与会话」按 platform 原样展示：`Platform.operatingSystem` 返回的
+  /// `android`/`windows` 会让界面显示成「PiliPlus / android」，与官方客户端的
+  /// 「Synapse-Client / Android」不一致。这里统一成展示名。
+  static String _platformLabel() {
+    if (Platform.isAndroid) return 'Android';
+    if (Platform.isIOS) return 'iOS';
+    if (Platform.isMacOS) return 'macOS';
+    if (Platform.isWindows) return 'Windows';
+    if (Platform.isLinux) return 'Linux';
+    return Platform.operatingSystem;
+  }
+
   static SynapseClientIdentity _clientIdentity() => SynapseClientIdentity(
-    deviceId: deviceId ?? 'unregistered',
-    platform: Platform.operatingSystem,
+    deviceId: _ensureDeviceIdSync(),
+    platform: _platformLabel(),
     clientVersion: BuildConfig.versionName,
     buildNumber: BuildConfig.versionCode,
   );
 
-  static Future<SynapseClientIdentity> _ensureClientIdentity() async {
+  /// 本进程内已生成、可能尚未落盘的设备标识。
+  static String? _sessionDeviceId;
+
+  static String _generateDeviceId() => base64Url
+      .encode(List<int>.generate(24, (_) => Random.secure().nextInt(256)))
+      .replaceAll('=', '');
+
+  /// 同步版设备标识登记。
+  ///
+  /// [Dio] 客户端是同步构造的，而首个请求完全可能发生在 [_ensureClientIdentity]
+  /// 之前；旧实现直接 `deviceId ?? 'unregistered'`，于是未走过绑定流程的安装会以同一个
+  /// `unregistered` 建设备分组，多个设备在「设备与会话」里塌成一组、一并被撤销。
+  /// 这里先生成、内存留一份、异步落盘，保证同一进程的所有请求用同一个 id。
+  static String _ensureDeviceIdSync() {
     final existing = deviceId;
-    if (existing == null) {
-      final generated = base64Url
-          .encode(List<int>.generate(24, (_) => Random.secure().nextInt(256)))
-          .replaceAll('=', '');
+    if (existing != null) return existing;
+    final pending = _sessionDeviceId;
+    if (pending != null) return pending;
+    final generated = _generateDeviceId();
+    _sessionDeviceId = generated;
+    unawaited(GStorage.setting.put(SettingBoxKey.synapseDeviceId, generated));
+    return generated;
+  }
+
+  static Future<SynapseClientIdentity> _ensureClientIdentity() async {
+    if (deviceId == null) {
+      final generated = _sessionDeviceId ?? _generateDeviceId();
+      _sessionDeviceId = generated;
       await GStorage.setting.put(SettingBoxKey.synapseDeviceId, generated);
     }
     return _clientIdentity();
@@ -1187,7 +1240,17 @@ abstract final class SynapseSyncService {
   /// DioException string.
   static String errorMessage(Object error) {
     if (error is SynapseOAuthException) return error.message;
+    if (error is SynapseIpVerificationRequired) {
+      return '需要先完成人机验证，请重试；若仍失败请检查网络环境';
+    }
+    if (error is SynapseIpVerificationBanned) {
+      return error.toString();
+    }
     if (error is DioException) {
+      final ban = SynapseIpVerification.banFromDioException(error);
+      if (ban != null) {
+        return 'IP 已被封禁${ban.reason == null || ban.reason!.isEmpty ? '' : '：${ban.reason}'}';
+      }
       final body = error.response?.data;
       if (body is Map) {
         final serverError = body['error'];

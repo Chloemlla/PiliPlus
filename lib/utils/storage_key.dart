@@ -31,6 +31,8 @@ abstract final class SettingBoxKey {
       synapseSettingsUpdatedAt = 'synapseSettingsUpdatedAt',
       synapseLocalSettingsChangedAt = 'synapseLocalSettingsChangedAt',
       synapseAccountsSynced = 'synapseAccountsSynced',
+      synapseFingerprint = 'synapseFingerprint',
+      synapseIpVerificationToken = 'synapseIpVerificationToken',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',

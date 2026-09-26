@@ -48,6 +48,7 @@ import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/update.dart';
 import 'package:pili_plus/utils/utils.dart';
+import 'package:pili_plus/services/synapse_ip_verification.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -802,6 +803,10 @@ Future<void> _showSynapseSyncDialog(
                 alignment: Alignment.centerLeft,
                 child: Text(SynapseSyncService.deviceTrackingStatus),
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(SynapseIpVerification.statusText),
+              ),
               TextField(
                 controller: urlController,
                 decoration: const InputDecoration(labelText: '服务地址'),
@@ -834,6 +839,20 @@ Future<void> _showSynapseSyncDialog(
                 }
               },
               child: const Text('预览变更'),
+            ),
+          if (SynapseSyncService.isConfigured)
+            TextButton(
+              onPressed: () async {
+                try {
+                  final verified = await SynapseIpVerification.verifyNow();
+                  SmartDialog.showToast(
+                    verified ? '网络访问验证已完成' : '网络访问验证未完成，请重试',
+                  );
+                } catch (error) {
+                  SmartDialog.showToast(SynapseSyncService.errorMessage(error));
+                }
+              },
+              child: const Text('网络访问验证'),
             ),
           FilledButton(
             onPressed: () async {

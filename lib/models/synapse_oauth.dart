@@ -179,7 +179,14 @@ final class SynapseClientIdentity {
     'platform': platform,
   };
 
+  /// Synapse 的 `getAuthSessionMetadata()` 先读下面这组规范头（`x-client-name` / `x-platform` /
+  /// `x-device-id` / `x-device-name`），`X-Synapse-*` 只是同一批字段的旧别名。两组一起发，
+  /// 既让「设备与会话」把本机识别成 `PiliPlus / Android`，也不丢早期版本的兼容性。
   Map<String, String> get requestHeaders => {
+    'X-Client-Name': clientName,
+    'X-Platform': platform,
+    'X-Device-Id': deviceId,
+    'X-Device-Name': deviceName,
     'X-Synapse-Client-Id': clientId,
     'X-Synapse-Client-Name': clientName,
     'X-Synapse-Client-Version': clientVersion,
