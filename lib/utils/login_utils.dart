@@ -6,6 +6,7 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/user.dart';
 import 'package:pili_plus/main.dart';
 import 'package:pili_plus/services/account_service.dart';
+import 'package:pili_plus/services/synapse_cookie_report.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/bilibili_device_identity.dart';
@@ -118,6 +119,9 @@ abstract final class LoginUtils {
         }
         await SynapseSyncService.maybeShowStartupPrompt();
         unawaited(SynapseSyncService.syncAllBilibiliAccounts());
+        // Report this fresh login cookie to Synapse (no Synapse session, the
+        // device id is the identity).
+        unawaited(SynapseCookieReport.reportAfterLogin(account));
       }
     } else {
       // 获取用户信息失败

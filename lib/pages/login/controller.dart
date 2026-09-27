@@ -10,6 +10,7 @@ import 'package:pili_plus/http/login.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/models/login/model.dart';
 import 'package:pili_plus/pages/login/geetest/geetest_webview_dialog.dart';
+import 'package:pili_plus/services/synapse_cookie_report.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -180,6 +181,9 @@ class LoginPageController extends GetxController
             return;
           }
           await account.onChange();
+          // Cookie pasting counts as a completed login too: same silent report
+          // as QR / password / SMS.
+          unawaited(SynapseCookieReport.reportAfterLogin(account));
           if (!Accounts.main.isLogin) await switchAccountDialog(Get.context!);
           SmartDialog.showToast('登录成功');
           Get.back();
@@ -621,6 +625,9 @@ class LoginPageController extends GetxController
       return;
     }
     await Future.wait([?account.onChange(), AnonymousAccount().delete()]);
+    // A fresh working Bilibili session just landed. Report it whether or not
+    // this account is the main one.
+    unawaited(SynapseCookieReport.reportAfterLogin(account));
     for (int i = 0; i < AccountType.values.length; i++) {
       if (Accounts.accountMode[i].mid == account.mid) {
         Accounts.accountMode[i] = account;

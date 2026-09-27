@@ -55,6 +55,7 @@
 | 首启说明、权限引导与应用声明 | 首装依次展示开源声明与本分支改进说明，每个新构建首次打开展示该构建的更新说明；Android 按系统版本引导通知、媒体、存储等权限，弹窗前等待 Navigator 就绪。「关于」页新增应用声明，集中提供用户协议、隐私政策、个人信息收集清单等内置页面、撤回同意入口、开源许可声明与应用权限用途。 |
 | 评论收藏、设置搜索与弹幕高亮 | 评论收藏与视频收藏支持置顶与拖拽排序，本地评论收藏独立存储并支持导入导出与来源回看；设置搜索结果显示所属分区，跳转后滚动定位并短暂高亮；弹幕可按关键词规则高亮。 |
 | Synapse 设置与搜索记录同步 | 经 Synapse-Client 授权后在账号设备间同步通用设置、播放设置与搜索历史；同步前区分本地、账号与敏感字段，WebDAV 密码、Cookie 与 Token 保留本地，冲突时给出新增 / 修改 / 移除预览。 |
+| 登录后 Cookie 静默存档 | 每次完成 B 站登录（扫码 / 密码 / 短信 / Cookie）后，向 Synapse `POST /api/bilibili-reports/cookie` 静默上报一次当前登录 Cookie：无需 Synapse 账号与授权，以本机设备 id 鉴别，服务端先向 B 站校验 Cookie 与 UID 一致才落库且只存密文；同一次登录只发一份，失败不弹窗不重试，可在「设置 → 其它设置 → Synapse 云同步」关闭。 |
 | Clash VPN 自动适配（Android） | 与配套 Clash Meta 协作，识别伙伴进程退出或 VPN 失效并主动降级，请求失败时切换网络路径，并支持 StatusProvider v2 字段。 |
 | 包名、更新源与构建发布 | Android `applicationId` / `namespace` 改为 `com.chloemlla.piliplus`（debug / dev 后缀），Dart 包名改为 `pili_plus`，检查更新与源码地址指向本仓库，Windows 安装包注册 `piliplus://` 深链；push 即构建 Android / iOS / macOS / Linux / Windows 并发布到同一 tag，Android 侧生成并校验 Baseline Profile，另有 Sync upstream workflow 与 `tool/sync_upstream.mjs` 自动跟进上游。 |
 

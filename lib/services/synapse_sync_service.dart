@@ -97,6 +97,11 @@ abstract final class SynapseSyncService {
   static const defaultBaseUrl = 'https://chloemlla.com';
   static const oauthTokenPath = 'api/oauth/token';
   static const _syncApiSuffix = '/api/bilibili-sync';
+
+  /// Prefix of the login cookie report endpoint: no Synapse session, the device
+  /// id is the identity. Kept apart from [_syncApiSuffix] because that surface
+  /// needs an authorized and bound account, this one only writes at login time.
+  static const reportsApiSuffix = '/api/bilibili-reports';
   static const redirectUri = 'piliplus://synapse-auth';
   static const _oauthTimeout = Duration(minutes: 2);
   static const syncInterval = Duration(minutes: 5);
@@ -126,6 +131,7 @@ abstract final class SynapseSyncService {
     SettingBoxKey.synapseSettingsVersion,
     SettingBoxKey.synapseLocalSettingsChangedAt,
     SettingBoxKey.synapseAccountsSynced,
+    SettingBoxKey.synapseCookieReportEnabled,
     SettingBoxKey.webdavPassword,
   };
 
@@ -1037,6 +1043,18 @@ abstract final class SynapseSyncService {
     final providerPath = _normalizedPath(provider);
     return provider.replace(path: '${providerPath.isEmpty ? '' : providerPath}$_syncApiSuffix');
   }
+
+  /// Base URI of the report endpoint, normalized with the same rules as
+  /// [_syncBaseUri] so a provider hosted under a sub-path keeps working.
+  static Uri reportsBaseUri() {
+    final provider = _providerBaseUri(_parseBaseUrl(baseUrl));
+    final providerPath = _normalizedPath(provider);
+    return provider.replace(path: '$providerPath$reportsApiSuffix');
+  }
+
+  /// Device identity (with the lazily persisted device id), reused by every
+  /// Synapse reporting channel.
+  static SynapseClientIdentity get clientIdentity => _clientIdentity();
 
   static String _normalizedPath(Uri value) {
     final path = value.path.replaceFirst(RegExp(r'/+$'), '');
