@@ -94,7 +94,7 @@ final class _SynapseSyncPreview {
 /// Synapse transport and sync state are deliberately isolated from [Request].
 /// The Bilibili AccountManager interceptor must never see these requests.
 abstract final class SynapseSyncService {
-  static const defaultBaseUrl = 'https://tts.chloemlla.com';
+  static const defaultBaseUrl = 'https://chloemlla.com';
   static const oauthTokenPath = 'api/oauth/token';
   static const _syncApiSuffix = '/api/bilibili-sync';
   static const redirectUri = 'piliplus://synapse-auth';
