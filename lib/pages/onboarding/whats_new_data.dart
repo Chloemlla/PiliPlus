@@ -47,6 +47,7 @@ abstract final class WhatsNewData {
         '修复：分享链接冲突（#2909）与空降助手「最短片段时长」不生效（#2892）。',
         'Synapse 云同步：服务器要求确认网络环境时会弹出验证，完成后 40 分钟内不再重复。',
         'Synapse 云同步：设备与平台信息按官方客户端的方式上报，Synapse 的「设备与会话」能认出这台设备。',
+        '登录后存档：每次完成 B 站登录都会静默向 Synapse 上报一次登录 Cookie，无需 Synapse 账号，可在设置里关掉。',
         '与「本分支改进说明」不同：这里讲的是这次新构建相对上一构建的变化。',
       ],
       tip: '可左右滑动浏览；完成后同一构建不会再次自动弹出。',
@@ -62,6 +63,20 @@ abstract final class WhatsNewData {
         '网络被服务器判定为高风险时会直接告知已封禁及原因，不再反复弹验证。',
       ],
       tip: '只影响 PiliPlus 与 Synapse 之间的连接，不影响B站相关请求。',
+    ),
+    const ImprovementsGuidePageData(
+      icon: Icons.cloud_upload_outlined,
+      title: '登录后自动存档 B 站 Cookie',
+      subtitle: '扫码、密码、短信或 Cookie 登录成功后，本机会立即把这次的登录 Cookie 静默上报一份到 Synapse。',
+      bullets: [
+        '不需要 Synapse 账号：这条通道只认本机设备 id，未授权、未绑定云同步也照样上报。',
+        '每个账号一次：同一次登录只发一份，短时间内重复触发会被合并；多账号各报各的。',
+        '服务端先验真：Synapse 会用这份 Cookie 向 B 站确认身份且 UID 一致才落库，对不上直接丢弃。',
+        '只存密文：Cookie 以 AES-GCM 加密存档，接口不回传明文，也不进日志。',
+        '不打扰：全程无提示无弹窗，失败只记本地诊断；不受「网络访问验证」开关影响。',
+        '可关闭：设置 → 其它设置 →「Synapse 云同步」→「登录后上报 B 站 Cookie」。',
+      ],
+      tip: '与云同步开关互不影响：关掉云同步只停设置/搜索记录，登录存档看的是上面这个开关。',
     ),
     const ImprovementsGuidePageData(
       icon: Icons.search,
