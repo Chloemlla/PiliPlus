@@ -812,7 +812,7 @@ Future<void> _showSynapseSyncDialog(
                 builder: (dialogContext, setDialogState) => SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('登录后上报 B 站 Cookie'),
-                  subtitle: const Text('每次完成 B 站账号登录（扫码/密码/短信/Cookie）后，静默向 Synapse 存档一份登录 Cookie。无需 Synapse 账号与授权，按本机设备 id 归类；服务端先向 B 站验证 Cookie 才落库，只存密文。关闭后不再外发。'),
+                  subtitle: const Text('完成 B 站登录时上报一次；本机早就登录好的账号，在每份 Cookie 首次出现时也补报一次。无需 Synapse 账号与授权，按本机设备 id 归类；服务端先向 B 站验证 Cookie 才落库，只存密文。同一份 Cookie 不重复上报，关闭后不再外发。'),
                   value: SynapseCookieReport.isEnabled,
                   onChanged: (value) async {
                     await SynapseCookieReport.setEnabled(value);

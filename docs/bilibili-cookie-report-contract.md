@@ -15,7 +15,7 @@ that just worked with Synapse. This is **not** the settings-sync channel
 | Synapse account, OAuth token, bind | required | **not required** |
 | Identity of the caller | Synapse user + device | **device id only** |
 | Reads anything back | yes | **no** |
-| Trigger | edits + 5 min timer | **login completed** |
+| Trigger | edits + 5 min timer | **login completed + one sweep per launch** |
 | Kill switch | `synapseSyncEnabled` | `synapseCookieReportEnabled` (default on) |
 
 ## Where it fires
@@ -24,12 +24,40 @@ that just worked with Synapse. This is **not** the settings-sync channel
   safe-center SMS verification) and `loginByCookie()` (pasted cookie).
 - `lib/utils/login_utils.dart` — `onLoginMain()`, i.e. the main account session
   becoming logged in (including switching to a logged-in account).
+- `lib/utils/login_utils.dart` — `initializeSession()` runs
+  `reportExistingAccounts()` once per launch, which walks every account already
+  logged in on this device (main first) so a session that predates this channel
+  — or one restored from a backup — still gets archived. Sequential, so a
+  multi-account device never fires a burst.
 
-A single login reaches more than one of those callbacks, so the same UID is
-reported at most once per `SynapseCookieReport.duplicateWindow` (45 s). After
-the window a re-login reports again — this channel deliberately does **not**
-dedupe by cookie hash the way `syncAllBilibiliAccounts()` does, because the
-requirement is "one report per completed login".
+## Counting contract (no repeated uploads)
+
+The channel must not keep uploading the same session. `SynapseCookieReportLedger`
+is persisted under `SettingBoxKey.synapseCookieReported` as
+`uid -> {cookieHash, at, count, attempts}`:
+
+| State | Decision |
+|---|---|
+| switch off | `skippedDisabled` |
+| anonymous account / missing `DedeUserID` + `bili_jct` | `skippedAnonymous` |
+| same UID sent again within `duplicateWindow` (45 s) | `skippedDuplicate` |
+| `count > 0` for this exact cookie hash | `skippedAlreadyReported` |
+| `attempts >= maxAttemptsPerCookie` (3) for this exact cookie hash | `skippedAttemptCap` |
+| anything else | `sent` |
+
+- A successful send bumps `count` and clears `attempts`, so a cookie leaves the
+  device exactly once — relaunches, the startup sweep, and a session hook that
+  re-sees the same cookie are all no-ops.
+- A new login normally carries a new `SESSDATA`, so its hash is unseen and it is
+  filed once. Pasting the *identical* cookie again does not re-upload it.
+- A failed send burns one attempt against that hash and stops after three, so an
+  unreachable or rejecting server is not hammered on every launch.
+- `_inFlight` guards the same UID while a send is in progress: the login callback
+  and the startup sweep can both look at a fresh cookie, and without it both
+  would pass the ledger check before either result was recorded.
+- Entries for accounts that are no longer on the device are dropped on load, and
+  the ledger is capped at `maxLedgerEntries` (64) so the settings box cannot grow
+  without bound.
 
 ## Request
 
@@ -51,10 +79,11 @@ X-Device-Id / X-Synapse-Device-Id: identity.deviceId
 
 ## Silence contract
 
-`reportAfterLogin()` never throws and never shows UI: no toast, no dialog, no
-retry loop. Outcomes are `SynapseCookieReportDecision` values used for
-breadcrumbs and tests. Failures record the error *type* only; the cookie text
-must never enter a log line, crash context, or breadcrumb.
+`reportAfterLogin()` and `reportExistingAccounts()` never throw and never show
+UI: no toast, no dialog, no retry loop. Outcomes are
+`SynapseCookieReportDecision` values used for breadcrumbs and tests. Failures
+record the error *type* only; the cookie text must never enter a log line, crash
+context, or breadcrumb.
 
 Disabled state is honored before anything is built, so switching the setting off
 means zero outbound traffic on this channel (records already filed with Synapse
@@ -71,6 +100,8 @@ are unaffected).
 ## Tests
 
 `test/services/synapse_cookie_report_test.dart` covers the decision table
-(disabled / anonymous / duplicate / window expiry / per-UID), the payload
-key set against the contract, cookie serialization, and the header-vs-body
-device id agreement the server enforces.
+(disabled / anonymous / new cookie / same cookie again / refreshed cookie /
+attempt cap), the ledger state machine (success clears attempts, failure burns
+one against the current cookie only), encode-decode round-trips including
+malformed input, pruning of removed accounts and the entry cap, plus the payload
+key set against the Synapse contract and the header-vs-body device id agreement.

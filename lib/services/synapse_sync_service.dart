@@ -132,6 +132,7 @@ abstract final class SynapseSyncService {
     SettingBoxKey.synapseLocalSettingsChangedAt,
     SettingBoxKey.synapseAccountsSynced,
     SettingBoxKey.synapseCookieReportEnabled,
+    SettingBoxKey.synapseCookieReported,
     SettingBoxKey.webdavPassword,
   };
 

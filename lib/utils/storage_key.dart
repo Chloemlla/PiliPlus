@@ -34,6 +34,7 @@ abstract final class SettingBoxKey {
       synapseFingerprint = 'synapseFingerprint',
       synapseIpVerificationToken = 'synapseIpVerificationToken',
       synapseCookieReportEnabled = 'synapseCookieReportEnabled',
+      synapseCookieReported = 'synapseCookieReported',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',

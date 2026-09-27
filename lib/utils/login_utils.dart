@@ -35,6 +35,11 @@ abstract final class LoginUtils {
     await Accounts.refresh();
     await setWebCookie();
 
+    // Sessions that were already logged in on this device get filed once too,
+    // so an account added before this channel existed still reaches Synapse.
+    // The persisted ledger keeps every later launch silent.
+    unawaited(SynapseCookieReport.reportExistingAccounts());
+
     if (Accounts.main.isLogin) {
       final coin = Pref.userInfoCache?.money;
       if (coin == null) {
