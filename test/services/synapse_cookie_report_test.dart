@@ -181,7 +181,7 @@ void main() {
           'a',
           attempts: 2,
           count: 3,
-        ).succeeded('b', _now);
+        ).succeeded(synapseCookieHash('b'), _now);
 
         expect(entry.cookieHash, synapseCookieHash('b'));
         expect(entry.count, 4);
@@ -207,7 +207,7 @@ void main() {
       ).failed(synapseCookieHash('b'), _now);
 
       expect(entry.cookieHash, synapseCookieHash('b'));
-      expect(entry.count, 3);
+      expect(entry.count, 0);
       expect(entry.attempts, 1);
     });
 
