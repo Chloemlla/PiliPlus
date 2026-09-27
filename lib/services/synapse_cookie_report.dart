@@ -57,6 +57,13 @@ abstract final class SynapseCookieReport {
       ) ==
       true;
 
+  /// Persist the kill switch. Pages must not touch the settings box directly
+  /// (tool/check_import_boundaries.py), so the write lives here.
+  static Future<void> setEnabled(bool value) => GStorage.setting.put(
+    SettingBoxKey.synapseCookieReportEnabled,
+    value,
+  );
+
   /// The account's Bilibili cookie header, in the same shape the sync vault
   /// stores.
   static String cookieOf(LoginAccount account) => account.cookieJar

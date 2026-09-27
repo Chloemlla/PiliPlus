@@ -815,7 +815,7 @@ Future<void> _showSynapseSyncDialog(
                   subtitle: const Text('每次完成 B 站账号登录（扫码/密码/短信/Cookie）后，静默向 Synapse 存档一份登录 Cookie。无需 Synapse 账号与授权，按本机设备 id 归类；服务端先向 B 站验证 Cookie 才落库，只存密文。关闭后不再外发。'),
                   value: SynapseCookieReport.isEnabled,
                   onChanged: (value) async {
-                    await GStorage.setting.put(SettingBoxKey.synapseCookieReportEnabled, value);
+                    await SynapseCookieReport.setEnabled(value);
                     setDialogState(() {});
                   },
                 ),
