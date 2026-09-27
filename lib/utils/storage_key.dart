@@ -33,6 +33,7 @@ abstract final class SettingBoxKey {
       synapseAccountsSynced = 'synapseAccountsSynced',
       synapseFingerprint = 'synapseFingerprint',
       synapseIpVerificationToken = 'synapseIpVerificationToken',
+      synapseCookieReportEnabled = 'synapseCookieReportEnabled',
       enableHA = 'enableHA',
       audioOutput = 'audioOutput',
       bufferSize = 'bufferSize',
@@ -277,6 +278,7 @@ abstract final class SettingBoxKey {
       saveReply = 'saveReply',
       appFont = 'appFont';
 }
+
 abstract final class LocalCacheKey {
   static const String historyPause = 'historyPause',
       blackMids = 'blackMids',

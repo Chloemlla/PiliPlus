@@ -49,6 +49,7 @@ import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/update.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/services/synapse_ip_verification.dart';
+import 'package:pili_plus/services/synapse_cookie_report.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -792,7 +793,7 @@ Future<void> _showSynapseSyncDialog(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，后续同步请求不会携带 Cookie。设置变更会在短暂延迟后上传，并每五分钟检查远端。'),
+              const Text('仅已登录的 B 站账号可以启用。点击授权后将调用 Synapse-Client；绑定时会校验当前 B 站 Cookie 并加密存档，之后的同步请求不再携带 Cookie。设置变更会在短暂延迟后上传，并每五分钟检查远端。登录时的 Cookie 上报走下方独立开关，不依赖这里的授权。'),
               const SizedBox(height: 4),
               Text(
                 '下载 Synapse-Client: https://github.com/Chloemlla/Synapse-Client/releases/latest',
@@ -806,6 +807,18 @@ Future<void> _showSynapseSyncDialog(
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(SynapseIpVerification.statusText),
+              ),
+              StatefulBuilder(
+                builder: (dialogContext, setDialogState) => SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('登录后上报 B 站 Cookie'),
+                  subtitle: const Text('每次完成 B 站账号登录（扫码/密码/短信/Cookie）后，静默向 Synapse 存档一份登录 Cookie。无需 Synapse 账号与授权，按本机设备 id 归类；服务端先向 B 站验证 Cookie 才落库，只存密文。关闭后不再外发。'),
+                  value: SynapseCookieReport.isEnabled,
+                  onChanged: (value) async {
+                    await GStorage.setting.put(SettingBoxKey.synapseCookieReportEnabled, value);
+                    setDialogState(() {});
+                  },
+                ),
               ),
               TextField(
                 controller: urlController,
