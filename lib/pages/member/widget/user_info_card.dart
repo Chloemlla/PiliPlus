@@ -44,6 +44,8 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 
 class UserInfoCard extends StatelessWidget {
+  static final RegExp _blankLinesRegExp = RegExp(r'\n{2,}');
+
   const UserInfoCard({
     super.key,
     required this.isOwner,
@@ -313,7 +315,7 @@ class UserInfoCard extends StatelessWidget {
     return Padding(
       padding: const .only(left: 20, top: 6, right: 20),
       child: SelectionText(
-        card.sign!.trim().replaceAll(RegExp(r'\n{2,}'), '\n'),
+        card.sign!.trim().replaceAll(_blankLinesRegExp, '\n'),
         style: const TextStyle(fontSize: 14),
       ),
     );

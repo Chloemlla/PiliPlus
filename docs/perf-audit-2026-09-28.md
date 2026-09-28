@@ -57,6 +57,18 @@
   - 修法：提为 `static final _fingerprintRegExp`
   - 状态：已修
 
+- [x] **B4** `lib/pages/member/widget/user_info_card.dart:316`
+  - 类别：B-资源/重复计算
+  - 问题：`_buildSign()` 每次渲染个人页签名都编译 `RegExp(r'\n{2,}')`
+  - 修法：提为类级 `static final _blankLinesRegExp`
+  - 状态：已修
+
+- [x] **B5** `lib/utils/latex_to_unicode.dart:421`
+  - 类别：B-资源/重复计算
+  - 问题：`Parser._parseBareArg()` 在解析裸参数时逐次编译 `RegExp(r'^ +')`（LaTeX 解析循环内）
+  - 修法：提为 `Parser` 的 `static final _leadingSpacesRegExp`（保留仅裁前导空格语义，未改用 `trimLeft`）
+  - 状态：已修
+
 ---
 
 ## 未采纳（记录理由，避免下次重复排查）
@@ -65,3 +77,4 @@
 - `lib/common/widgets/image/network_img_layer.dart`：已带 `memCacheWidth/Height` 与缩略图 URL 归一，图片层已优化。
 - `lib/pages/video/reply/widgets/reply_item_grpc.dart:776`、`header_control.dart` 的内联正则：均在 `onTap`/校验器/下载回调中，非渲染热路径，且部分为动态拼接，收益极低，保持不动以免夹带风险。
 - 大范围 `const` 化 / `RepaintBoundary` 铺设：linter 已强制 `const`，盲目加 `RepaintBoundary` 可能反而增加层合成开销，非行为等价，不在本轮范围。
+- `lib/services/synapse_sync_service.dart` / `synapse_cookie_report.dart` 的 `/+$`、`/$` 去尾斜杠正则：均在同步初始化 / 拦截器创建等低频路径，且分散在不同类作用域，收益低且触及近期新增的敏感传输代码，本轮不动。

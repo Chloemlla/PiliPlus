@@ -283,6 +283,8 @@ class Lexer {
 final class Parser {
   Parser(this.tokens);
 
+  static final RegExp _leadingSpacesRegExp = RegExp(r'^ +');
+
   final List<Token> tokens;
   int pos = 0;
 
@@ -418,7 +420,7 @@ final class Parser {
     var token = _peek();
     if (token == null) return null;
     if (token.kind == TokenKind.text) {
-      final stripped = token.value.replaceFirst(RegExp(r'^ +'), '');
+      final stripped = token.value.replaceFirst(_leadingSpacesRegExp, '');
       if (stripped.isEmpty) {
         pos++;
         return null;
