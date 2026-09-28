@@ -33,6 +33,8 @@ abstract final class SynapseIpVerification {
   static const _defaultTtlMinutes = 40;
 
   static const errorCode = 'IP_VERIFICATION_REQUIRED';
+
+  static final RegExp _fingerprintRegExp = RegExp(r'^[a-zA-Z0-9_-]+$');
   static const bannedErrorText = 'IP已被封禁';
 
   /// 一次性重试标记：避免拦截器在同一个请求上反复刷新令牌。
@@ -73,7 +75,7 @@ abstract final class SynapseIpVerification {
     if (trimmed == null || trimmed.length < 8 || trimmed.length > 200) {
       return null;
     }
-    return RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(trimmed) ? trimmed : null;
+    return _fingerprintRegExp.hasMatch(trimmed) ? trimmed : null;
   }
 
   static String _generateFingerprint() {

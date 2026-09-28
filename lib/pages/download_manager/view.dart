@@ -235,7 +235,7 @@ class _BatchActionsBar extends StatelessWidget {
         left: 12,
         right: 12,
         top: 8,
-        bottom: 8 + MediaQuery.of(context).padding.bottom,
+        bottom: 8 + MediaQuery.paddingOf(context).bottom,
       ),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,

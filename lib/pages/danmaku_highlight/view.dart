@@ -347,7 +347,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomPadding),
@@ -472,7 +472,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
                   ),
                 ],
               ),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+              SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
             ],
           ),
         ),

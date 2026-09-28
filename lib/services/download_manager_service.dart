@@ -33,6 +33,8 @@ class DownloadManagerService extends GetxService {
 
   static const releasesUrl = 'https://github.com/Chloemlla/Seal/releases';
 
+  static final RegExp _bvidRegExp = RegExp(r'BV\w+');
+
   final DownloadTaskRepository _repository;
   final SealDownloadChannelDispatcher _channel;
   final DownloadManagerErrorReporter _errorReporter;
@@ -312,7 +314,7 @@ class DownloadManagerService extends GetxService {
 
   String _extractBvid(String? sourceUrl) {
     if (sourceUrl == null || sourceUrl.isEmpty) return '';
-    return RegExp(r'BV\w+').firstMatch(sourceUrl)?.group(0) ?? '';
+    return _bvidRegExp.firstMatch(sourceUrl)?.group(0) ?? '';
   }
 
   void _refreshStats() {
