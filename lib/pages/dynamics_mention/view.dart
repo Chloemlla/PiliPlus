@@ -253,7 +253,7 @@ class _DynMentionPanelState
         response != null && response.isNotEmpty
             ? SliverMainAxisGroup(
                 slivers: [
-                  if (topSliver != null) topSliver,
+                  ?topSliver,
                   ...response.map((group) {
                     if (group.items.isNullOrEmpty) {
                       return const SliverToBoxAdapter();

@@ -15,8 +15,6 @@ import 'package:pili_plus/models_new/blacklist/list.dart';
 import 'package:pili_plus/pages/blacklist/controller.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/date_utils.dart';
-import 'package:pili_plus/utils/global_data.dart';
-import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;

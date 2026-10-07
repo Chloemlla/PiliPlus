@@ -1933,7 +1933,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   }
 
   Widget get ugcSeasonPanel {
-    final videoDetail = ugcIntroController.videoDetail.rawValue;
+    final videoDetail = ugcIntroController.videoDetail.value;
     return KeepAliveWrapper(
       child: Column(
         children: [
