@@ -1209,7 +1209,7 @@ packages:
       path: media_kit_video
       ref: b0187daeb076cbe29c3d332f0626cca5a34f1624
       resolved-ref: b0187daeb076cbe29c3d332f0626cca5a34f1624
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      url: "https://github.com/My-Responsitories/media-kit.git"
     source: git
     version: "2.0.1"
   menu_base:
