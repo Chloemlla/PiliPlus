@@ -3,10 +3,12 @@ import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
 import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/video/video_type.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/common/reply_controller.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/reply/vote/reply_vote_mixin.dart';
 import 'package:pili_plus/utils/id_utils.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get.dart';
 
 class VideoReplyController extends ReplyController<MainListReply>
@@ -22,6 +24,17 @@ class VideoReplyController extends ReplyController<MainListReply>
 
   final String heroTag;
   late final videoCtr = Get.find<VideoDetailController>(tag: heroTag);
+
+  MentionItem? get mentionItem {
+    if (videoCtr.isUgc) {
+      try {
+        return videoCtr.ugcIntroCtr.videoDetail.value.owner?.mentionItem;
+      } catch (_) {
+        if (kDebugMode) rethrow;
+      }
+    }
+    return null;
+  }
 
   @override
   dynamic get sourceId => IdUtils.av2bv(aid);

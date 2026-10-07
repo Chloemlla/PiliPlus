@@ -17,6 +17,7 @@ import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
+import 'package:pili_plus/utils/ios/pip_helper.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -167,7 +168,9 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
                 color: Colors.white,
               ),
             ),
-          if (Platform.isAndroid || (PlatformUtils.isDesktop && !isFullScreen))
+          if (Platform.isAndroid ||
+              IOSPipHelper.isAvailable ||
+              (PlatformUtils.isDesktop && !isFullScreen))
             ComBtn(
               height: btnHeight,
               tooltip: '画中画',
@@ -176,7 +179,7 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
                   plPlayerController.toggleDesktopPip();
                   return;
                 }
-                if (AndroidHelper.isPipAvailable) {
+                if (Platform.isIOS || AndroidHelper.isPipAvailable) {
                   plPlayerController.enterPip();
                 }
               },

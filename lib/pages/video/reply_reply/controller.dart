@@ -2,6 +2,7 @@ import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, DetailListReply, Mode;
 import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/common/publish/publish_route.dart';
 import 'package:pili_plus/pages/common/reply_controller.dart';
 import 'package:pili_plus/pages/video/reply_new/view.dart';
@@ -152,6 +153,7 @@ class VideoReplyReplyController extends ReplyController
     int? oid,
     int? replyType,
     int? index,
+    MentionItem? mentionItem,
   }) {
     assert(replyItem != null && index != null);
 
@@ -206,6 +208,6 @@ class VideoReplyReplyController extends ReplyController
   void onClose() {
     _controller?.dispose();
     _controller = null;
-    super.dispose();
+    super.onClose();
   }
 }

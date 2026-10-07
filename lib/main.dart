@@ -33,9 +33,11 @@ import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/extension/core_palettes_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/font_utils.dart';
+import 'package:pili_plus/utils/ios/pip_helper.dart';
 import 'package:pili_plus/utils/json_file_handler.dart';
 import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/max_screen_size.dart';
@@ -198,7 +200,7 @@ Future<void> _main() async {
     );
     await Utils.copyText(e.toString(), needToast: false);
     if (kDebugMode) debugPrint('GStorage init error: $e');
-    exit(0);
+    DeviceUtils.exitApp();
   }
   ScaledWidgetsFlutterBinding.instance.scaleFactor = Pref.uiScale;
   await Future.wait([
@@ -220,6 +222,7 @@ Future<void> _main() async {
     }
     await Future.wait([
       if (Pref.horizontalScreen) ?fullMode() else ?portraitUpMode(),
+      if (Platform.isIOS) IOSPipHelper.init(),
     ]);
   } else if (Platform.isWindows) {
     if (await WebViewEnvironment.getAvailableVersion() != null) {
@@ -267,6 +270,8 @@ Future<void> _main() async {
   });
 
   SmartDialog.config.toast = SmartConfigToast(displayType: .onlyRefresh);
+
+  FocusManager.instance.addEarlyKeyEventHandler(_onKeyEvent);
 
   if (PlatformUtils.isMobile) {
     SystemChrome.setEnabledSystemUIMode(.edgeToEdge);

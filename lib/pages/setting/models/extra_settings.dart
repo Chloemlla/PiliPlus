@@ -760,8 +760,7 @@ List<SettingsModel> get extraSettings => [
   ),
   NormalModel(
     title: '最大缓存大小',
-    getSubtitle: () =>
-        '当前最大缓存大小: 「${CacheManager.formatSize(Pref.maxCacheSize)}」',
+    getSubtitle: () => '当前最大缓存大小: 「${Pref.maxCacheSize.formatSize}」',
     leading: const Icon(Icons.delete_outlined),
     onTap: _showCacheDialog,
   ),
@@ -1457,6 +1456,7 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
     builder: (context) => AlertDialog(
       title: const Text('最大缓存大小'),
       content: TextField(
+        maxLength: 6,
         autofocus: true,
         onChanged: (value) => valueStr = value,
         keyboardType: TextInputType.number,

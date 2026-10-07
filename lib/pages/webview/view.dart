@@ -8,7 +8,7 @@ import 'package:pili_plus/main.dart' show webViewEnvironment;
 import 'package:pili_plus/models/common/webview_menu_type.dart';
 import 'package:pili_plus/plugin/linux_webview.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
-import 'package:pili_plus/utils/cache_manager.dart';
+import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/linux_cookie_manager.dart';
 import 'package:pili_plus/utils/login_utils.dart';
@@ -483,9 +483,7 @@ document.styleSheets[0].insertRule('#app__display-area > div.control-panel {disp
                           builder: (context) {
                             String suggestedFilename = request.suggestedFilename
                                 .toString();
-                            final fileSize = CacheManager.formatSize(
-                              request.contentLength,
-                            );
+                            final fileSize = request.contentLength.formatSize;
                             try {
                               suggestedFilename = Uri.decodeComponent(
                                 suggestedFilename,

@@ -31,6 +31,7 @@ import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart'
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_status.dart';
 import 'package:pili_plus/plugin/pl_player/models/video_fit_type.dart';
+import 'package:pili_plus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:pili_plus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:pili_plus/plugin/pl_player/utils/stream_error.dart';
 import 'package:pili_plus/services/service_locator.dart';
@@ -44,8 +45,10 @@ import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/box_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/image_utils.dart';
+import 'package:pili_plus/utils/ios/pip_helper.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/persistence.dart';
@@ -58,7 +61,8 @@ import 'package:archive/archive.dart' show getCrc32;
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/services.dart' show HapticFeedback, DeviceOrientation;
+import 'package:flutter/services.dart'
+    show DeviceOrientation, HapticFeedback, KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
@@ -73,6 +77,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
 typedef PlayCallback = Future<void>? Function();
+typedef PlayOwner = ({String tag, Type type});
 
 class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Player? _videoPlayerController;
@@ -241,6 +246,58 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       (PlatformUtils.isDesktop && isDesktopPip);
   late bool isDesktopPip = false;
   late Rect _lastWindowBounds;
+  static Rect? _lastPipBounds;
+
+  Rect _adjustPipBounds(Rect lastRect, Size size, double aspectRatio) {
+    final lastSize = lastRect.size;
+    final lastOrientation = lastSize.orientation;
+    final orientation = size.orientation;
+
+    if (lastOrientation != orientation) {
+      final double width, height;
+      switch (orientation) {
+        case .portrait:
+          if (lastSize.width > size.height) {
+            height = min(lastSize.width, _lastWindowBounds.size.height);
+            width = height * aspectRatio;
+          } else {
+            height = size.height;
+            width = size.width;
+          }
+        case .landscape:
+          if (lastSize.height > size.width) {
+            width = lastSize.height;
+            height = width / aspectRatio;
+          } else {
+            height = size.height;
+            width = size.width;
+          }
+      }
+
+      return _lastPipBounds = Rect.fromLTWH(
+        lastRect.left,
+        lastRect.top,
+        width,
+        height,
+      );
+    }
+    return _lastPipBounds = Rect.fromLTWH(
+      lastRect.left,
+      lastRect.top,
+      lastSize.width,
+      lastSize.width / aspectRatio,
+    );
+  }
+
+  bool updatePipBounds() {
+    if (isDesktopPip) {
+      windowManager.getBounds().then((rect) {
+        if (isDesktopPip) _lastPipBounds = rect;
+      });
+      return true;
+    }
+    return false;
+  }
 
   late final showWindowTitleBar = Pref.showWindowTitleBar;
   late final RxBool isAlwaysOnTop = false.obs;
@@ -281,25 +338,27 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     final state = videoPlayerController!.state;
     int width = state.width;
     int height = state.height;
-    if (width == 0) {
-      width = this.width ?? 16;
-    }
-    if (height == 0) {
-      height = this.height ?? 9;
-    }
+    if (width == 0) width = this.width ?? 16;
+    if (height == 0) height = this.height ?? 9;
+    final aspectRatio = width / height;
     if (height > width) {
-      size = Size(shortSide, shortSide * height / width);
-      minimumSize = Size(minShortSide, minShortSide * height / width);
+      size = Size(shortSide, shortSide / aspectRatio);
+      minimumSize = Size(minShortSide, minShortSide / aspectRatio);
     } else {
-      size = Size(shortSide * width / height, shortSide);
-      minimumSize = Size(minShortSide * width / height, minShortSide);
+      size = Size(shortSide * aspectRatio, shortSide);
+      minimumSize = Size(minShortSide * aspectRatio, minShortSide);
     }
 
     await windowManager.setMinimumSize(minimumSize);
     setAlwaysOnTop(true);
-    windowManager
-      ..setSize(size)
-      ..setAspectRatio(width / height);
+    if (_lastPipBounds != null) {
+      windowManager.setBounds(
+        _adjustPipBounds(_lastPipBounds!, size, aspectRatio),
+      );
+    } else {
+      windowManager.setSize(size);
+    }
+    windowManager.setAspectRatio(width / height);
   }
 
   void toggleDesktopPip() {
@@ -328,6 +387,18 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   void enterPip({bool autoEnter = false}) {
     if (videoPlayerController case NativePlayer(:final state)) {
       _persistPipState(position: state.position, force: true);
+      if (Platform.isIOS) {
+        if (videoController?.id.value case final textureId?) {
+          IOSPipHelper.enter(
+            textureId,
+            width: state.width == 0 ? width : state.width,
+            height: state.height == 0 ? height : state.height,
+            autoEnter: autoEnter,
+            state: _iosPipState(state),
+          );
+        }
+        return;
+      }
       PageUtils.enterPip(
         autoEnter: autoEnter,
         width: state.width == 0 ? width : state.width,
@@ -340,7 +411,30 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   void _disableAutoEnterPip() {
     if (_isAutoEnterPip) {
-      PiliAndroidHelper.disableAutoEnterPip();
+      if (Platform.isIOS) {
+        IOSPipHelper.disableAutoEnter();
+      } else {
+        PiliAndroidHelper.disableAutoEnterPip();
+      }
+    }
+  }
+
+  Map<String, Object> _iosPipState(PlayerState state, [Duration? position]) {
+    return {
+      'isPlaying': playerStatus.isPlaying,
+      'isBuffering': isBuffering.value,
+      'isLive': isLive,
+      'position': (position ?? state.position).inMilliseconds,
+      'duration': durationInMilliseconds,
+      'speed': state.rate,
+    };
+  }
+
+  void _updateIOSPip([Duration? position]) {
+    if (Platform.isIOS && IOSPipHelper.needsUpdate) {
+      if (_videoPlayerController case final player?) {
+        IOSPipHelper.update(_iosPipState(player.state, position));
+      }
     }
   }
 
@@ -482,10 +576,16 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     return _instance != null;
   }
 
-  static void setPlayCallBack(PlayCallback? playCallBack) {
+  static void setPlayCallBack(
+    PlayCallback? playCallBack, {
+    PlayOwner? playOwner,
+  }) {
     _playCallBack = playCallBack;
+    _playOwner = playOwner;
   }
 
+  static PlayOwner? _playOwner;
+  static PlayOwner? get playOwner => _playOwner;
   static PlayCallback? _playCallBack;
 
   static Future<void>? playIfExists() {
@@ -604,6 +704,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       } else {
         _isAutoEnterPip = true;
       }
+    } else if (Platform.isIOS && autoPiP && IOSPipHelper.isAvailable) {
+      _isAutoEnterPip = true;
     }
   }
 
@@ -1035,6 +1137,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
       speed: playbackSpeed,
       debugLabel: debugLabel,
     );
+    _updateIOSPip(position);
   }
 
   /// 播放事件监听
@@ -1062,6 +1165,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
           playerStatus = .paused;
           _startWakeLockTimer();
           _disableAutoEnterPip();
+          _updateIOSPip();
         }
         _handleWatchPlaybackState();
 
@@ -1111,7 +1215,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
           element(position);
         }
       }),
-      stream.duration.listen(updateDuration),
+      stream.duration.listen((Duration duration) {
+        updateDuration(duration);
+        _updateIOSPip();
+      }),
       stream.buffer.listen((Duration buffer) {
         buffered.value = buffer.inSeconds;
         videoPlayerServiceHandler?.onBufferedChange(buffer);
@@ -1227,6 +1334,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     danmakuController?.clear();
     try {
       await _videoPlayerController?.seek(position);
+      _updateIOSPip(position);
     } catch (e) {
       if (kDebugMode) debugPrint('seek failed: $e');
     }
@@ -1259,24 +1367,19 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Future<void> setPlaybackSpeed(double speed) async {
     lastPlaybackSpeed = playbackSpeed;
 
-    if (speed == _videoPlayerController?.state.rate) {
-      return;
-    }
+    if (speed == _videoPlayerController?.state.rate) return;
 
     await _videoPlayerController?.setRate(speed);
-    _playbackSpeed.value = speed;
+    if (!isLive) _playbackSpeed.value = speed;
     _updatePlaybackState();
     if (danmakuController != null) {
       try {
-        DanmakuOption currentOption = danmakuController!.option;
-        double defaultDuration = currentOption.duration * lastPlaybackSpeed;
-        double defaultStaticDuration =
-            currentOption.staticDuration * lastPlaybackSpeed;
-        DanmakuOption updatedOption = currentOption.copyWith(
-          duration: defaultDuration / speed,
-          staticDuration: defaultStaticDuration / speed,
+        danmakuController?.updateOption(
+          danmakuController!.option.copyWith(
+            duration: DanmakuOptions.danmakuDuration / speed,
+            staticDuration: DanmakuOptions.danmakuStaticDuration / speed,
+          ),
         );
-        danmakuController!.updateOption(updatedOption);
       } catch (_) {}
     }
   }
@@ -1733,6 +1836,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (!_isDetached && Platform.isAndroid) {
       AndroidHelper$ToDart.onUserLeaveHint?.release();
       AndroidHelper$ToDart.onUserLeaveHint = null;
+    } else if (Platform.isIOS) {
+      IOSPipHelper.dispose();
     }
     _timer?.cancel();
     _keyboardSpeedTimer?.cancel();
@@ -1891,27 +1996,47 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   Future<void> takeScreenshot() async {
     SmartDialog.showToast('截图中');
     final image = await videoPlayerController?.screenshot();
-    if (image != null) {
-      SmartDialog.showToast('点击弹窗保存截图');
-      final dispose = await showDialog<bool>(
-        context: Get.context!,
-        builder: (context) => GestureDetector(
-          onTap: () async {
-            Get.back(result: false);
-            final bytes = await image.toByteData(format: .png);
-            image.dispose();
-            if (bytes != null) {
-              final time = DurationUtils.formatDuration(
-                positionInMilliseconds / 1000,
-              ).replaceAll(':', '-');
-              ImageUtils.saveByteImg(
-                bytes: bytes.buffer.asUint8List(),
-                fileName: 'screenshot_${cid}_$time',
-              );
-            } else {
-              SmartDialog.showToast('保存失败');
-            }
-          },
+    if (image == null) {
+      SmartDialog.showToast('截图失败');
+      return;
+    }
+
+    var saved = false;
+    Future<void> save() async {
+      if (saved) return;
+      saved = true;
+      Get.back(result: false);
+      final bytes = await image.toByteData(format: .png);
+      image.dispose();
+      if (bytes != null) {
+        final time = DurationUtils.formatDuration(
+          positionInMilliseconds / 1000,
+        ).replaceAll(':', '-');
+        ImageUtils.saveByteImg(
+          bytes: bytes.buffer.asUint8List(),
+          fileName: 'screenshot_${cid}_$time',
+        );
+      } else {
+        SmartDialog.showToast('保存失败');
+      }
+    }
+
+    SmartDialog.showToast('点击弹窗或按 Enter 保存截图');
+    final dispose = await showDialog<bool>(
+      context: Get.context!,
+      builder: (context) => Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent &&
+              (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+            save();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: save,
           child: Align(
             alignment: Alignment.centerRight,
             child: Padding(
@@ -1936,11 +2061,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
             ),
           ),
         ),
-      );
-      if (dispose ?? true) image.dispose();
-    } else {
-      SmartDialog.showToast('截图失败');
-    }
+      ),
+    );
+    if (dispose ?? true) image.dispose();
   }
 
   void onPopInvokedWithResult(bool didPop, Object? result) {

@@ -8,6 +8,7 @@ import 'package:pili_plus/common/widgets/sliver/sliver_pinned_header.dart';
 import 'package:pili_plus/common/widgets/view_insets_safe_area.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models_new/dynamic/dyn_mention/group.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/dynamics_mention/controller.dart';
 import 'package:pili_plus/pages/dynamics_mention/widgets/item.dart';
 import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState;
@@ -22,15 +23,18 @@ class DynMentionPanel extends StatefulWidget {
     super.key,
     this.scrollController,
     this.onCachePos,
+    this.top,
   });
 
   final ScrollController? scrollController;
   final ValueChanged<double>? onCachePos;
+  final MentionItem? top;
 
   static Future<Object? /* ListOr<MentionItem> */> onDynMention(
     BuildContext context, {
     double offset = 0,
     ValueChanged<double>? onCachePos,
+    MentionItem? top,
   }) {
     return showModalBottomSheet(
       context: Get.context!,
@@ -50,6 +54,7 @@ class DynMentionPanel extends StatefulWidget {
         builder: (context, scrollController) => DynMentionPanel(
           scrollController: scrollController,
           onCachePos: onCachePos,
+          top: top,
         ),
       ),
     );
@@ -225,6 +230,20 @@ class _DynMentionPanelState
     ThemeData theme,
     LoadingState<List<MentionGroup>?> loadingState,
   ) {
+    final Widget? topSliver = _controller.controller.text.isEmpty
+        ? switch (widget.top) {
+            final top? => SliverToBoxAdapter(
+              child: Padding(
+                padding: const .only(top: 5),
+                child: DynMentionItem(
+                  item: top,
+                  onTap: () => Get.back(result: top),
+                ),
+              ),
+            ),
+            _ => null,
+          }
+        : null;
     return switch (loadingState) {
       Loading() => const SliverPadding(
         padding: EdgeInsets.only(top: 8),
@@ -233,38 +252,44 @@ class _DynMentionPanelState
       Success<List<MentionGroup>?>(:final response) =>
         response != null && response.isNotEmpty
             ? SliverMainAxisGroup(
-                slivers: response.map((group) {
-                  if (group.items.isNullOrEmpty) {
-                    return const SliverToBoxAdapter();
-                  }
-                  return SliverMainAxisGroup(
-                    slivers: [
-                      SliverPinnedHeader(
-                        backgroundColor: theme.bottomSheetTheme.backgroundColor,
-                        child: Padding(
-                          padding: const .symmetric(
-                            horizontal: 16,
-                            vertical: 10,
+                slivers: [
+                  if (topSliver != null) topSliver,
+                  ...response.map((group) {
+                    if (group.items.isNullOrEmpty) {
+                      return const SliverToBoxAdapter();
+                    }
+                    return SliverMainAxisGroup(
+                      slivers: [
+                        SliverPinnedHeader(
+                          backgroundColor:
+                              theme.bottomSheetTheme.backgroundColor,
+                          child: Padding(
+                            padding: const .symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            child: Text(group.groupName!),
                           ),
-                          child: Text(group.groupName!),
                         ),
-                      ),
-                      SliverList.builder(
-                        itemCount: group.items!.length,
-                        itemBuilder: (context, index) {
-                          final item = group.items![index];
-                          return DynMentionItem(
-                            item: item,
-                            onTap: () => Get.back(result: item),
-                            onCheck: (value) =>
-                                _controller.onCheck(value, item),
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                }).toList(),
+                        SliverList.builder(
+                          itemCount: group.items!.length,
+                          itemBuilder: (context, index) {
+                            final item = group.items![index];
+                            return DynMentionItem(
+                              item: item,
+                              onTap: () => Get.back(result: item),
+                              onCheck: (value) =>
+                                  _controller.onCheck(value, item),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  }),
+                ],
               )
+            : topSliver != null
+            ? SliverMainAxisGroup(slivers: [topSliver])
             : HttpError(onReload: _controller.onReload),
       Error(:final errMsg) => HttpError(
         errMsg: errMsg,

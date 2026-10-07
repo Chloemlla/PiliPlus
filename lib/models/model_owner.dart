@@ -1,4 +1,5 @@
 import 'package:pili_plus/models/model_video.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/utils/parse_int.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -31,4 +32,11 @@ class Owner implements BaseOwner {
     'name': name,
     'face': face,
   };
+
+  MentionItem? get mentionItem {
+    final name = this.name;
+    final mid = this.mid;
+    if (name == null || mid == null) return null;
+    return MentionItem(face: face, name: name, uid: mid.toString());
+  }
 }

@@ -10,7 +10,7 @@ import 'package:pili_plus/pages/declarations/declarations_page.dart';
 import 'package:pili_plus/pages/declarations/legal_info_page.dart';
 import 'package:pili_plus/pages/declarations/withdraw_consent_page.dart';
 import 'package:pili_plus/pages/dlna/view.dart';
-import 'package:pili_plus/pages/download/view.dart';
+import 'package:pili_plus/pages/download/download/view.dart';
 import 'package:pili_plus/pages/download_manager/view.dart';
 import 'package:pili_plus/pages/dynamics/view.dart';
 import 'package:pili_plus/pages/dynamics_create_vote/view.dart';

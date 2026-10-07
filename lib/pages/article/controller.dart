@@ -8,6 +8,7 @@ import 'package:pili_plus/models/dynamics/article_content_model.dart'
 import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/models/model_avatar.dart';
 import 'package:pili_plus/models_new/article/article_view/data.dart';
+import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/common/dyn/common_dyn_controller.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
@@ -29,6 +30,8 @@ class ArticleController extends CommonDynController {
   @override
   int get replyType => commentType;
   final summary = Summary();
+  @override
+  MentionItem? get mentionItem => summary.author?.mentionItem;
 
   late final RxInt topIndex = 0.obs;
 

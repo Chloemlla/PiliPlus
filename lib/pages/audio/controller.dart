@@ -213,6 +213,8 @@ class AudioController extends GetxController
       ..onNext = () {
         playNext(nextPart: true);
       }
+      ..onSkipToNext = playNext
+      ..onSkipToPrevious = playPrev
       ..onSetSpeed = setSpeed
       ..onClearSession = onPause;
 
@@ -899,6 +901,8 @@ class AudioController extends GetxController
       ..onPause = null
       ..onSeek = null
       ..clearControlCallbacks()
+      ..onSkipToNext = null
+      ..onSkipToPrevious = null
       ..onVideoDetailDispose(hashCode.toString())
       ..clearIfNeeded();
     _subscriptions?.forEach((e) => e.cancel());

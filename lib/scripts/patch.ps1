@@ -107,6 +107,8 @@ $MouseCursorPatch = "lib/scripts/mouse_cursor.patch"
 
 $GeetestIOSPatch = "lib/scripts/geetest_ios.patch"
 
+$DoubleTapGesturePatch = "lib/scripts/double_tap_gesture.patch"
+
 function Get-PubCacheRootPath {
     if (-not [string]::IsNullOrWhiteSpace($env:PUB_CACHE)) {
         return [System.IO.Path]::GetFullPath($env:PUB_CACHE)
@@ -323,7 +325,8 @@ $patches = @($ModalBarrierPatch, $TextSelectionPatch, $MouseCursorPatch,
             $SelectableRegionPatch, $EditableTextPatch, $TextFieldPatch,
             $ScrollPositionPatch, $ScrollablePatch, $ScrollableGesturePatch,
             $DraggableScrollableSheetPatch, $ScaffoldPatch, $TextPatch,
-            $TextPainterPatch, $SliverPatch, $RefreshIndicatorPatch)
+            $TextPainterPatch, $SliverPatch, $RefreshIndicatorPatch,
+            $DoubleTapGesturePatch)
 
 switch ($platform.ToLower()) {
     "android" {
