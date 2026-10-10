@@ -28,12 +28,11 @@ import 'package:pili_plus/utils/utils.dart';
 import 'package:pili_plus/utils/waterfall.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
-import 'package:waterfall_flow/waterfall_flow.dart'
-    hide SliverWaterfallFlowDelegateWithMaxCrossAxisExtent;
 
 class DynTopicPage extends StatefulWidget {
   const DynTopicPage({super.key});
@@ -364,10 +363,11 @@ class _DynTopicPageState extends State<DynTopicPage>
       Success(:final response) =>
         response != null && response.isNotEmpty
             ? GlobalData().dynamicsWaterfallFlow
-                  ? SliverWaterfallFlow(
+                  ? SliverMasonryGrid(
+                      crossAxisSpacing: 4,
                       gridDelegate: dynGridDelegate,
                       delegate: SliverChildBuilderDelegate(
-                        (_, index) => _itemBuilder(response, index),
+                        (context, index) => _itemBuilder(response, index),
                         childCount: response.length,
                       ),
                     )

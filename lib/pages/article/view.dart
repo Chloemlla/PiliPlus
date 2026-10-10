@@ -1,11 +1,11 @@
 import 'dart:math';
 
 import 'package:pili_plus/common/widgets/badge.dart';
-import 'package:pili_plus/common/widgets/custom_icon.dart';
 // PageView is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
+import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/sliver/sliver_to_box_adapter.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
@@ -15,11 +15,13 @@ import 'package:pili_plus/pages/article/controller.dart';
 import 'package:pili_plus/pages/article/widgets/article_ops.dart';
 import 'package:pili_plus/pages/article/widgets/html_render.dart';
 import 'package:pili_plus/pages/article/widgets/opus_content.dart';
+import 'package:pili_plus/pages/article/widgets/sliver_to_box_adapter.dart';
 import 'package:pili_plus/pages/common/dyn/common_dyn_page.dart';
 import 'package:pili_plus/pages/dynamics_repost/view.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
+import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/num_utils.dart';
@@ -44,15 +46,27 @@ class ArticlePage extends StatefulWidget {
 
 class _ArticlePageState extends CommonDynPageState<ArticlePage> {
   @override
-  final ArticleController controller = Get.putOrFind(
-    ArticleController.new,
-    tag: Get.parameters['type']! + Get.parameters['id']!,
-  );
+  late final ArticleController controller;
+  @override
+  bool get isArticle => true;
 
   @override
-  dynamic get arguments => {
-    'id': controller.id,
-  };
+  dynamic get arguments => {'id': controller.id};
+
+  UniqueKey? _centerKey;
+
+  @override
+  void initState() {
+    final params = Get.parameters;
+    controller = Get.putOrFind(
+      ArticleController.new,
+      tag: params['type']! + params['id']!,
+    );
+    if (params.containsKey('viewComment')) {
+      _centerKey = UniqueKey();
+    }
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +92,8 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
         padding: .symmetric(horizontal: padding),
         child: SelectionArea(
           child: CustomScrollView(
+            primary: true,
+            center: _centerKey,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               _buildContent(
@@ -91,7 +107,10 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                   ),
                 ),
               ),
-              SelectionContainer.disabled(child: buildReplyHeader()),
+              SelectionContainer.disabled(
+                key: _centerKey,
+                child: buildReplyHeader(),
+              ),
               SelectionContainer.disabled(
                 child: Obx(() => replyList(controller.loadingState.value)),
               ),
@@ -101,6 +120,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
       );
     }
 
+    _centerKey = null;
     padding = padding / 4;
     final flex = controller.ratio[0].toInt();
     final flex1 = controller.ratio[1].toInt();
@@ -111,6 +131,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
           flex: flex,
           child: SelectionArea(
             child: CustomScrollView(
+              primary: true,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
@@ -461,14 +482,14 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                       },
                     ),
                   ),
-                  Expanded(
-                    child: textIconButton(
-                      text: '分享',
-                      icon: CustomIcons.share_node,
-                      stat: null,
-                      onPressed: () => ShareUtils.shareText(controller.url),
-                    ),
-                  ),
+                  // Expanded(
+                  //   child: textIconButton(
+                  //     text: '分享',
+                  //     icon: CustomIcons.share_node,
+                  //     stat: null,
+                  //     onPressed: () => ShareUtils.shareText(controller.url),
+                  //   ),
+                  // ),
                   Expanded(
                     child: textIconButton(
                       icon: FontAwesomeIcons.star,
@@ -476,6 +497,14 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                       text: '收藏',
                       stat: stats.favorite,
                       onPressed: controller.onFav,
+                    ),
+                  ),
+                  Expanded(
+                    child: textIconButton(
+                      icon: FontAwesomeIcons.comment,
+                      text: '评论',
+                      stat: stats.comment,
+                      onPressed: _jumpToComment,
                     ),
                   ),
                   Expanded(
@@ -551,6 +580,7 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                       CachedNetworkImage(
                         height: height,
                         width: contentWidth,
+                        gaplessPlayback: true,
                         memCacheWidth: memCacheWidth,
                         memCacheHeight: memCacheHeight,
                         fit: pic.isLongPic == true ? BoxFit.cover : null,
@@ -629,6 +659,27 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _jumpToComment() {
+    if (!isPortrait) return;
+    if (_centerKey == null) {
+      _centerKey = UniqueKey();
+      setState(() {});
+    } else {
+      PrimaryScrollController.of(context).jumpToTop();
+    }
+  }
+
+  @override
+  Widget httpError({String? errMsg, VoidCallback? onReload}) {
+    return ArticleSliverToBoxAdapter(
+      child: HttpError(
+        isSliver: false,
+        errMsg: errMsg,
+        onReload: controller.onReload,
       ),
     );
   }

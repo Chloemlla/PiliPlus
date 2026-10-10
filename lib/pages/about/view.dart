@@ -15,7 +15,7 @@ import 'package:pili_plus/services/first_launch_improvements_guide_service.dart'
 import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/services/logger.dart';
 import 'package:pili_plus/utils/accounts.dart';
-import 'package:pili_plus/utils/android/android_helper.dart';
+import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/date_utils.dart';
@@ -209,7 +209,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
           ),
           if (Platform.isAndroid)
             ListTile(
-              onTap: PiliAndroidHelper.openLinkVerifySettings,
+              onTap: AndroidHelper.openLinkVerifySettings,
               leading: const Icon(MdiIcons.linkBoxOutline),
               title: const Text('打开受支持的链接'),
               trailing: Icon(Icons.arrow_forward, size: 16, color: outline),

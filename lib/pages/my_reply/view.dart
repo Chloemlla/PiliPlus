@@ -15,9 +15,9 @@ import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/waterfall.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
-import 'package:waterfall_flow/waterfall_flow.dart';
 
 class MyReply extends StatefulWidget {
   const MyReply({super.key});
@@ -83,7 +83,8 @@ class _MyReplyState extends State<MyReply> with DynMixin {
         slivers: [
           replies.isNotEmpty
               ? ViewSliverSafeArea(
-                  sliver: SliverWaterfallFlow(
+                  sliver: SliverMasonryGrid(
+                    crossAxisSpacing: 4,
                     gridDelegate: dynGridDelegate,
                     delegate: SliverChildBuilderDelegate(
                       childCount: _controller.count,

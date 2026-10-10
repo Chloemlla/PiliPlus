@@ -13,7 +13,7 @@ import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/plugin/pl_player/widgets/common_btn.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart'
     show shutdownTimerService;
-import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/android/android_helper.dart';
 import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
@@ -168,8 +168,8 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
                 color: Colors.white,
               ),
             ),
-          if (Platform.isAndroid ||
-              IOSPipHelper.isAvailable ||
+          if ((Platform.isAndroid && PiliAndroidHelper.isPipAvailable) ||
+              (Platform.isIOS && IOSPipHelper.isAvailable) ||
               (PlatformUtils.isDesktop && !isFullScreen))
             ComBtn(
               height: btnHeight,
@@ -177,9 +177,7 @@ strutStyle: const StrutStyle(fontSize: 15, leading: 0),
               onTap: () {
                 if (PlatformUtils.isDesktop) {
                   plPlayerController.toggleDesktopPip();
-                  return;
-                }
-                if (Platform.isIOS || AndroidHelper.isPipAvailable) {
+                } else {
                   plPlayerController.enterPip();
                 }
               },

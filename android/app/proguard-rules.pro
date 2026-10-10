@@ -50,3 +50,11 @@
 ############################################################
 
 -dontwarn com.google.android.gms.internal.mlkit_vision_barcode.**
+
+############################################################
+# jnigen-generated bindings (upstream AndroidHelper keep rules)
+# JNI resolves these members by name, so R8 must keep them.
+############################################################
+
+-keep class com.chloemlla.piliplus.AndroidHelper { public *; }
+-keep class com.chloemlla.piliplus.AndroidHelper$ToDart { public *; }
