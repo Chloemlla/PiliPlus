@@ -25,6 +25,7 @@ void main() {
     Hive.init(tempDir.path);
     AccountSecretStore.init(tempDir.path);
     GStorage.regAdapter();
+    GStorage.setting = await Hive.openBox('setting');
     Accounts.account = await Hive.openBox<LoginAccount>('account');
   });
 

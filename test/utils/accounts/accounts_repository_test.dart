@@ -7,6 +7,7 @@ import 'package:pili_plus/utils/accounts/account_adapter.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/accounts/account_type_adapter.dart';
 import 'package:pili_plus/utils/accounts/cookie_jar_adapter.dart';
+import 'package:pili_plus/utils/storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -23,6 +24,7 @@ void main() {
       ..registerAdapter(BiliCookieJarAdapter())
       ..registerAdapter(LoginAccountAdapter())
       ..registerAdapter(AccountTypeAdapter());
+    GStorage.setting = await Hive.openBox('setting');
   });
 
   setUp(() async {
