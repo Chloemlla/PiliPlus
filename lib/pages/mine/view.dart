@@ -23,7 +23,6 @@ import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:pili_plus/utils/utils.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';

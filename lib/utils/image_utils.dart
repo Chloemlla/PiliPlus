@@ -256,15 +256,14 @@ abstract final class ImageUtils {
       }
     } else {
       SmartDialog.dismiss();
-      final savePath = await FilePicker.saveFile(
+      final saveUri = await FilePicker.saveFile(
         fileName: fileName,
-        bytes: Uint8List(0),
+        bytes: bytes,
       );
-      if (savePath == null) {
+      if (saveUri == null) {
         SmartDialog.showToast("取消保存");
         return null;
       }
-      await File(savePath).writeAsBytes(bytes);
       SmartDialog.showToast(' 已保存 ');
       res = SaveResult(true, null);
     }
@@ -290,15 +289,14 @@ abstract final class ImageUtils {
         skipIfExists: false,
       );
     } else {
-      final savePath = await FilePicker.saveFile(
+      final saveUri = await FilePicker.saveFile(
         fileName: fileName,
-        bytes: Uint8List(0),
+        bytes: await file.readAsBytes(),
       );
-      if (savePath == null) {
+      if (saveUri == null) {
         SmartDialog.showToast("取消保存");
         return;
       }
-      await file.moveOrCopy(savePath);
       res = SaveResult(true, null);
     }
     if (needToast) {

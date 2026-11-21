@@ -65,6 +65,13 @@ extension ListExt<T> on List<T> {
     return selected ?? lowest ?? first;
   }
 
+  T findClosestTarget(
+    bool Function(T) test,
+    T Function(T, T) combine,
+  ) {
+    return where(test).reduceOrNull(combine) ?? reduce(combine);
+  }
+
   /// from [algorithms.lowerBoundBy].
   int lowerBoundByKey<K extends Comparable<K>>(
     K Function(T element) keyOf,

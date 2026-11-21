@@ -109,7 +109,6 @@ class LiveRoomController extends GetxController
     if (stopDM) stopLiveMsgStream();
   }
 
-  @override
   Future<void> openInAppMiniPlayer() async {
     final currentRoomId = roomId;
     final success = await InAppMiniPlayerService.instance.show(

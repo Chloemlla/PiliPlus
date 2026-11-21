@@ -214,22 +214,21 @@ abstract final class MediaExportUtils {
       savePath =
           '$tmpDirPath/export_${DateTime.now().millisecondsSinceEpoch}_$fileName';
     } else {
-      final String? pickedPath;
+      final Uri? pickedUri;
       try {
-        pickedPath = await FilePicker.saveFile(
+        pickedUri = await FilePicker.saveFile(
           fileName: fileName,
-          type: isAudio ? FileType.audio : FileType.video,
           bytes: Uint8List(0),
         );
       } catch (e) {
         SmartDialog.showToast('$e');
         return;
       }
-      if (pickedPath == null) {
+      if (pickedUri == null) {
         SmartDialog.showToast('取消保存');
         return;
       }
-      savePath = pickedPath;
+      savePath = pickedUri.toFilePath();
     }
 
     final cancelToken = CancelToken();

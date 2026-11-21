@@ -234,11 +234,11 @@ class _PlaylistImportPageState extends State<PlaylistImportPage> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['json'],
       );
-      final file = result == null || result.files.isEmpty ? null : result.files.first;
+      final file = files.isEmpty ? null : files.first;
       if (file == null) {
         return;
       }

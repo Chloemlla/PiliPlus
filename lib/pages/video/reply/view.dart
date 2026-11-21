@@ -14,7 +14,6 @@ import 'package:pili_plus/pages/video/reply/controller.dart';
 import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:get/get.dart';
-import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:pili_plus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:flutter/material.dart';
 

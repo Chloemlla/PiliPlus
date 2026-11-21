@@ -2,7 +2,6 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:pili_plus/common/style.dart';
-import 'package:pili_plus/models/common/video/base_quality.dart';
 // DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/marquee.dart';
 import 'package:pili_plus/pages/live_room/controller.dart';
@@ -405,7 +404,7 @@ Obx(
                                   iconColor: codecColor,
                                   collapsedIconColor: codecColor,
                                   title: Text(
-                                    '${codec.codecName ?? ci.toString()} (${LiveQuality.fromCode(codec.currentQn)?.desc ?? codec.currentQn})',
+                                    '${codec.codecName ?? ci.toString()} (${codec.currentQn.desc})',
                                     style: isCurrCodec
                                         ? currStyle
                                         : const TextStyle(fontSize: 14),

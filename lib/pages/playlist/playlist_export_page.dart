@@ -265,11 +265,7 @@ class _PlaylistExportPageState extends State<PlaylistExportPage> {
                 : 'application/vnd.apple.mpegurl',
           );
         } else if (toFile) {
-          await StorageUtils.saveBytes2File(
-            name: fileName,
-            bytes: bytes,
-            allowedExtensions: [extension],
-          );
+          await StorageUtils.saveBytes2File(name: fileName, bytes: bytes);
         }
       } else {
         final message = result.toString();

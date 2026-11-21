@@ -7,7 +7,6 @@ import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart'
     show
         RefreshIndicator,
         displacement,
-        refreshDragExtent,
         kDragContainerExtentPercentage;
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
@@ -46,7 +45,6 @@ import 'package:pili_plus/services/synapse_ip_verification.dart';
 import 'package:pili_plus/services/synapse_cookie_report.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide RefreshIndicator;
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
