@@ -2,7 +2,7 @@ import 'package:pili_plus/models/horizontal_video_model.dart';
 import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models/model_video.dart';
 import 'package:pili_plus/models_new/video/video_detail/dimension.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 
 // 稍后再看, 排行榜等网页返回也使用该类
 class HotVideoItemModel extends HorizontalVideoModel with MultiSelectData {

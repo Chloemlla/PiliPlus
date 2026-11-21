@@ -2,7 +2,7 @@ import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models_new/fav/fav_detail/cnt_info.dart';
 import 'package:pili_plus/models_new/fav/fav_detail/ogv.dart';
 import 'package:pili_plus/models_new/fav/fav_detail/ugc.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 
 class FavDetailItemModel with MultiSelectData {
   int? id;

@@ -6,8 +6,7 @@ import 'package:pili_plus/models_new/download/download_info.dart';
 import 'package:pili_plus/models_new/sponsor_block/segment_item.dart';
 import 'package:pili_plus/models_new/video/video_play_info/subtitle.dart';
 import 'package:pili_plus/models_new/video/video_play_info/view_point.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart'
-    show MultiSelectData;
+import 'package:pili_plus/models/common/multi_select_data.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';

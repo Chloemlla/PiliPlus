@@ -1,10 +1,9 @@
 import 'package:pili_plus/http/loading_state.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 import 'package:pili_plus/pages/common/common_list_controller.dart';
 import 'package:get/get.dart';
 
-mixin MultiSelectData {
-  bool checked = false;
-}
+export 'package:pili_plus/models/common/multi_select_data.dart';
 
 abstract interface class MultiSelectBase<T extends MultiSelectData> {
   RxBool get enableMultiSelect;

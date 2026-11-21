@@ -35,10 +35,9 @@ import 'package:pili_plus/plugin/pl_player/models/hwdec_type.dart';
 import 'package:pili_plus/plugin/pl_player/models/long_press_speed_formula.dart';
 import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/utils/device_utils.dart';
-import 'package:pili_plus/utils/bilibili_device_identity.dart';
+import 'package:pili_plus/utils/buvid_store.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/global_data.dart';
-import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/setting_secret_store.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -1150,21 +1149,7 @@ abstract final class Pref {
   static bool get silentDownImg =>
       _setting.get(SettingBoxKey.silentDownImg, defaultValue: false);
 
-  static String get buvid {
-    String? value = _setting.get(SettingBoxKey.buvid);
-    if (value != null) return value;
-
-    value = _localCache.get(SettingBoxKey.buvid);
-    if (value != null) {
-      _setting.put(SettingBoxKey.buvid, value);
-      _localCache.delete(SettingBoxKey.buvid);
-    } else {
-      value = LoginUtils.generateBuvid();
-      GStorage.setting.put(SettingBoxKey.buvid, value);
-    }
-    BilibiliDeviceIdentity.buvid = value!;
-    return value;
-  }
+  static String get buvid => BuvidStore.buvid;
 
   static bool get showMemberShop =>
       _setting.get(SettingBoxKey.showMemberShop, defaultValue: false);

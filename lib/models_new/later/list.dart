@@ -5,7 +5,7 @@ import 'package:pili_plus/models_new/later/bangumi.dart';
 import 'package:pili_plus/models_new/later/rights.dart';
 import 'package:pili_plus/models_new/later/stat.dart';
 import 'package:pili_plus/models_new/video/video_detail/dimension.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:flutter/material.dart'
     show ColorScheme, Widget, Positioned;

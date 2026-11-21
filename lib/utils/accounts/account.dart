@@ -1,15 +1,13 @@
 import 'package:pili_plus/common/constants.dart';
-import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/accounts/grpc_headers.dart';
+import 'package:pili_plus/utils/buvid_store.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
-import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:cookie_jar/cookie_jar.dart';
-import 'package:dio/dio.dart' show Options;
 import 'package:hive_ce/hive.dart';
 
 sealed class Account {
@@ -197,7 +195,7 @@ class AnonymousAccount extends Account {
   @override
   bool activated = true;
 
-  late String _buvid = Pref.buvid;
+  late String _buvid = BuvidStore.buvid;
   @override
   String get buvid => _buvid;
   @override
@@ -211,43 +209,28 @@ class AnonymousAccount extends Account {
   @override
   Future<void> delete() {
     grpcHeaders['x-bili-fawkes-req-bin'] = GrpcHeaders.fawkes;
-    return cookieJar.deleteAll().whenComplete(_getBuvid);
+    return cookieJar.deleteAll().whenComplete(refreshBuvidCookies);
   }
 
   static final _instance = AnonymousAccount._();
 
-  AnonymousAccount._() {
-    _getBuvid();
-  }
+  AnonymousAccount._();
 
-  Future<void> _getBuvid() async {
-    try {
-      final res = await Request().get(
-        '/x/frontend/finger/spi',
-        options: Options(extra: {'account': const NoAccount()}),
-      );
-      final resData = res.data;
-      if (resData['code'] == 0) {
-        final data = resData['data'];
-        final String b3 = data['b_3'];
-        final String b4 = data['b_4'];
-        final bnut = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
-        (cookieJar.domainCookies['bilibili.com'] ??= {
-            '/': {},
-          })['/']!
-          ..['buvid3'] = SerializableCookie(
-            Cookie('buvid3', b3)..setBiliDomain(),
-          )
-          ..['b_nut'] = SerializableCookie(
-            Cookie('b_nut', bnut)..setBiliDomain(),
-          )
-          ..['buvid4'] = SerializableCookie(
-            Cookie('buvid4', b4)..setBiliDomain(),
-          );
-      } else {
-        throw resData;
-      }
-    } catch (_) {
+  /// Installed by `LoginUtils.initializeSession`.
+  ///
+  /// `utils/accounts/` must not import `http/`, otherwise storage
+  /// initialization would transitively depend on `storage_pref.dart`;
+  /// the fingerprint request lives in `anonymous_buvid.dart` instead.
+  static Future<void> Function(DefaultCookieJar cookieJar)?
+  buvidCookieRefresher;
+
+  /// Refreshes the anonymous device fingerprints, falling back to a local
+  /// buvid3 when no refresher is installed yet.
+  Future<void> refreshBuvidCookies() async {
+    final refresher = buvidCookieRefresher;
+    if (refresher != null) {
+      await refresher(cookieJar);
+    } else {
       cookieJar.setBuvid3();
     }
   }

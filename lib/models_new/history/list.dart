@@ -1,7 +1,7 @@
 import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/progress_bar/video_progress_indicator.dart';
 import 'package:pili_plus/models_new/history/history.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:flutter/material.dart'

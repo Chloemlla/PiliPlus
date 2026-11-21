@@ -6,7 +6,7 @@ import 'package:pili_plus/models_new/pgc/pgc_info_model/new_ep.dart';
 import 'package:pili_plus/models_new/video/video_detail/episode.dart'
     hide EpisodeItem;
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
-import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account_vip.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/scroll_offset_helper.dart';
@@ -71,7 +71,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
   void initState() {
     super.initState();
     _initIfNeeded();
-    _isVip = Accounts.isVideoVip;
+    _isVip = AccountVip.isVideoVip;
 
     _scrollController = ScrollController(keepScrollOffset: false);
     _listener = _videoDetailCtr.cid.listen(_onCidChanged);

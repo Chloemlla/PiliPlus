@@ -27,6 +27,7 @@ import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/widgets/page.dart';
 import 'package:pili_plus/utils/accounts.dart';
+import 'package:pili_plus/utils/accounts/account_vip.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
@@ -467,7 +468,7 @@ class _EpisodePanelState extends State<EpisodePanel>
     }
   }
 
-  late final _isVip = Accounts.isVideoVip;
+  late final _isVip = AccountVip.isVideoVip;
   void _onChangeEpisode(
     int tabIndex,
     int index,

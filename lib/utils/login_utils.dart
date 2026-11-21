@@ -9,7 +9,8 @@ import 'package:pili_plus/services/account_service.dart';
 import 'package:pili_plus/services/synapse_cookie_report.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
-import 'package:pili_plus/utils/bilibili_device_identity.dart';
+import 'package:pili_plus/utils/accounts/anonymous_buvid.dart';
+import 'package:pili_plus/utils/buvid_store.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/linux_cookie_manager.dart';
 import 'package:pili_plus/utils/request_utils.dart';
@@ -26,6 +27,8 @@ import 'package:get/get.dart';
 
 abstract final class LoginUtils {
   static Future<void> initializeSession() async {
+    AnonymousAccount.buvidCookieRefresher = refreshAnonymousBuvidCookies;
+    unawaited(AnonymousAccount().refreshBuvidCookies());
     Request.installAccountManager();
     Accounts.configureSessionHandlers(
       activateAccount: Request.buvidActive,
@@ -176,14 +179,7 @@ abstract final class LoginUtils {
     ]);
   }
 
-  static String generateBuvid() {
-    final md5Str = Digest(
-      List.generate(16, (_) => Utils.random.nextInt(256)),
-    ).toString().toUpperCase();
-    final buvid = 'XY${md5Str[2]}${md5Str[12]}${md5Str[22]}$md5Str';
-    BilibiliDeviceIdentity.buvid = buvid;
-    return buvid;
-  }
+  static String generateBuvid() => BuvidStore.generate();
 
   static String get buvid => Pref.buvid;
 

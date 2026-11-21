@@ -1,8 +1,6 @@
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
-import 'package:pili_plus/utils/login_utils.dart';
-import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:hive_ce/hive.dart';
 
 typedef AccountActivator = Future<void> Function(Account account);
@@ -18,8 +16,6 @@ abstract final class Accounts {
     AccountType.values.length,
     AnonymousAccount(),
   );
-  static bool get isMainVip => Pref.userInfoCache?.vipStatus == 1;
-  static bool get isVideoVip => main == video ? isMainVip : true;
   static Account get main => accountMode[AccountType.main.index];
   static Account get video => accountMode[AccountType.video.index];
   static Account get heartbeat => accountMode[AccountType.heartbeat.index];
@@ -194,10 +190,12 @@ abstract final class Accounts {
       (key, value) => MapEntry(key, LoginAccount.fromJson(value)),
     );
     await Accounts.account.putAll(res);
+    // `refresh` re-activates accounts and notifies the heartbeat listener,
+    // so page-level state is updated there instead of being written here.
     await Accounts.refresh();
-    MineController.anonymity.value = !Accounts.heartbeat.isLogin;
-    if (Accounts.main.isLogin) {
-      await LoginUtils.onLoginMain();
+    final onMainLogin = _onMainLogin;
+    if (Accounts.main.isLogin && onMainLogin != null) {
+      await onMainLogin();
     }
   }
 }

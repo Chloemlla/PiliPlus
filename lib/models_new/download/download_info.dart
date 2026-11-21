@@ -1,6 +1,5 @@
 import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
-import 'package:pili_plus/pages/common/multi_select/base.dart'
-    show MultiSelectData;
+import 'package:pili_plus/models/common/multi_select_data.dart';
 
 class DownloadPageInfo with MultiSelectData {
   final String pageId;

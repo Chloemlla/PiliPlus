@@ -33,21 +33,22 @@ PAGE_IMPORT_BASELINE = {
         "pages/mine/view.dart",
     },
     "lib/models/common/setting_type.dart": {
+        "pages/setting/models/dm_settings.dart",
+        "pages/setting/models/dyn_settings.dart",
         "pages/setting/models/extra_settings.dart",
         "pages/setting/models/model.dart",
         "pages/setting/models/play_settings.dart",
         "pages/setting/models/privacy_settings.dart",
         "pages/setting/models/recommend_settings.dart",
+        "pages/setting/models/reply_settings.dart",
         "pages/setting/models/style_settings.dart",
         "pages/setting/models/video_settings.dart",
     },
     "lib/models/common/sponsor_block/segment_model.dart": {
         "pages/sponsor_block/block_mixin.dart"
     },
-    "lib/models/model_hot_video_item.dart": {
-        "pages/common/multi_select/base.dart"
-    },
     "lib/utils/app_scheme.dart": {
+        "pages/article/view.dart",
         "pages/audio/view.dart",
         "pages/dynamics/widgets/vote.dart",
         "pages/fan/view.dart",
@@ -57,6 +58,10 @@ PAGE_IMPORT_BASELINE = {
         "pages/rank/view.dart",
         "pages/subscription_detail/view.dart",
         "pages/video/reply_reply/view.dart",
+    },
+    "lib/utils/config_archive.dart": {
+        "pages/my_reply/view.dart",
+        "pages/search/controller.dart",
     },
     "lib/utils/extension/three_dot_ext.dart": {
         "pages/common/common_whisper_controller.dart",
@@ -69,6 +74,7 @@ PAGE_IMPORT_BASELINE = {
         "pages/video/introduction/ugc/controller.dart",
     },
     "lib/utils/page_utils.dart": {
+        "pages/article/view.dart",
         "pages/common/common_intro_controller.dart",
         "pages/common/publish/publish_route.dart",
         "pages/contact/view.dart",
@@ -83,7 +89,7 @@ PAGE_IMPORT_BASELINE = {
         "pages/login/geetest/geetest_webview_dialog.dart",
     },
     "lib/utils/storage_pref.dart": {
-        "pages/setting/pages/fullscreen_sc_size.dart"
+        "pages/setting/pages/fullscreen_sc.dart"
     },
 }
 
@@ -97,6 +103,7 @@ RAW_PAGE_WRITE_BASELINE = {
     "lib/pages/history/base_controller.dart": 1,
     "lib/pages/history/controller.dart": 1,
     "lib/pages/later/base_controller.dart": 1,
+    "lib/pages/live_room/controller.dart": 1,
     "lib/pages/live_room/view.dart": 1,
     "lib/pages/live_room/widgets/bottom_control.dart": 1,
     "lib/pages/live_room/widgets/header_control.dart": 1,
@@ -104,14 +111,18 @@ RAW_PAGE_WRITE_BASELINE = {
     "lib/pages/mine/controller.dart": 2,
     "lib/pages/search/controller.dart": 3,
     "lib/pages/search/view.dart": 2,
+    "lib/pages/setting/models/dm_settings.dart": 1,
+    "lib/pages/setting/models/dyn_settings.dart": 2,
     "lib/pages/setting/models/extra_settings.dart": 22,
     "lib/pages/setting/models/model.dart": 2,
-    "lib/pages/setting/models/play_settings.dart": 8,
-    "lib/pages/setting/models/style_settings.dart": 19,
+    "lib/pages/setting/models/recommend_settings.dart": 2,
+    "lib/pages/setting/models/reply_settings.dart": 5,
+    "lib/pages/setting/models/play_settings.dart": 9,
+    "lib/pages/setting/models/style_settings.dart": 20,
     "lib/pages/setting/models/video_settings.dart": 16,
     "lib/pages/setting/pages/bar_set.dart": 2,
     "lib/pages/setting/pages/color_select.dart": 4,
-    "lib/pages/setting/pages/fullscreen_sc_size.dart": 2,
+    "lib/pages/setting/pages/fullscreen_sc.dart": 5,
     "lib/pages/setting/pages/logs.dart": 1,
     "lib/pages/setting/widgets/switch_item.dart": 2,
     "lib/pages/video/pay_coins/view.dart": 1,

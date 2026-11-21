@@ -1,4 +1,4 @@
-import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/models/common/multi_select_data.dart';
 
 class FavNoteItemModel with MultiSelectData {
   FavNoteItemModel({
