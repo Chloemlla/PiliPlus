@@ -18,6 +18,7 @@ import 'package:pili_plus/models_new/video/video_detail/data.dart';
 import 'package:pili_plus/models_new/video/video_detail/episode.dart' as ugc;
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/models_new/video/video_play_info/subtitle.dart';
+import 'package:pili_plus/services/download/bounded_task_queue.dart';
 import 'package:pili_plus/services/download/download_manager.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/cache_manager.dart';

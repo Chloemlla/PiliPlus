@@ -49,7 +49,7 @@ class _SeasonPanelState extends State<SeasonPanel> {
   }
 
   bool _initIfNeeded() {
-    final ugcSeason = _ugcController.videoDetail.rawValue.ugcSeason;
+    final ugcSeason = _ugcController.videoDetail.value.ugcSeason;
     if (ugcSeason == null) return true;
     _ugcSeason = ugcSeason;
     return false;

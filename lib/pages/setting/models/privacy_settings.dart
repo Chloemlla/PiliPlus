@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/services.dart';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/stateful_builder.dart';
 import 'package:flutter/material.dart' hide StatefulBuilder;
@@ -13,6 +14,7 @@ import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/api_type.dart';
 import 'package:pili_plus/utils/android/credential_auth.dart';
 import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
 
 List<SettingsModel> get privacySettings => [

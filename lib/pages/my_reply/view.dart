@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/export_import.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
@@ -82,17 +83,16 @@ class _MyReplyState extends State<MyReply> with DynMixin {
               onPressed: () => showConfirmDialog(
                 context: context,
                 title: const Text('Clear Local Storage?'),
-                onConfirm: () {
-                  GStorage.reply!.clear();
-                  _replies.clear();
-                  setState(() {});
+                onConfirm: () async {
+                  await _controller.clear();
+                  if (mounted) setState(() {});
                 },
               ),
               icon: const Icon(Icons.clear_all),
             ),
             IconButton(
               tooltip: 'Refresh',
-              onPressed: () => setState(_initReply),
+              onPressed: () => setState(_controller.reload),
               icon: const Icon(Icons.refresh),
             ),
           ],

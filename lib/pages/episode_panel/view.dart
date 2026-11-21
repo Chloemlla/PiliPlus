@@ -33,6 +33,7 @@ import 'package:pili_plus/utils/duration_utils.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
+import 'package:pili_plus/utils/scroll_offset_helper.dart';
 import 'package:pili_plus/utils/utils.dart';
 import 'package:collection/collection.dart';
 import 'package:easy_debounce/easy_debounce.dart';
@@ -163,10 +164,10 @@ class _EpisodePanelState extends State<EpisodePanel>
   void _syncEpisodes(int tabIndex) {
     switch (_type) {
       case .part:
-        _videoDetail = _ugcController.videoDetail.rawValue;
+        _videoDetail = _ugcController.videoDetail.value;
         _episodes = _videoDetail.pages!;
       case .season:
-        _videoDetail = _ugcController.videoDetail.rawValue;
+        _videoDetail = _ugcController.videoDetail.value;
         _sections = _videoDetail.ugcSeason!.sections!;
         _episodes = _sections[tabIndex].episodes!;
       case .pgc:
@@ -207,7 +208,7 @@ class _EpisodePanelState extends State<EpisodePanel>
         _reverse = false;
         _tabIndex = () => 0;
         _itemIndex = () => _ugcController.partIndex;
-        _videoDetail = _ugcController.videoDetail.rawValue;
+        _videoDetail = _ugcController.videoDetail.value;
         _episodes = _videoDetail.pages!;
         _addUgcListener();
 
@@ -215,7 +216,7 @@ class _EpisodePanelState extends State<EpisodePanel>
         _isUgc = true;
         _tabIndex = () => _ugcController.sectionIndex;
         _itemIndex = () => _ugcController.seasonIndex;
-        _videoDetail = _ugcController.videoDetail.rawValue;
+        _videoDetail = _ugcController.videoDetail.value;
         _sections = _videoDetail.ugcSeason!.sections!;
         if (_sections.length > 1) {
           _tabController = TabController(

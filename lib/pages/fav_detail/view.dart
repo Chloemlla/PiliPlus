@@ -480,7 +480,7 @@ class _FavDetailPageState extends State<FavDetailPage>
       Success(:final response) =>
         response != null && response.isNotEmpty
             ? _buildGrid(response, theme)
-            : HttpError(onReload: _favDetailController.onReload),
+            : HttpError(onReload: controller.onReload),
       Error(:final errMsg) => HttpError(
         errMsg: errMsg,
         onReload: controller.onReload,
@@ -492,17 +492,17 @@ class _FavDetailPageState extends State<FavDetailPage>
     List<FavDetailItemModel> response,
     ThemeData theme,
   ) {
-    final ordered = _favDetailController.orderedItems;
+    final ordered = controller.orderedItems;
     return SliverGrid.builder(
       gridDelegate: gridDelegate,
       itemBuilder: (context, index) {
         if (index == ordered.length) {
-          _favDetailController.onLoadMore();
+          controller.onLoadMore();
           return Container(
             height: 60,
             alignment: Alignment.center,
             child: Text(
-              _favDetailController.isEnd ? '没有更多了' : '加载中...',
+              controller.isEnd ? '没有更多了' : '加载中...',
               style: TextStyle(
                 color: theme.colorScheme.outline,
                 fontSize: 13,
@@ -514,7 +514,7 @@ class _FavDetailPageState extends State<FavDetailPage>
         return FavVideoCardH(
           item: item,
           index: index,
-          ctr: _favDetailController,
+          ctr: controller,
         );
       },
       itemCount: ordered.length + 1,

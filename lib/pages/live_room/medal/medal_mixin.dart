@@ -61,7 +61,7 @@ mixin LiveMedalMixin<T extends StatefulWidget>
     final medalController = liveController.medalController;
     await medalController.onRefresh();
     if (!mounted) return;
-    switch (medalController.loadingState.rawValue) {
+    switch (medalController.loadingState.value) {
       case Success(:final response):
         if (response != null && response.isNotEmpty) {
           showDialog(
@@ -126,7 +126,7 @@ mixin LiveMedalMixin<T extends StatefulWidget>
                   }
                   final res = await liveController.getUserMedal();
                   if (!isWearing && res && mounted) {
-                    final medal = liveController.medal.rawValue;
+                    final medal = liveController.medal.value;
                     if (medal != null && medal.id != item.uinfoMedal.id) {
                       SmartDialog.showToast('该直播间不支持展示其他粉丝牌');
                     }

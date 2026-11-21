@@ -144,7 +144,7 @@ class _SectionPanelState extends State<SectionPanel> {
     _episodes = _sections[sectionIndex].episodes!;
     setState(() {});
     final episode = _episodes.getOrNull(_index);
-    if (episode?.cid == _pgcController.cid.rawValue) {
+    if (episode?.cid == _pgcController.cid.value) {
       _jumpToCurrent();
     } else {
       _scrollController.jumpToTop();
@@ -226,7 +226,7 @@ class _SectionPanelState extends State<SectionPanel> {
 
   Widget _buildItem(int index) {
     final item = _episodes[index];
-    final color = item.cid == _pgcController.cid.rawValue
+    final color = item.cid == _pgcController.cid.value
         ? colorScheme.primary
         : colorScheme.onSurface;
     return GestureDetector(

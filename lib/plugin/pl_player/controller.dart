@@ -627,8 +627,11 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     return null;
   }
 
-  static Future<void>? seekToIfExists(Duration position) {
-    return _instance?.seekTo(position);
+  static Future<void>? seekToIfExists(
+    Duration position, {
+    bool isSeek = true,
+  }) {
+    return _instance?.seekTo(position, isSeek: isSeek);
   }
 
   static double? getVolumeIfExists() {
@@ -1361,7 +1364,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   }
 
   /// 跳转至指定位置
-  Future<void> seekTo(Duration position) async {
+  Future<void> seekTo(Duration position, {bool isSeek = true}) async {
     if (_playerCount == 0) return;
     if (position < Duration.zero) {
       position = Duration.zero;
@@ -1370,6 +1373,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     _watchSessionTracker.markSeek(position: position, at: DateTime.now());
     _heartDuration = position.inSeconds;
 
+    if (isSeek) {
+      /// 拖动进度条调节时，不等待第一帧，防止抖动
+      await _videoPlayerController?.stream.buffer.first;
+    }
     danmakuController?.clear();
     try {
       await _videoPlayerController?.seek(position);

@@ -1,4 +1,4 @@
-import 'package:pili_plus/models/common/video/video_quality.dart';
+import 'package:pili_plus/models/common/video/base_quality.dart';
 import 'package:pili_plus/models/quality_mode.dart';
 import 'package:flutter_test/flutter_test.dart';
 

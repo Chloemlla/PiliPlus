@@ -81,6 +81,14 @@ typedef _StatusConfig = (
 
 class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   VideoPlayerServiceHandler() {
+    if (Platform.isAndroid) {
+      nativeMediaNotificationService
+        ..ensureInitialized()
+        ..onAction = _handleNativeAction;
+      liveUpdateService
+        ..ensureInitialized()
+        ..onAction = _handleNativeAction;
+    }
     // Android 14 dispatches volume keys from the activity straight to the
     // session without checking canHandleVolumeKey(), so a FIXED remote
     // session swallows them there. Only verified to fall back on Android 16.
@@ -167,17 +175,6 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   bool Function()? isPlaying;
   void Function()? onSkipToNext;
   void Function()? onSkipToPrevious;
-
-  VideoPlayerServiceHandler() {
-    if (Platform.isAndroid) {
-      nativeMediaNotificationService
-        ..ensureInitialized()
-        ..onAction = _handleNativeAction;
-      liveUpdateService
-        ..ensureInitialized()
-        ..onAction = _handleNativeAction;
-    }
-  }
 
   bool get _useNativeAndroidNotification => Platform.isAndroid;
   bool get _hasPlaybackTarget =>

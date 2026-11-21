@@ -155,11 +155,11 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
     VideoDetailData? data,
     bool force = false,
   }) {
-    data ??= videoDetail.rawValue;
+    data ??= videoDetail.value;
 
     final pages = data.pages;
     if (pages != null && pages.length > 1) {
-      final cid = this.cid.rawValue;
+      final cid = this.cid.value;
       _partIndex = math.max(0, pages.indexWhere((e) => e.cid == cid));
     } else {
       _partIndex = 0;
@@ -629,7 +629,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
       }
     }
 
-    final targetCid = skipPart ? seasonCid : this.cid.rawValue;
+    final targetCid = skipPart ? seasonCid : this.cid.value;
     final currIndex = episodes.indexWhere((e) => e.cid == targetCid);
 
     int prevIndex = currIndex - 1;
@@ -699,7 +699,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
         return false;
       }
 
-      final targetCid = skipPart ? seasonCid : this.cid.rawValue;
+      final targetCid = skipPart ? seasonCid : this.cid.value;
       final currIndex = episodes.indexWhere((e) => e.cid == targetCid);
 
       int nextIndex = currIndex + 1;

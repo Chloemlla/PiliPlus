@@ -51,9 +51,7 @@ abstract class CommonPublishPageState<T extends CommonPublishPage>
     final panelType = widget.panelType;
     this.panelType = Rx(panelType);
     controller = ChatBottomPanelContainerController<PanelType>(
-      data: panelType,
       uiScale: Pref.uiScale,
-      currentPanelType: panelType == .none ? .none : .other,
     );
 
     focusNode = FocusNode();

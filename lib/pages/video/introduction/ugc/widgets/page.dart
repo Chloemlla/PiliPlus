@@ -113,7 +113,7 @@ class _PagePanelState extends State<PagePanel> {
 
   (bool bvidChanged, bool dispose) _initIfNeeded() {
     assert(_isCurr);
-    final videoDetail = _ugcController.videoDetail.rawValue;
+    final videoDetail = _ugcController.videoDetail.value;
     if (!videoDetail.hasParts) return const (true, true);
     final bvidChanged = _bvid != _videoDetailCtr.bvid;
     _bvid = _videoDetailCtr.bvid;

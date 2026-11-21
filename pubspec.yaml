@@ -87,10 +87,7 @@ dependencies:
       url: https://github.com/bggRGjQaUbCoE/extended_nested_scroll_view.git
       ref: 161cd202c20bf0ba2394e3a86381d58864dc9e4e
   ffi: ^2.2.0
-  file_picker:
-    git:
-      url: https://github.com/miguelpruivo/flutter_file_picker.git
-      ref: 7fbe3adab03d890d306b197e9244ac6f7f165391
+  file_picker: ^13.1.0
   fixnum: ^1.1.1
   fl_chart: ^1.0.0
   flex_seed_scheme: ^4.0.1
@@ -224,15 +221,16 @@ dependency_overrides:
       url: https://github.com/My-Responsitories/media-kit.git
       path: media_kit_video
       ref: b0187daeb076cbe29c3d332f0626cca5a34f1624
+  audio_session:
+    git:
+      url: https://github.com/bggRGjQaUbCoE/audio_session.git
+      ref: c8c2143c1720292801f72867e29ddeb50c36134e
+
   cached_network_image_ce:
     git:
       url: https://github.com/My-Responsitories/flutter_cached_network_image_ce.git
       path: cached_network_image
       ref: 6ad91e9bf71254803e222b7d254751576f2f6d7b
-  audio_session:
-    git:
-      url: https://github.com/bggRGjQaUbCoE/audio_session.git
-      ref: c8c2143c1720292801f72867e29ddeb50c36134e
 
 dev_dependencies:
   flutter_test:

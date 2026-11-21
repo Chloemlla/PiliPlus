@@ -407,7 +407,7 @@ class LiveRoomController extends GetxController
   }
 
   void toggleDanmaku() {
-    final newVal = !plPlayerController.enableShowLiveDanmaku.rawValue;
+    final newVal = !plPlayerController.enableShowLiveDanmaku.value;
     plPlayerController.enableShowLiveDanmaku.value = newVal;
     if (!plPlayerController.tempPlayerConf) {
       GStorage.setting.put(

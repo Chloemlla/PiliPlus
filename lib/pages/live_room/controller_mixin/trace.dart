@@ -12,7 +12,7 @@ mixin _LiveTraceMixin on GetxController, _LiveDataMixin {
     try {
       // id
       final ruid = this.ruid!;
-      final roomInfo = roomInfoH5.rawValue?.roomInfo;
+      final roomInfo = roomInfoH5.value?.roomInfo;
       if (roomInfo == null) {
         Utils.reportError('liveTrace: null roomInfo');
         return;

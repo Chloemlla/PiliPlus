@@ -195,7 +195,7 @@ mixin _LiveDMStreamMixin
           if (isMainLogin) {
             final json = obj['data']['uinfo_medal'];
             final updateRuid = json['ruid'];
-            final medalRuid = medal.rawValue?.ruid;
+            final medalRuid = medal.value?.ruid;
             if (medalRuid == updateRuid ||
                 (medalRuid == null && updateRuid == ruid)) {
               medal.value = .fromJson(json);

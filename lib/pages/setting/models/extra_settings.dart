@@ -4,7 +4,11 @@ import 'dart:io';
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
 import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart'
-    show RefreshIndicator, displacement, refreshDragExtent;
+    show
+        RefreshIndicator,
+        displacement,
+        refreshDragExtent,
+        kDragContainerExtentPercentage;
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart'
@@ -19,6 +23,7 @@ import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
 import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
 import 'package:pili_plus/pages/home/controller.dart';
 import 'package:pili_plus/pages/setting/models/model.dart';
+import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
 import 'package:pili_plus/pages/setting/widgets/slider_dialog.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -93,19 +98,6 @@ List<SettingsModel> get extraSettings => [
         .put(SettingBoxKey.pgcSkipType, value.index)
         .whenComplete(setState),
   ),
-  SplitModel(
-    normalModel: const NormalModel.split(
-      title: '检查未读动态',
-      subtitle: '点击设置检查周期(min)',
-      leading: Icon(Icons.notifications_none),
-    ),
-    switchModel: SwitchModel.split(
-      defaultVal: true,
-      setKey: SettingBoxKey.checkDynamic,
-      onChanged: (value) => Get.find<MainController>().checkDynamic = value,
-      onTap: _showDynDialog,
-    ),
-  ),
   const SwitchModel(
     title: '显示视频分段信息',
     leading: Icon(CustomIcons.view_headline_rotate_90),
@@ -171,38 +163,11 @@ List<SettingsModel> get extraSettings => [
     defaultVal: false,
     onChanged: (value) => ImageGridView.horizontalPreview = value,
   ),
-  NormalModel(
-    title: '评论折叠行数',
-    subtitle: '0行为不折叠',
-    leading: const Icon(Icons.compress),
-    getTrailing: (theme) => Text(
-      '${ReplyItemGrpc.replyLengthLimit}行',
-      style: theme.textTheme.titleSmall,
-    ),
-    onTap: _showReplyLengthDialog,
-  ),
-  NormalModel(
-    title: '弹幕行高',
-    subtitle: '默认1.6',
-    leading: const Icon(CustomIcons.dm_settings),
-    getTrailing: (theme) => Text(
-      Pref.danmakuLineHeight.toString(),
-      style: theme.textTheme.titleSmall,
-    ),
-    onTap: _showDmHeightDialog,
-  ),
   const SwitchModel(
     title: '显示视频警告/争议信息',
     leading: Icon(Icons.warning_amber_rounded),
     setKey: SettingBoxKey.showArgueMsg,
     defaultVal: true,
-  ),
-  SwitchModel(
-    title: '显示动态警告/争议信息',
-    leading: const Icon(Icons.warning_amber_rounded),
-    setKey: SettingBoxKey.showDynDispute,
-    defaultVal: false,
-    onChanged: (val) => ItemModulesModel.showDynDispute = val,
   ),
   const SwitchModel(
     title: '分P/合集：倒序播放从首集开始播放',
@@ -496,29 +461,6 @@ List<SettingsModel> get extraSettings => [
     onSelected: (value, setState) => GStorage.setting
         .put(SettingBoxKey.reply2SortType, value.index)
         .whenComplete(setState),
-  ),
-  PopupModel(
-    title: '动态展示',
-    leading: const Icon(Icons.dynamic_feed_rounded),
-    value: () => Pref.defaultDynamicType,
-    items: DynamicsTabType.values.take(4),
-    onSelected: (value, setState) => GStorage.setting
-        .put(SettingBoxKey.defaultDynamicType, value.index)
-        .whenComplete(setState),
-  ),
-  SwitchModel(
-    title: '显示动态互动内容',
-    subtitle: '开启后则在动态卡片底部显示互动内容（如关注的人点赞、热评等）',
-    leading: const Icon(Icons.quickreply_outlined),
-    setKey: SettingBoxKey.showDynInteraction,
-    defaultVal: true,
-    onChanged: (val) => ItemModulesModel.showDynInteraction = val,
-  ),
-  NormalModel(
-    title: '用户页默认展示TAB',
-    leading: const Icon(Icons.tab),
-    getSubtitle: () => '当前优先展示「${Pref.memberTab.title}」',
-    onTap: _showMemberTabDialog,
   ),
   SwitchModel(
     title: '显示UP主页小店TAB',

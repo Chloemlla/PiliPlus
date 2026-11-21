@@ -334,7 +334,7 @@ $patches = @($ModalBarrierPatch, $TextSelectionPatch, $MouseCursorPatch,
             $ScrollPositionPatch, $ScrollablePatch, $ScrollableGesturePatch,
             $DraggableScrollableSheetPatch, $ScaffoldPatch, $TextPatch,
             $TextPainterPatch, $SliverPatch, $RefreshIndicatorPatch,
-            $DoubleTapGesturePatch)
+            $DoubleTapGesturePatch, $MediaQueryPatch)
 
 switch ($platform.ToLower()) {
     "android" {

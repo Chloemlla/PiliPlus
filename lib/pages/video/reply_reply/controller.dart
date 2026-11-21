@@ -280,9 +280,9 @@ class VideoReplyReplyController extends ReplyController
     await super.queryData(isRefresh);
     if (isEnd) {
       progress.value = 1;
-    } else if (count.rawValue > 0) {
+    } else if (count.value > 0) {
       progress.value =
-          (loadingState.rawValue.dataOrNull?.length ?? 0) / count.rawValue;
+          (loadingState.value.dataOrNull?.length ?? 0) / count.value;
     }
   }
 
@@ -300,13 +300,13 @@ class VideoReplyReplyController extends ReplyController
 
   @override
   void queryBySort() {
-    if (replyTree.rawValue != null) return;
+    if (replyTree.value != null) return;
     super.queryBySort();
   }
 
   @override
   Future<void> onRefresh() async {
-    if (replyTree.rawValue != null) return Future.syncValue(null);
+    if (replyTree.value != null) return Future.syncValue(null);
     if (_inflightReply != null) await _inflightReply;
     _cancelReplyTimer();
     return super.onRefresh();
@@ -322,7 +322,7 @@ class VideoReplyReplyController extends ReplyController
   final replyTree = Rxn<ReplyTree>();
 
   void buildTree() {
-    final data = loadingState.rawValue.data!;
+    final data = loadingState.value.data!;
     if (data.isEmpty) return;
     final seen = HashSet<Int64>();
     data.retainWhere((i) => seen.add(i.id));
@@ -330,7 +330,7 @@ class VideoReplyReplyController extends ReplyController
     replyTree.value = ReplyTree.build(
       data: data,
       seen: seen,
-      rootId: firstFloor.rawValue?.id ?? data.first.root,
+      rootId: firstFloor.value?.id ?? data.first.root,
       removed: removedReply,
       foldDepth: Pref.foldDepth,
     );
@@ -338,13 +338,13 @@ class VideoReplyReplyController extends ReplyController
 
   void toggleCollapseTree(int index) {
     replyTree
-      ..rawValue!.toggleCollapse(index)
+      ..value!.toggleCollapse(index)
       ..refresh();
   }
 
   bool setIndexByTreeNode(int end, ReplyTreeNode? node) {
     if (node != null) {
-      final index = replyTree.rawValue!.reverseIdentityIndexOf(node, end);
+      final index = replyTree.value!.reverseIdentityIndexOf(node, end);
       if (index != -1) {
         this.index.value = index;
         jumpToItem(index);
@@ -357,10 +357,10 @@ class VideoReplyReplyController extends ReplyController
   Future<void> onReplyByTreeNode(int index, ReplyInfo replyItem) async {
     if (await _sendReply(replyItem) case final replyInfo?) {
       replyTree
-        ..rawValue!.appendLeaf(replyInfo, index)
+        ..value!.appendLeaf(replyInfo, index)
         ..refresh();
 
-      final data = loadingState.rawValue.dataOrNull;
+      final data = loadingState.value.dataOrNull;
       if (data != null) {
         final index = data.reverseIdentityIndexOf(replyItem);
         data.insert(index + 1, replyInfo);
@@ -370,10 +370,10 @@ class VideoReplyReplyController extends ReplyController
 
   void onRemoveByTreeNode(int index, ReplyInfo replyItem) {
     replyTree
-      ..rawValue!.remove(index)
+      ..value!.remove(index)
       ..refresh();
 
-    final data = loadingState.rawValue.dataOrNull;
+    final data = loadingState.value.dataOrNull;
     if (data != null) {
       final index = data.reverseIdentityIndexOf(replyItem);
       onRemove(index, replyItem, null);

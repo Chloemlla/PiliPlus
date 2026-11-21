@@ -263,7 +263,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
             IconButton(
               visualDensity: .compact,
               onPressed: () {
-                if (controller.replyTree.rawValue != null) {
+                if (controller.replyTree.value != null) {
                   controller
                     ..showReplyTree = !controller.showReplyTree
                     ..replyTree.refresh();
@@ -279,7 +279,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
                     controller.nextReplyRound();
                     return;
                   }
-                  final count = controller.count.rawValue;
+                  final count = controller.count.value;
                   if (count != -1) {
                     final total = (count / 20).ceil();
                     final remain = total - (controller.page - 1);

@@ -666,7 +666,6 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage>
                       CachedNetworkImage(
                         height: height,
                         width: contentWidth,
-                        gaplessPlayback: true,
                         memCacheWidth: memCacheWidth,
                         memCacheHeight: memCacheHeight,
                         fit: pic.isLongPic == true ? BoxFit.cover : null,
