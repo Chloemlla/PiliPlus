@@ -25,7 +25,6 @@ import 'package:pili_plus/common/widgets/image_grid/image_grid_builder.dart';
 import 'package:pili_plus/common/widgets/image_viewer/gallery_viewer.dart';
 import 'package:pili_plus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
@@ -96,7 +95,7 @@ class ImageGridView extends StatelessWidget {
     if (horizontalPreview &&
         !fullScreen &&
         Get.currentRoute.startsWith(_regex) &&
-        !context.mediaQuerySize.isPortrait) {
+        !MediaQuery.isPortraitOf(context)) {
       final scaffoldState = MiniScaffold.maybeOf(context);
       if (scaffoldState != null) {
         onViewImage?.call();

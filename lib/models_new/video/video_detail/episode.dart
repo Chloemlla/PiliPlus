@@ -1,3 +1,6 @@
+import 'package:pili_plus/models/common/badge_type.dart';
+import 'package:pili_plus/models/common/episode_panel_type.dart';
+import 'package:pili_plus/models/common/pgc_episode_type.dart';
 import 'package:pili_plus/models_new/video/video_detail/arc.dart';
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 
@@ -155,6 +158,10 @@ class EpisodePlaybackFlags {
     return value is String ? int.tryParse(value.trim()) : null;
   }
 }
+typedef ShowEpisodes = void Function({
+  required EpisodeType? type,
+  PgcEpisodeType? episodeType,
+});
 
 class BaseEpisodeItem {
   int? id;
@@ -169,6 +176,12 @@ class BaseEpisodeItem {
   bool isChargingPurchased;
 
   bool get shouldSkipForAutoPlay => isCharging && !isChargingPurchased;
+
+  PBadgeType get badgeType => switch (badge) {
+    '预告' => .gray,
+    '限免' => .free,
+    _ => .primary,
+  };
 
   BaseEpisodeItem({
     this.id,

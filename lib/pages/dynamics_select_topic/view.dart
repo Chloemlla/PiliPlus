@@ -8,7 +8,6 @@ import 'package:pili_plus/models_new/dynamic/dyn_topic_top/topic_item.dart';
 import 'package:pili_plus/pages/dynamics_select_topic/controller.dart';
 import 'package:pili_plus/pages/dynamics_select_topic/widgets/item.dart';
 import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState;
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -33,7 +32,7 @@ class SelectTopicPanel extends StatefulWidget {
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: min(600, context.mediaQueryShortestSide),
+        maxWidth: min(600, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) => DraggableScrollableSheet(
         expand: false,

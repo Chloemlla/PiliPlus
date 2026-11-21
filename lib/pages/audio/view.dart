@@ -26,9 +26,7 @@ import 'package:pili_plus/plugin/pl_player/models/play_repeat.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/num_utils.dart';
@@ -85,18 +83,21 @@ class _AudioPageState extends State<AudioPage> {
     AudioController(),
     tag: Utils.generateRandomString(8),
   );
+  late bool isPortrait;
+  late ColorScheme colorScheme;
+  late EdgeInsets padding;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _controller.didChangeDependencies(context);
+    colorScheme = ColorScheme.of(context);
+    isPortrait = MediaQuery.isPortraitOf(context);
+    padding = MediaQuery.viewPaddingOf(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.of(context);
-    final isPortrait = MediaQuery.sizeOf(context).isPortrait;
-    final padding = MediaQuery.viewPaddingOf(context);
     return SimpleScaffold(
       appBar: AppBar(
         actions: [
@@ -247,7 +248,7 @@ class _AudioPageState extends State<AudioPage> {
         useSafeArea: true,
         isScrollControlled: true,
         constraints: BoxConstraints(
-          maxWidth: min(640, context.mediaQueryShortestSide),
+          maxWidth: min(640, MediaQuery.shortestSideOf(context)),
         ),
         builder: (context) {
           final colorScheme = ColorScheme.of(context);
@@ -432,7 +433,7 @@ class _AudioPageState extends State<AudioPage> {
           }
           return FractionallySizedBox(
             heightFactor:
-                PlatformUtils.isMobile && !context.mediaQuerySize.isPortrait
+                PlatformUtils.isMobile && !MediaQuery.isPortraitOf(context)
                 ? 1.0
                 : 0.7,
             alignment: Alignment.bottomCenter,
@@ -496,7 +497,7 @@ class _AudioPageState extends State<AudioPage> {
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxWidth: min(640, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) {
         final colorScheme = ColorScheme.of(context);
@@ -631,7 +632,7 @@ class _AudioPageState extends State<AudioPage> {
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxWidth: min(640, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) {
         final colorScheme = ColorScheme.of(context);
@@ -781,7 +782,7 @@ class _AudioPageState extends State<AudioPage> {
             ActionItem(
               icon: const Icon(FontAwesomeIcons.circlePlay),
               onTap: () {
-                _controller.player?.pause();
+                _controller.onPause();
                 PageUtils.toVideoPage(
                   cid: audioItem.associatedItem.subId.first.toInt(),
                   aid: audioItem.associatedItem.oid.toInt(),
@@ -988,7 +989,7 @@ class _AudioPageState extends State<AudioPage> {
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
-                          _controller.player?.pause();
+                          _controller.onPause();
                           Get.toNamed('/member?mid=${audioItem.owner.mid}');
                         },
                         child: Row(

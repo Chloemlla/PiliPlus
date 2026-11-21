@@ -27,8 +27,6 @@ import 'package:pili_plus/pages/fav_detail/controller.dart'
 import 'package:pili_plus/pages/group_panel/view.dart';
 import 'package:pili_plus/pages/login/geetest/geetest_webview_dialog.dart';
 import 'package:pili_plus/utils/accounts.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
@@ -198,12 +196,12 @@ abstract final class RequestUtils {
                     useSafeArea: true,
                     isScrollControlled: true,
                     constraints: BoxConstraints(
-                      maxWidth: min(640, context.mediaQueryShortestSide),
+                      maxWidth: min(640, MediaQuery.shortestSideOf(context)),
                     ),
                     builder: (BuildContext context) {
                       final maxChildSize =
                           PlatformUtils.isMobile &&
-                              !context.mediaQuerySize.isPortrait
+                              !MediaQuery.isPortraitOf(context)
                           ? 1.0
                           : 0.7;
                       return DraggableScrollableSheet(

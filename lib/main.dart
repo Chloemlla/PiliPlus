@@ -31,8 +31,8 @@ import 'package:pili_plus/services/service_locator.dart';
 import 'package:pili_plus/services/whats_new_guide_service.dart';
 import 'package:pili_plus/services/synapse_sync_service.dart';
 import 'package:pili_plus/utils/cache_manager.dart';
-import 'package:pili_plus/utils/calc_window_position.dart';
 import 'package:pili_plus/utils/date_utils.dart';
+import 'package:pili_plus/utils/desktop/calc_window_position.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/extension/core_palettes_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
@@ -64,7 +64,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
-import 'package:window_manager/window_manager.dart' hide calcWindowPosition;
+import 'package:window_manager/window_manager.dart';
 
 WebViewEnvironment? webViewEnvironment;
 
@@ -113,7 +113,7 @@ Future<void> _initAppPath() async {
 /// network or Synapse server cannot delay the first frame (black screen) or
 /// trip the Android launch/foreground-service timeouts.
 Future<void> _initDeferredStartup() async {
-  if (PlatformUtils.isMobile || Platform.isMacOS) {
+  if (PlatformUtils.isMobile || Platform.isMacOS || Platform.isLinux) {
     try {
       await setupServiceLocator();
     } catch (e, s) {
@@ -300,24 +300,6 @@ Future<void> _main() async {
     } else {
       ScreenBrightnessPlatform.instance.setAutoReset(false);
     }
-  } else if (PlatformUtils.isDesktop) {
-    await windowManager.ensureInitialized();
-
-    final windowOptions = WindowOptions(
-      minimumSize: const Size(400, 720),
-      skipTaskbar: false,
-      titleBarStyle: Pref.showWindowTitleBar ? .normal : .hidden,
-      title: Constants.appName,
-    );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      final windowSize = Pref.windowSize;
-      await windowManager.setBounds(
-        await calcWindowPosition(windowSize) & windowSize,
-      );
-      if (Pref.isWindowMaximized) await windowManager.maximize();
-      await windowManager.show();
-      await windowManager.focus();
-    });
   }
 
   if (Pref.dynamicColor) {
@@ -346,6 +328,35 @@ Future<void> _main() async {
     CrashReporter.install(force: true);
   } else {
     runApp(MyApp(startupCrashReport: startupCrashReport));
+  }
+
+  if (PlatformUtils.isDesktop) {
+    final window = WindowManager.instance.getCurrent();
+    if (window != null) {
+      final showTitleBar = Pref.showWindowTitleBar;
+      // macOS 隐藏标题栏时改用 contentUnderTitleBar，保持窗口可拖动
+      final useContentUnderTitleBar = Platform.isMacOS && !showTitleBar;
+      window
+        ..titleBarStyle = useContentUnderTitleBar || showTitleBar
+            ? .normal
+            : .hidden
+        ..isWindowControlButtonsVisible = true
+        ..bounds = calcWindowBounds()
+        ..minimumSize = DeviceUtils.desktopMinSize
+        ..isVisibleInTaskbar = true
+        ..title = Constants.appName;
+      if (useContentUnderTitleBar) window.setContentUnderTitleBar(true);
+      if (Pref.isWindowMaximized) window.maximize();
+      void show([_]) => window
+        ..focus()
+        ..show();
+      switch (WidgetsBinding.instance.schedulerPhase) {
+        case .idle || .postFrameCallbacks:
+          WidgetsBinding.instance.scheduleFrameCallback(show);
+        case .transientCallbacks || .midFrameMicrotasks || .persistentCallbacks:
+          WidgetsBinding.instance.addPostFrameCallback(show);
+      }
+    }
   }
 }
 

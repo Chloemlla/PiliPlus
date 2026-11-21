@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/image/network_img_layer.dart';
-import 'package:pili_plus/models/common/badge_type.dart';
-import 'package:pili_plus/models/common/video/video_quality.dart';
 import 'package:pili_plus/models_new/download/bili_download_entry_info.dart';
 import 'package:pili_plus/pages/video/introduction/local/controller.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
@@ -113,15 +111,9 @@ class _LocalIntroPanelState extends State<LocalIntroPanel>
                         ),
                         right: 6.0,
                         bottom: 6.0,
-                        type: PBadgeType.gray,
+                        type: .gray,
                       ),
-                      if (entry.videoQuality case final videoQuality?)
-                        PBadge(
-                          text: VideoQuality.fromCode(videoQuality).shortDesc,
-                          right: 6.0,
-                          top: 6.0,
-                          type: PBadgeType.gray,
-                        ),
+                      entry.qaBadge,
                     ],
                   ),
                   Expanded(

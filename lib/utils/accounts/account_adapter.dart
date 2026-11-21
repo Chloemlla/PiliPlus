@@ -15,21 +15,30 @@ class LoginAccountAdapter extends TypeAdapter<LoginAccount> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     final type = (fields[3] as List?)?.cast<AccountType>().toSet();
-    if (fields[4] case final String secretKey) {
+    // Legacy records held 2 fields and kept the secret-store key in slot 4;
+    // current records store `buvid` in slot 4 and the secret key in slot 5.
+    final bool legacy = numOfFields <= 2;
+    final String? buvid = legacy ? null : fields[4] as String?;
+    final String? secretKey = legacy
+        ? fields[4] as String?
+        : fields[5] as String?;
+    if (secretKey != null) {
       final secret = AccountSecretStore.read(secretKey);
       return LoginAccount(
         BiliCookieJar.fromJson(secret?.cookies ?? const {}),
         secret?.accessKey,
         secret?.refresh,
         type,
+        buvid,
       );
     }
 
     final account = LoginAccount(
-      fields[0] as DefaultCookieJar,
+      fields[0] as DefaultCookieJar? ?? DefaultCookieJar(),
       fields[1] as String?,
       fields[2] as String?,
       type,
+      buvid,
     );
     if (account.shouldKeep) {
       account.persistSecret();
@@ -40,11 +49,13 @@ class LoginAccountAdapter extends TypeAdapter<LoginAccount> {
   @override
   void write(BinaryWriter writer, LoginAccount obj) {
     writer
-      ..writeByte(2)
-      ..writeByte(4)
-      ..write(obj.secretKey)
       ..writeByte(3)
-      ..write(obj.type.toList());
+      ..writeByte(3)
+      ..write(obj.type.toList())
+      ..writeByte(4)
+      ..write(obj.buvid)
+      ..writeByte(5)
+      ..write(obj.secretKey);
   }
 
   @override

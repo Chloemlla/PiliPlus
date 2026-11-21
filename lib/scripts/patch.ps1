@@ -4,6 +4,12 @@ param(
 
 $RepositoryRootPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
 
+# Keep git operations inside the SDK checkout from needing a global identity.
+$env:GIT_AUTHOR_NAME = "ci"
+$env:GIT_AUTHOR_EMAIL = "example@example.com"
+$env:GIT_COMMITTER_NAME = "ci"
+$env:GIT_COMMITTER_EMAIL = "example@example.com"
+
 $CanvasDanmakuRef = "697d4516df2fc3ba7417c7ce9aba079d34ba13e5"
 $CanvasDanmakuPatch = Join-Path $PSScriptRoot "canvas_danmaku_stroke_color.patch"
 
@@ -91,6 +97,8 @@ $TextPainterPatch = "lib/scripts/text_painter.patch"
 $SliverPatch = "lib/scripts/sliver.patch"
 
 $RefreshIndicatorPatch = "lib/scripts/refresh_indicator.patch"
+
+$MediaQueryPatch = "lib/scripts/media_query.patch"
 
 # TODO: remove
 # https://github.com/flutter/flutter/issues/124078

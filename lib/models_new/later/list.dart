@@ -1,9 +1,14 @@
+import 'package:pili_plus/common/widgets/badge.dart';
+import 'package:pili_plus/common/widgets/progress_bar/video_progress_indicator.dart';
 import 'package:pili_plus/models/model_owner.dart';
 import 'package:pili_plus/models_new/later/bangumi.dart';
 import 'package:pili_plus/models_new/later/rights.dart';
 import 'package:pili_plus/models_new/later/stat.dart';
 import 'package:pili_plus/models_new/video/video_detail/dimension.dart';
 import 'package:pili_plus/pages/common/multi_select/base.dart';
+import 'package:pili_plus/utils/duration_utils.dart';
+import 'package:flutter/material.dart'
+    show ColorScheme, Widget, Positioned;
 
 class LaterItemModel with MultiSelectData {
   int? aid;
@@ -25,6 +30,63 @@ class LaterItemModel with MultiSelectData {
   bool? isPugv;
   bool? isCharging;
   Dimension? dimension;
+
+  Widget? get label => isCharging == true
+      ? const PBadge(
+          text: '充电专属',
+          top: 6.0,
+          right: 6.0,
+          type: .error,
+        )
+      : rights?.isCooperation == 1
+      ? const PBadge(
+          text: '合作',
+          top: 6.0,
+          right: 6.0,
+        )
+      : pgcLabel != null
+      ? PBadge(
+          text: pgcLabel,
+          top: 6.0,
+          right: 6.0,
+        )
+      : isPugv == true
+      ? const PBadge(
+          text: '课堂',
+          top: 6.0,
+          right: 6.0,
+        )
+      : null;
+
+  Iterable<Widget> progressIndicator(ColorScheme colorScheme) sync* {
+    if (progress != null && progress != 0) {
+      yield PBadge(
+        text: progress == -1
+            ? '已看完'
+            : '${DurationUtils.formatDuration(progress)}/${DurationUtils.formatDuration(duration)}',
+        right: 6,
+        bottom: 8,
+        type: .gray,
+      );
+      yield Positioned(
+        left: 0,
+        bottom: 0,
+        right: 0,
+        child: VideoProgressIndicator(
+          color: colorScheme.primary,
+          backgroundColor: colorScheme.secondaryContainer,
+          progress: progress == -1 ? 1 : progress! / duration!,
+        ),
+      );
+    } else if (duration! > 0) {
+      yield PBadge(
+        text: DurationUtils.formatDuration(duration),
+        right: 6.0,
+        bottom: 6.0,
+        type: .gray,
+      );
+    }
+  }
 
   LaterItemModel({
     this.aid,

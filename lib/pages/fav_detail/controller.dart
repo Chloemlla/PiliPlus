@@ -11,7 +11,7 @@ import 'package:pili_plus/models_new/fav/fav_folder/list.dart';
 import 'package:pili_plus/pages/common/common_list_controller.dart';
 import 'package:pili_plus/pages/common/multi_select/base.dart';
 import 'package:pili_plus/pages/common/multi_select/multi_select_controller.dart';
-import 'package:pili_plus/pages/common/page_order_mixin.dart';
+import 'package:pili_plus/pages/common/page_order/page_order_mixin.dart';
 import 'package:pili_plus/pages/fav_sort/view.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
@@ -139,7 +139,7 @@ class FavDetailController
   }
 
   @override
-  bool? get hasFooter => true;
+  bool get hasFooter => true;
 
   @override
   List<FavDetailItemModel>? getDataList(FavDetailData response) {
@@ -149,9 +149,6 @@ class FavDetailController
       }
     } else if (response.hasMore == false) {
       isEnd = true;
-    }
-    if (pageDesc) {
-      return response.medias?.reversed.toList();
     }
     return response.medias;
   }
@@ -186,6 +183,7 @@ class FavDetailController
         ps: _ps,
         mediaId: mediaId,
         order: order.value,
+        pageDesc: pageDesc,
       );
 
   void toViewPlayAll() {

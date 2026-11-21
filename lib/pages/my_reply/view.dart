@@ -1,13 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
 import 'package:pili_plus/common/widgets/dialog/export_import.dart';
 import 'package:pili_plus/common/widgets/loading_widget/http_error.dart';
 import 'package:pili_plus/common/widgets/view_sliver_safe_area.dart';
 import 'package:pili_plus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
+import 'package:pili_plus/pages/article/view.dart';
 import 'package:pili_plus/pages/my_reply/controller.dart';
 import 'package:pili_plus/pages/my_reply/sort_page.dart';
 import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
+import 'package:pili_plus/pages/video/reply_reply/view.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
+import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/reply_utils.dart';
@@ -24,6 +29,12 @@ class MyReply extends StatefulWidget {
 
   @override
   State<MyReply> createState() => _MyReplyState();
+
+  static Map<String, Uint8List> json2ReplyProto(List<dynamic> list) => {
+    for (var e in list)
+      e['id'].toString(): (ReplyInfo.create()..mergeFromProto3Json(e))
+          .writeToBuffer(),
+  };
 }
 
 class _MyReplyState extends State<MyReply> with DynMixin {
@@ -65,6 +76,26 @@ class _MyReplyState extends State<MyReply> with DynMixin {
             onPressed: _controller.count == 0 ? null : _clearFavorites,
             icon: const Icon(Icons.delete_sweep_outlined),
           ),
+          if (kDebugMode) ...[
+            IconButton(
+              tooltip: 'Clear',
+              onPressed: () => showConfirmDialog(
+                context: context,
+                title: const Text('Clear Local Storage?'),
+                onConfirm: () {
+                  GStorage.reply!.clear();
+                  _replies.clear();
+                  setState(() {});
+                },
+              ),
+              icon: const Icon(Icons.clear_all),
+            ),
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: () => setState(_initReply),
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
           IconButton(
             tooltip: '导出',
             onPressed: _showExportDialog,
@@ -113,25 +144,47 @@ class _MyReplyState extends State<MyReply> with DynMixin {
   }
 
   void _replyReply(ReplyInfo replyInfo, int? rpid) {
-    switch (replyInfo.type.toInt()) {
+    int? rootRpId, secondRpId;
+    final id = replyInfo.id.toInt();
+    if (replyInfo.hasRoot()) {
+      rootRpId = replyInfo.root.toInt();
+      secondRpId = id;
+    } else {
+      rootRpId = id;
+    }
+    final type = replyInfo.type.toInt();
+    switch (type) {
       case 1:
         PiliScheme.videoPush(
           replyInfo.oid.toInt(),
           null,
+          rootRpId: rootRpId,
+          secondRpId: secondRpId,
         );
       case 12:
-        PageUtils.toDupNamed(
-          '/articlePage',
-          parameters: {
-            'id': replyInfo.oid.toString(),
-            'type': 'read',
-          },
+        ArticlePage.toArticlePage(
+          id: replyInfo.oid.toString(),
+          type: .read,
+          rootRpId: rootRpId,
+          secondRpId: secondRpId,
         );
       case _:
-        PageUtils.pushDynFromId(
-          rid: replyInfo.oid.toString(),
-          type: replyInfo.type,
-        );
+        if (BiliUtils.isDynOrArticle(type)) {
+          PageUtils.pushDynFromId(
+            rid: replyInfo.oid.toString(),
+            type: type,
+            rootRpId: rootRpId,
+            secondRpId: secondRpId,
+          );
+        } else {
+          // TODO:
+          VideoReplyReplyPanel.toReply(
+            oid: replyInfo.oid.toInt(),
+            rootId: rootRpId,
+            rpId: secondRpId,
+            type: type,
+          );
+        }
     }
   }
 

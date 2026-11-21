@@ -7,7 +7,6 @@ import 'package:pili_plus/utils/extension/box_ext.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/font_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
@@ -64,7 +63,7 @@ class _FontSettingPageState extends State<FontSettingPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     colorScheme = ColorScheme.of(context);
-    isPortrait = MediaQuery.sizeOf(context).isPortrait;
+    isPortrait = MediaQuery.isPortraitOf(context);
     scrollController = PrimaryScrollController.of(context);
   }
 

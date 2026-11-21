@@ -13,6 +13,7 @@ import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_type.dart';
 import 'package:pili_plus/models/common/pgc_review_type.dart';
 import 'package:pili_plus/models_new/pgc/pgc_review/list.dart';
+import 'package:pili_plus/pages/article/view.dart';
 import 'package:pili_plus/pages/pgc_review/child/controller.dart';
 import 'package:pili_plus/pages/pgc_review/post/view.dart';
 import 'package:pili_plus/utils/accounts.dart';
@@ -186,12 +187,9 @@ class _PgcReviewChildPageState extends State<PgcReviewChildPage>
       type: MaterialType.transparency,
       child: InkWell(
         onTap: isLongReview
-            ? () => Get.toNamed(
-                '/articlePage',
-                parameters: {
-                  'id': item.articleId!.toString(),
-                  'type': 'read',
-                },
+            ? () => ArticlePage.toArticlePage(
+                id: item.articleId!.toString(),
+                type: .read,
               )
             : null,
         onLongPress: !isLongReview ? showMore : null,

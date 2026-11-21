@@ -8,7 +8,6 @@ import 'package:pili_plus/pages/home/home_tab_factory.dart';
 import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/pages/mine/controller.dart';
 import 'package:pili_plus/utils/extension/get_ext.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -78,8 +77,7 @@ class _HomePageState extends CommonPageState<HomePage>
     }
     return Column(
       children: [
-        if (!_mainController.useSideBar &&
-            MediaQuery.sizeOf(context).isPortrait)
+        if (!_mainController.useSideBar && MediaQuery.isPortraitOf(context))
           customAppBar(),
         tabBar,
         Expanded(

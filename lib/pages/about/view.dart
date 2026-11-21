@@ -21,7 +21,6 @@ import 'package:pili_plus/utils/cache_manager.dart';
 import 'package:pili_plus/utils/date_utils.dart';
 import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
-import 'package:pili_plus/utils/login_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
 import 'package:pili_plus/utils/storage.dart';
@@ -263,7 +262,7 @@ Commit Hash: ${BuildConfig.commitHash}''',
           ListTile(
             title: const Text('导入/导出登录信息'),
             leading: const Icon(Icons.import_export_outlined),
-            onTap: () => showImportExportDialog<Map>(
+            onTap: () => showImportExportDialog<Map<String, dynamic>>(
               context,
               title: '登录信息',
               localFileName: () => 'account',
@@ -339,6 +338,12 @@ Commit Hash: ${BuildConfig.commitHash}''',
                 },
               );
             },
+          ),
+          ListTile(
+            title: const Text('导入/导出所有数据'),
+            dense: false,
+            leading: const Icon(Icons.archive_outlined),
+            onTap: () => showDataImportExportDialog(context),
           ),
           ListTile(
             title: const Text('重置所有设置'),

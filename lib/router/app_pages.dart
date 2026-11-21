@@ -18,6 +18,7 @@ import 'package:pili_plus/pages/dynamics_detail/view.dart';
 import 'package:pili_plus/pages/dynamics_topic/view.dart';
 import 'package:pili_plus/pages/dynamics_topic_rcmd/view.dart';
 import 'package:pili_plus/pages/fan/view.dart';
+import 'package:pili_plus/pages/fans_medal/view.dart';
 import 'package:pili_plus/pages/fav/view.dart';
 import 'package:pili_plus/pages/fav_create/view.dart';
 import 'package:pili_plus/pages/fav_detail/view.dart';
@@ -208,5 +209,6 @@ class Routes {
     GetPage(name: '/legalInfo', page: () => const LegalInfoPage()),
     GetPage(name: '/appPermissions', page: () => const AppPermissionsPage()),
     GetPage(name: '/withdrawConsent', page: () => const WithdrawConsentPage()),
+    GetPage(name: '/fansMedal', page: () => const FansMedalPage()),
   ];
 }

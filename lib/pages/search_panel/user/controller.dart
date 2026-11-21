@@ -4,7 +4,6 @@ import 'package:pili_plus/models/common/search/user_search_type.dart';
 import 'package:pili_plus/models/search/result.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/pages/search_panel/controller.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -29,7 +28,7 @@ class SearchUserController
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: min(640, context.mediaQueryShortestSide),
+        maxWidth: min(640, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) {
         final theme = Theme.of(context);

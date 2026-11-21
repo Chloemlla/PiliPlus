@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:pili_plus/common/widgets/badge.dart';
 import 'package:pili_plus/common/widgets/button/icon_button.dart';
 import 'package:pili_plus/common/widgets/dialog/dialog.dart';
@@ -48,21 +50,35 @@ class MediaListPanel extends CommonSlidePage {
 }
 
 class _MediaListPanelState extends State<MediaListPanel>
-    with SingleTickerProviderStateMixin, CommonSlideMixin {
-  late final ScrollController _controller;
+    with SingleTickerProviderStateMixin, CommonSlideMixin, ScrollOffsetMixin {
+  @override
+  final scrollController = ScrollController();
+  @override
+  late final int itemIndex;
+  @override
+  int get itemCount => widget.mediaList.length;
 
   @override
   void initState() {
     super.initState();
     final bvid = widget.bvid;
-    final bvIndex = widget.mediaList.indexWhere((item) => item.bvid == bvid);
-    _controller = ScrollController(
-      initialScrollOffset: bvIndex <= 0 ? 0 : bvIndex * 112.0 + 7,
+    itemIndex = max(
+      0,
+      widget.mediaList.indexWhere((item) => item.bvid == bvid),
     );
+    if (itemIndex > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(jumpToCurrent);
+    }
   }
 
   @override
-  Widget buildPage(ThemeData theme) {
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget buildPage() {
     return Material(
       color: theme.colorScheme.surface,
       child: Column(
@@ -106,26 +122,26 @@ class _MediaListPanelState extends State<MediaListPanel>
               ],
             ),
           ),
-          Expanded(child: enableSlide ? slideList(theme) : buildList(theme)),
+          Expanded(child: enableSlide ? slideList() : buildList()),
         ],
       ),
     );
   }
 
   @override
-  Widget buildList(ThemeData theme) {
+  Widget buildList() {
     return widget.loadPrevious != null
         ? refreshIndicator(
             onRefresh: widget.loadPrevious!,
-            child: _buildList(theme),
+            child: _buildList(),
           )
-        : _buildList(theme);
+        : _buildList();
   }
 
-  Widget _buildList(ThemeData theme) {
+  Widget _buildList() {
     final showDelBtn = widget.onDelete != null && widget.mediaList.length > 1;
     return CustomScrollView(
-      controller: _controller,
+      controller: scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -145,7 +161,7 @@ class _MediaListPanelState extends State<MediaListPanel>
                 }
                 final item = widget.mediaList[index];
                 final isCurr = item.bvid == widget.bvid;
-                return _buildItem(theme, index, item, isCurr, showDelBtn);
+                return _buildItem(index, item, isCurr, showDelBtn);
               },
             ),
           ),
@@ -155,7 +171,6 @@ class _MediaListPanelState extends State<MediaListPanel>
   }
 
   Widget _buildItem(
-    ThemeData theme,
     int index,
     MediaListItemModel item,
     bool isCurr,

@@ -1,10 +1,15 @@
 import 'package:pili_plus/common/constants.dart';
+import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
 import 'package:pili_plus/utils/accounts/grpc_headers.dart';
 import 'package:pili_plus/utils/id_utils.dart';
+import 'package:pili_plus/utils/storage.dart';
+import 'package:pili_plus/utils/storage_key.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:dio/dio.dart' show Options;
 import 'package:hive_ce/hive.dart';
 
 sealed class Account {
@@ -36,6 +41,9 @@ sealed class Account {
 
   String? get refresh => throw UnimplementedError();
 
+  set buvid(String value) => throw UnimplementedError();
+  String get buvid => throw UnimplementedError();
+
   const Account();
 }
 
@@ -56,6 +64,18 @@ class LoginAccount extends Account {
   @HiveField(3)
   final Set<AccountType> type;
 
+  late String _buvid = AnonymousAccount()._buvid;
+  @override
+  @HiveField(4)
+  String get buvid => _buvid;
+  @override
+  set buvid(String value) {
+    if (_buvid == value) return;
+    _buvid = value;
+    grpcHeaders.addAll(GrpcHeaders.newHeaders(this));
+    onChange();
+  }
+
   @override
   bool activated = false;
 
@@ -70,9 +90,7 @@ class LoginAccount extends Account {
   };
 
   @override
-  late final Map<String, String> grpcHeaders = GrpcHeaders.newHeaders(
-    accessKey,
-  );
+  late final Map<String, String> grpcHeaders = GrpcHeaders.newHeaders(this);
 
   @override
   late final String csrf = _cookieValue('bili_jct') ?? '';
@@ -114,6 +132,7 @@ class LoginAccount extends Account {
     'cookies': cookieJar.toJson(),
     'accessKey': accessKey,
     'refresh': refresh,
+    'buvid': buvid,
     'type': type.map((i) => i.index).toList(),
   };
 
@@ -126,7 +145,9 @@ class LoginAccount extends Account {
     this.accessKey,
     this.refresh, [
     Set<AccountType>? type,
+    String? buvid,
   ]) : type = type ?? {} {
+    if (buvid != null) _buvid = buvid;
     cookieJar.setBuvid3();
   }
 
@@ -141,6 +162,7 @@ class LoginAccount extends Account {
     json['accessKey'],
     json['refresh'],
     (json['type'] as Iterable?)?.map((i) => AccountType.values[i]).toSet(),
+    json['buvid'],
   );
 
   @override
@@ -155,7 +177,7 @@ class AnonymousAccount extends Account {
   @override
   final bool isLogin = false;
   @override
-  final DefaultCookieJar cookieJar = DefaultCookieJar()..setBuvid3();
+  final DefaultCookieJar cookieJar = DefaultCookieJar();
   @override
   final String? accessKey = null;
   @override
@@ -170,20 +192,65 @@ class AnonymousAccount extends Account {
   final Map<String, String> headers = Constants.baseHeaders;
 
   @override
-  final Map<String, String> grpcHeaders = GrpcHeaders.newHeaders();
+  late final Map<String, String> grpcHeaders = GrpcHeaders.newHeaders(this);
 
   @override
-  bool activated = false;
+  bool activated = true;
+
+  late String _buvid = Pref.buvid;
+  @override
+  String get buvid => _buvid;
+  @override
+  set buvid(String value) {
+    if (_buvid == value) return;
+    _buvid = value;
+    grpcHeaders.addAll(GrpcHeaders.newHeaders(this));
+    GStorage.setting.put(SettingBoxKey.buvid, value);
+  }
 
   @override
   Future<void> delete() {
     grpcHeaders['x-bili-fawkes-req-bin'] = GrpcHeaders.fawkes;
-    return cookieJar.deleteAll().whenComplete(cookieJar.setBuvid3);
+    return cookieJar.deleteAll().whenComplete(_getBuvid);
   }
 
   static final _instance = AnonymousAccount._();
 
-  AnonymousAccount._();
+  AnonymousAccount._() {
+    _getBuvid();
+  }
+
+  Future<void> _getBuvid() async {
+    try {
+      final res = await Request().get(
+        '/x/frontend/finger/spi',
+        options: Options(extra: {'account': const NoAccount()}),
+      );
+      final resData = res.data;
+      if (resData['code'] == 0) {
+        final data = resData['data'];
+        final String b3 = data['b_3'];
+        final String b4 = data['b_4'];
+        final bnut = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+        (cookieJar.domainCookies['bilibili.com'] ??= {
+            '/': {},
+          })['/']!
+          ..['buvid3'] = SerializableCookie(
+            Cookie('buvid3', b3)..setBiliDomain(),
+          )
+          ..['b_nut'] = SerializableCookie(
+            Cookie('b_nut', bnut)..setBiliDomain(),
+          )
+          ..['buvid4'] = SerializableCookie(
+            Cookie('buvid4', b4)..setBiliDomain(),
+          );
+      } else {
+        throw resData;
+      }
+    } catch (_) {
+      cookieJar.setBuvid3();
+    }
+  }
 
   factory AnonymousAccount() => _instance;
 

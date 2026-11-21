@@ -1,6 +1,8 @@
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/utils/accounts/account.dart';
 import 'package:pili_plus/utils/accounts/account_secret_store.dart';
+import 'package:pili_plus/utils/login_utils.dart';
+import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:hive_ce/hive.dart';
 
 typedef AccountActivator = Future<void> Function(Account account);
@@ -16,7 +18,8 @@ abstract final class Accounts {
     AccountType.values.length,
     AnonymousAccount(),
   );
-  static bool get mainEqVideo => main == video;
+  static bool get isMainVip => Pref.userInfoCache?.vipStatus == 1;
+  static bool get isVideoVip => main == video ? isMainVip : true;
   static Account get main => accountMode[AccountType.main.index];
   static Account get video => accountMode[AccountType.video.index];
   static Account get heartbeat => accountMode[AccountType.heartbeat.index];
@@ -184,6 +187,18 @@ abstract final class Accounts {
   @pragma("vm:prefer-inline")
   static Account get(AccountType key) {
     return accountMode[key.index];
+  }
+
+  static Future<void> importJsonAccount(Map<String, dynamic> json) async {
+    final res = json.map(
+      (key, value) => MapEntry(key, LoginAccount.fromJson(value)),
+    );
+    await Accounts.account.putAll(res);
+    await Accounts.refresh();
+    MineController.anonymity.value = !Accounts.heartbeat.isLogin;
+    if (Accounts.main.isLogin) {
+      await LoginUtils.onLoginMain();
+    }
   }
 }
 

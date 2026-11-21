@@ -1,8 +1,10 @@
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/video.dart';
+import 'package:pili_plus/pages/common/common_controller.dart'
+    show RefreshImplMixin;
 import 'package:pili_plus/pages/common/common_list_controller.dart';
 
-class ZoneController extends CommonListController {
+class ZoneController extends CommonListController with RefreshImplMixin {
   ZoneController({this.rid, this.seasonType});
 
   int? rid;

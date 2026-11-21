@@ -12,7 +12,6 @@ import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/dynamics_mention/controller.dart';
 import 'package:pili_plus/pages/dynamics_mention/widgets/item.dart';
 import 'package:pili_plus/pages/search/controller.dart' show DebounceStreamState;
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:get/get.dart';
@@ -41,7 +40,7 @@ class DynMentionPanel extends StatefulWidget {
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: min(600, context.mediaQueryShortestSide),
+        maxWidth: min(600, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) => DraggableScrollableSheet(
         expand: false,

@@ -14,7 +14,6 @@ import 'package:pili_plus/utils/log_redactor.dart';
 import 'package:pili_plus/utils/clash_compat.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:pili_plus/utils/utils.dart';
-import 'package:archive/archive.dart';
 import 'package:brotli/brotli.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
@@ -24,8 +23,8 @@ import 'package:flutter/foundation.dart'
     show debugPrint, kDebugMode, listEquals;
 
 class Request {
-  static const _gzipDecoder = GZipDecoder();
-  static const _brotliDecoder = BrotliDecoder();
+  static final gzip = ZLibDecoder(gzip: true);
+  static const brotli = BrotliDecoder();
 
   static final Request _instance = Request._internal();
   static late AccountManager accountManager;
@@ -377,6 +376,32 @@ class Request {
     }
   }
 
+  Future<Response> request<T>(
+    String url, {
+    Map<String, dynamic>? queryParameters,
+    Object? data,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await dio.request<T>(
+        url,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      return Response(
+        data: {
+          'message': await AccountManager.dioError(e),
+        }, // 将自定义 Map 数据赋值给 Response 的 data 属性
+        statusCode: e.response?.statusCode ?? -1,
+        requestOptions: e.requestOptions,
+      );
+    }
+  }
+
   /*
    * 下载文件
    */
@@ -410,8 +435,8 @@ class Request {
     List<int> responseBytes,
     Map<String, List<String>> headers,
   ) => switch (headers['content-encoding']?.firstOrNull) {
-    'gzip' => _gzipDecoder.decodeBytes(responseBytes),
-    'br' => _brotliDecoder.convert(responseBytes),
+    'gzip' => gzip.convert(responseBytes),
+    'br' => brotli.convert(responseBytes),
     _ => responseBytes,
   };
 

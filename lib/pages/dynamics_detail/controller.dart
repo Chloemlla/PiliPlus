@@ -7,11 +7,18 @@ import 'package:pili_plus/http/reply.dart';
 import 'package:pili_plus/models/dynamics/result.dart';
 import 'package:pili_plus/models_new/dynamic/dyn_mention/item.dart';
 import 'package:pili_plus/pages/common/dyn/common_dyn_controller.dart';
+import 'package:pili_plus/pages/common/reply/reply_controller.dart';
 import 'package:pili_plus/utils/id_utils.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
-class DynamicDetailController extends CommonDynController with ReloadMixin {
+class DynamicDetailController extends CommonDynController
+    with
+        ReloadMixin,
+        GetSingleTickerProviderStateMixin,
+        ReplyLocateMixin,
+        MainReplyLocateMixin,
+        DynReplyLocateMixin {
   DynamicDetailController({super.count});
 
   bool _isInit = false;
@@ -31,7 +38,7 @@ class DynamicDetailController extends CommonDynController with ReloadMixin {
   @override
   void onInit() {
     super.onInit();
-    dynItem = Get.arguments['item'];
+    dynItem = args['item'];
     final commentType = dynItem.basic?.commentType;
     final commentIdStr = dynItem.basic?.commentIdStr;
     if (commentType != null &&

@@ -8,7 +8,6 @@ import 'package:pili_plus/http/browser_ua.dart';
 import 'package:pili_plus/http/constants.dart';
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
-import 'package:pili_plus/http/login.dart';
 import 'package:pili_plus/models/common/account_type.dart';
 import 'package:pili_plus/models/common/video/video_type.dart';
 import 'package:pili_plus/models/home/rcmd/result.dart';
@@ -51,13 +50,33 @@ abstract final class VideoHttp {
   static bool enableFilter = zoneRegExp.pattern.isNotEmpty;
 
   // 首页推荐视频
+  //
+  // [desktop] 为 true 时沿用同一个公开网页接口，改用哔哩哔哩官方 Windows
+  // 客户端（Electron 版）首页实际发送的参数组合：plat=1、feed_version=V1、
+  // fresh_type 表示操作类型（0 初次 / 3 刷新 / 4 加载更多）、x_num 与 y_num
+  // 为可视网格的行列数、pc_wx_install 等标记。参数取自该客户端自身渲染层的
+  // 请求代码，不涉及私有接口与设备指纹。
   static Future<LoadingState<List<RcmdVideoItemModel>>> rcmdVideoList({
     required int ps,
     required int freshIdx,
+    bool desktop = false,
   }) async {
-    final res = await Request().get(
-      Api.recommendListWeb,
-      queryParameters: await WbiSign.makSign({
+    final Map<String, Object> params;
+    if (desktop) {
+      params = <String, Object>{
+        'plat': 1,
+        'feed_version': 'V1',
+        'ps': ps,
+        'fresh_idx': freshIdx,
+        // 0 初次进入、3 下拉刷新、4 加载更多
+        'fresh_type': freshIdx == 0 ? 0 : 4,
+        'x_num': 3,
+        'y_num': 4,
+        'pc_wx_install': 0,
+        'pc_wx_gm_install': 0,
+      };
+    } else {
+      params = <String, Object>{
         'version': 1,
         'feed_version': 'V8',
         'homepage_ver': 1,
@@ -65,7 +84,11 @@ abstract final class VideoHttp {
         'fresh_idx': freshIdx,
         'brush': freshIdx,
         'fresh_type': 4,
-      }),
+      };
+    }
+    final res = await Request().get(
+      Api.recommendListWeb,
+      queryParameters: await WbiSign.makSign(params),
     );
     if (res.data['code'] == 0) {
       List<RcmdVideoItemModel> list = <RcmdVideoItemModel>[];
@@ -149,7 +172,7 @@ abstract final class VideoHttp {
       queryParameters: params,
       options: Options(
         headers: {
-          'buvid': LoginHttp.buvid,
+          'buvid': Accounts.get(.recommend).buvid,
           'fp_local': '1111111111111111111111111111111111111111111111111111111111111111',
           'fp_remote': '1111111111111111111111111111111111111111111111111111111111111111',
           'session_id': '11111111',
@@ -226,6 +249,7 @@ abstract final class VideoHttp {
     String? language,
     bool voiceBalance = false,
     int fnval = 4048,
+    bool fallback = false,
   }) async {
     final dmImgStr = Utils.base64EncodeRandomString(16, 64);
     final dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
@@ -244,6 +268,13 @@ abstract final class VideoHttp {
       'gaia_source': 'pre-load',
       'isGaiaAvoided': true,
       'web_location': 1315873,
+      if (videoType != .ugc && !fallback) ...{
+        'biz_type': ?videoType.bizType,
+        'scene': 'normal',
+        'from_client': 'BROWSER',
+        'drm_tech_type': 0,
+        'app_id': 100,
+      },
       // 免登录查看1080p
       if (tryLook) 'try_look': 1,
       'dm_img_list': '[]',
@@ -254,13 +285,52 @@ abstract final class VideoHttp {
     });
 
     try {
-      final res = await Request().get(videoType.api, queryParameters: params);
+      final res = await Request().get(
+        fallback ? videoType.fallbackApi : videoType.api,
+        queryParameters: params,
+      );
 
       if (res.data['code'] == 0) {
         late PlayUrlModel data;
         switch (videoType) {
           case .ugc:
             data = PlayUrlModel.fromJson(res.data['data']);
+
+          // ogv
+          case .pgc || .pugv when !fallback:
+            final result = res.data['data'];
+            final videoInfo = result['video_info'];
+            if (videoInfo != null) {
+              data = PlayUrlModel.fromJson(videoInfo);
+              final progress = result['watch_progress'];
+              if (progress != null) {
+                data.lastPlayTime =
+                    progress['current_watch_progress'] ??
+                    progress['current_progress'];
+              }
+            } else if (result['arc']?['is_drm'] == true) {
+              return await videoUrl(
+                avid: avid,
+                bvid: bvid,
+                cid: cid,
+                qn: qn,
+                epid: epid,
+                seasonId: seasonId,
+                tryLook: tryLook,
+                videoType: videoType,
+                fnval: fnval,
+                language: language,
+                voiceBalance: voiceBalance,
+                fallback: true,
+              );
+            } else {
+              final reason = result['not_playable_reason'];
+              if (reason != null) {
+                return Error(_parseVideoErr(reason['code'], reason['message']));
+              } else {
+                return Error(result.toString());
+              }
+            }
 
           case .pgc:
             final result = res.data['result'];
@@ -286,6 +356,9 @@ abstract final class VideoHttp {
           tryLook: tryLook,
           videoType: .pgc,
           fnval: fnval,
+          language: language,
+          voiceBalance: voiceBalance,
+          fallback: fallback,
         );
       }
       return Error(_parseVideoErr(res.data['code'], res.data['message']));
@@ -340,9 +413,9 @@ abstract final class VideoHttp {
       queryParameters: {'bvid': bvid},
     );
     if (res.data['code'] == 0) {
-      final items = (res.data['data'] as List?)?.map(
-        (i) => HotVideoItemModel.fromJson(i),
-      );
+      final items = (res.data['data'] as List?)
+          ?.whereNotBlocked((e) => e['owner']?['mid'])
+          .map((i) => HotVideoItemModel.fromJson(i));
       final list = RecommendFilter.applyFilterToRelatedVideos
           ? items?.where((i) => !RecommendFilter.filterAll(i)).toList()
           : items?.toList();
@@ -866,7 +939,7 @@ abstract final class VideoHttp {
     String subtitleUrl, {
     SubtitleFormat format = .vtt,
   }) async {
-    final res = await Request().get("https:$subtitleUrl");
+    final res = await Request().get(subtitleUrl.http2https);
     if (res.data?['body'] case List list) {
       switch (format) {
         case .json:

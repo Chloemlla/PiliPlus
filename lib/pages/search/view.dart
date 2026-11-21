@@ -12,7 +12,6 @@ import 'package:pili_plus/pages/search/controller.dart';
 import 'package:pili_plus/pages/search/widgets/hot_keyword.dart';
 import 'package:pili_plus/pages/search/widgets/search_text.dart';
 import 'package:pili_plus/utils/em.dart' show Em;
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/storage.dart';
 import 'package:pili_plus/utils/storage_key.dart';
 import 'package:pili_plus/utils/utils.dart';
@@ -44,7 +43,7 @@ class _SearchPageState extends State<SearchPage> {
     super.didChangeDependencies();
     theme = Theme.of(context);
     padding = MediaQuery.viewPaddingOf(context);
-    isPortrait = MediaQuery.sizeOf(context).isPortrait;
+    isPortrait = MediaQuery.isPortraitOf(context);
   }
 
   @override

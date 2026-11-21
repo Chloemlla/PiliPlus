@@ -1,5 +1,8 @@
 package com.chloemlla.piliplus;
 
+import static com.example.piliplus.MediaHelper.getCustomRemoteAction;
+import static com.example.piliplus.MediaHelper.getRemoteAction;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -192,7 +195,9 @@ public final class AndroidHelper {
     @RequiresApi(api = Build.VERSION_CODES.O)
     private static void setPipActions(Context context, PictureInPictureParams.Builder builder, boolean isLive, boolean isPlaying) {
         ArrayList<RemoteAction> actionList = new ArrayList<>(3);
-        if (!isLive) {
+        if (isLive) {
+            actionList.add(getCustomRemoteAction(context, R.drawable.ic_player_refresh, 0, "ACTION_REFRESH"));
+        } else {
             actionList.add(getRemoteAction(context, R.drawable.ic_player_rewind_10s, "ACTION_REWIND", (int) PlaybackState.ACTION_REWIND));
         }
         if (isPlaying) {
@@ -200,7 +205,9 @@ public final class AndroidHelper {
         } else {
             actionList.add(getRemoteAction(context, R.drawable.ic_player_play, "ACTION_PLAY", (int) PlaybackState.ACTION_PLAY));
         }
-        if (!isLive) {
+        if (isLive) {
+            actionList.add(getCustomRemoteAction(context, R.drawable.ic_state_danmaku, 1, "ACTION_DM"));
+        } else {
             actionList.add(getRemoteAction(context, R.drawable.ic_player_fast_forward_10s, "ACTION_FAST_FORWARD", (int) PlaybackState.ACTION_FAST_FORWARD));
         }
         builder.setActions(actionList);
@@ -331,6 +338,19 @@ public final class AndroidHelper {
         } catch (Exception e) {
             return e.toString();
         }
+    }
+
+    public static String manufacturer() {
+        return Build.MANUFACTURER;
+    }
+
+    public static boolean isChromeOS() {
+        PackageManager pm = getContext().getPackageManager();
+        if (Build.VERSION.SDK_INT >= 27 && pm.hasSystemFeature(PackageManager.FEATURE_PC)) {
+            return true;
+        }
+        return pm.hasSystemFeature("org.chromium.arc") || pm.hasSystemFeature("org.chromium.arc.device_management")
+                || (Build.DEVICE != null && Build.DEVICE.matches(".+_cheets|cheets_.+"));
     }
 
     public static final class ToDart {

@@ -1,4 +1,5 @@
 import 'package:pili_plus/http/api.dart';
+import 'package:pili_plus/http/browser_ua.dart';
 import 'package:pili_plus/http/init.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/search/search_type.dart';
@@ -10,7 +11,6 @@ import 'package:pili_plus/models_new/pgc/pgc_info_model/result.dart';
 import 'package:pili_plus/models_new/search/search_rcmd/data.dart';
 import 'package:pili_plus/models_new/search/search_trending/data.dart';
 import 'package:pili_plus/utils/extension/iterable_ext.dart';
-import 'package:pili_plus/utils/request_utils.dart';
 import 'package:pili_plus/utils/wbi_sign.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -86,6 +86,7 @@ abstract final class SearchHttp {
           'origin': 'https://search.bilibili.com',
           'referer':
               'https://search.bilibili.com/${searchType.name}?keyword=${Uri.encodeFull(keyword)}',
+          'user-agent': BrowserUa.pc,
         },
       ),
     );
@@ -95,7 +96,7 @@ abstract final class SearchHttp {
         final Map<String, dynamic> dataData = resData['data'];
         final vVoucher = dataData['v_voucher'];
         if (vVoucher != null) {
-          RequestUtils.validate(vVoucher, onSuccess);
+          // RequestUtils.validate(vVoucher, onSuccess);
           return const Error('触发风控');
         }
         try {

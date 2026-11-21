@@ -11,6 +11,7 @@ import 'package:pili_plus/models_new/pgc/pgc_info_model/episode.dart';
 import 'package:pili_plus/models_new/video/video_detail/data.dart';
 import 'package:pili_plus/models_new/video/video_detail/page.dart';
 import 'package:pili_plus/pages/common/common_intro_controller.dart';
+import 'package:pili_plus/pages/live_room/controller.dart';
 import 'package:pili_plus/pages/video/introduction/local/controller.dart';
 import 'package:pili_plus/pages/video/introduction/pgc/controller.dart';
 import 'package:pili_plus/pages/video/introduction/ugc/controller.dart';
@@ -21,14 +22,17 @@ import 'package:pili_plus/services/live_update_service.dart';
 import 'package:pili_plus/services/native_media_notification_service.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
+import 'package:pili_plus/utils/device_utils.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/storage_pref.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_service_mpris/audio_service_mpris.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:jni/jni.dart' show JStringExtension;
 import 'package:path/path.dart' as path;
 
 Future<VideoPlayerServiceHandler> initAudioService() {
@@ -41,6 +45,18 @@ Future<VideoPlayerServiceHandler> initAudioService() {
     );
   }
 
+  if (Platform.isLinux) {
+    AudioServiceMpris.init(
+      dBusName: 'com.example.piliplus.audio',
+      identity: Constants.appName,
+      desktopEntry: 'com.example.piliplus',
+      canGoNext: true,
+      canGoPrevious: true,
+      canPlay: true,
+      canPause: true,
+      canControl: true,
+    );
+  }
   return AudioService.init(
     builder: VideoPlayerServiceHandler.new,
     config: const AudioServiceConfig(
@@ -64,6 +80,25 @@ typedef _StatusConfig = (
 );
 
 class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
+  VideoPlayerServiceHandler() {
+    // Android 14 dispatches volume keys from the activity straight to the
+    // session without checking canHandleVolumeKey(), so a FIXED remote
+    // session swallows them there. Only verified to fall back on Android 16.
+    if (Platform.isAndroid && DeviceUtils.sdkInt >= 36) {
+      final jStr = AndroidHelper.manufacturer();
+      if (jStr != null &&
+          jStr.toDartString(releaseOriginal: true).toLowerCase() == 'vivo') {
+        androidPlaybackInfo.add(
+          RemoteAndroidPlaybackInfo(
+            volumeControlType: .fixed,
+            maxVolume: 100,
+            volume: 50,
+          ),
+        );
+      }
+    }
+  }
+
   static final List<MediaItem> _item = [];
 
   /// Native position push throttling. SystemUI interpolates the scrubber
@@ -129,6 +164,7 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   FutureOr<void>? Function()? onMiniPlayer;
   FutureOr<void>? Function()? onClearSession;
   FutureOr<void>? Function(double speed)? onSetSpeed;
+  bool Function()? isPlaying;
   void Function()? onSkipToNext;
   void Function()? onSkipToPrevious;
 
@@ -172,9 +208,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       final tag = playOwner.tag;
       try {
         return switch (playOwner.type) {
-          UgcIntroController => Get.find<UgcIntroController>(tag: tag),
-          PgcIntroController => Get.find<PgcIntroController>(tag: tag),
-          LocalIntroController => Get.find<LocalIntroController>(tag: tag),
+          UgcIntroController _ => Get.find<UgcIntroController>(tag: tag),
+          PgcIntroController _ => Get.find<PgcIntroController>(tag: tag),
+          LocalIntroController _ => Get.find<LocalIntroController>(tag: tag),
           _ => throw UnimplementedError(playOwner.type.toString()),
         };
       } catch (_) {
@@ -306,6 +342,22 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         PlPlayerController.instance?.playbackSpeed ?? _lastPlaybackSpeed;
     final index = speeds.indexWhere((e) => e > current + 0.01);
     return index == -1 ? speeds.first : speeds[index];
+  }
+
+  @override
+  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) {
+    try {
+      switch (name) {
+        case 'ACTION_DM':
+          final tag = PlPlayerController.playOwner!.tag;
+          Get.find<LiveRoomController>(tag: tag).toggleDanmaku();
+        case 'ACTION_REFRESH':
+          final tag = PlPlayerController.playOwner!.tag;
+          Get.find<LiveRoomController>(tag: tag).queryLiveUrl();
+        default:
+      }
+    } catch (_) {}
+    return Future.syncValue(null);
   }
 
   void setMediaItem(MediaItem newMediaItem) {
@@ -484,30 +536,9 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         updatePosition: position,
         speed: speed,
         controls: [
-          if (!isLive)
-            const MediaControl(
-              androidIcon: 'drawable/ic_player_rewind_10s',
-              label: 'Rewind',
-              action: .rewind,
-            ),
-          if (playing)
-            const MediaControl(
-              androidIcon: 'drawable/ic_player_pause',
-              label: 'Pause',
-              action: .pause,
-            )
-          else
-            const MediaControl(
-              androidIcon: 'drawable/ic_player_play',
-              label: 'Play',
-              action: .play,
-            ),
-          if (!isLive)
-            const MediaControl(
-              androidIcon: 'drawable/ic_player_fast_forward_10s',
-              label: 'Fast Forward',
-              action: .fastForward,
-            ),
+          if (isLive) _refresh else _rewind,
+          if (playing) _pause else _play,
+          if (isLive) _dm else _fastForward,
         ],
         playing: playing,
         systemActions: const {.seek},
@@ -828,3 +859,41 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
   }
 }
+
+const _refresh = MediaControl(
+  androidIcon: 'drawable/ic_player_refresh',
+  label: 'Refresh',
+  action: .custom,
+  customAction: CustomMediaAction(name: 'ACTION_REFRESH'),
+);
+
+const _dm = MediaControl(
+  androidIcon: 'drawable/ic_state_danmaku',
+  label: 'Danmaku',
+  action: .custom,
+  customAction: CustomMediaAction(name: 'ACTION_DM'),
+);
+
+const _play = MediaControl(
+  androidIcon: 'drawable/ic_player_play',
+  label: 'Play',
+  action: .play,
+);
+
+const _pause = MediaControl(
+  androidIcon: 'drawable/ic_player_pause',
+  label: 'Pause',
+  action: .pause,
+);
+
+const _rewind = MediaControl(
+  androidIcon: 'drawable/ic_player_rewind_10s',
+  label: 'Rewind',
+  action: .rewind,
+);
+
+const _fastForward = MediaControl(
+  androidIcon: 'drawable/ic_player_fast_forward_10s',
+  label: 'Fast Forward',
+  action: .fastForward,
+);

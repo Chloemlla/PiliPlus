@@ -6,6 +6,8 @@ import 'package:pili_plus/common/widgets/pendant_avatar.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/common/widgets/selection_text.dart';
 import 'package:pili_plus/common/widgets/view_safe_area.dart';
+import 'package:pili_plus/http/live.dart';
+import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/image_preview_type.dart';
 import 'package:pili_plus/models/common/member/user_info_type.dart';
 import 'package:pili_plus/models/model_owner.dart';
@@ -28,7 +30,6 @@ import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/bili_colors.dart';
 import 'package:pili_plus/utils/bili_utils.dart';
 import 'package:pili_plus/utils/color_utils.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
@@ -61,6 +62,7 @@ class UserInfoCard extends StatelessWidget {
     required this.chargeCount,
     required this.guards,
     required this.guardCount,
+    required this.hasMedal,
   });
 
   final bool isOwner;
@@ -76,12 +78,13 @@ class UserInfoCard extends StatelessWidget {
   final Object? chargeCount;
   final List<Owner>? guards;
   final Object? guardCount;
+  final bool hasMedal;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isLight = colorScheme.isLight;
-    final width = context.width;
+    final width = MediaQuery.widthOf(context);
     final isPortrait = width < 600;
     return ViewSafeArea(
       top: !isPortrait,
@@ -322,8 +325,14 @@ class UserInfoCard extends StatelessWidget {
   }
 
   Widget _buildExtraInfo(ColorScheme colorScheme) {
+    final style = TextStyle(
+      fontSize: 12,
+      height: 1,
+      color: colorScheme.outline,
+    );
+    const strutStyle = StrutStyle(leading: 0, height: 1, fontSize: 12);
     return Padding(
-      padding: const .only(left: 20, top: 6, right: 20),
+      padding: const .only(left: 20, top: 8, right: 20),
       child: Wrap(
         spacing: 10,
         runSpacing: 8,
@@ -333,7 +342,8 @@ class UserInfoCard extends StatelessWidget {
             onTap: () => Utils.copyText(card.mid.toString()),
             child: Text(
               'UID: ${card.mid}',
-              style: TextStyle(fontSize: 12, color: colorScheme.outline),
+              style: style,
+              strutStyle: strutStyle,
             ),
           ),
           ...?card.spaceTag?.map(
@@ -341,10 +351,10 @@ class UserInfoCard extends StatelessWidget {
               final hasUri = item.uri?.isNotEmpty ?? false;
               final child = Text(
                 item.title ?? '',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: hasUri ? colorScheme.secondary : colorScheme.outline,
-                ),
+                style: hasUri
+                    ? TextStyle(fontSize: 12, color: colorScheme.secondary)
+                    : style,
+                strutStyle: strutStyle,
               );
               if (hasUri) {
                 return GestureDetector(
@@ -355,6 +365,35 @@ class UserInfoCard extends StatelessWidget {
               return child;
             },
           ),
+          if (hasMedal)
+            Builder(
+              builder: (context) {
+                final medalName = card.medalName;
+                final hasMedalName = medalName != null;
+                return GestureDetector(
+                  onTap: hasMedalName
+                      ? () => Utils.copyText(medalName)
+                      : () async {
+                          final res = await LiveHttp.liveMedalName(card.mid!);
+                          if (res case Success(:final response)) {
+                            if (response != null) {
+                              card.medalName = response;
+                              if (context.mounted) {
+                                (context as Element).markNeedsBuild();
+                              }
+                            }
+                          } else {
+                            res.toast();
+                          }
+                        },
+                  child: Text(
+                    '粉丝勋章${hasMedalName ? ': $medalName' : ''}',
+                    style: style,
+                    strutStyle: strutStyle,
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

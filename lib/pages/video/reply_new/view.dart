@@ -23,7 +23,6 @@ import 'package:pili_plus/pages/emote/view.dart';
 import 'package:pili_plus/pages/video/controller.dart';
 import 'package:pili_plus/pages/video/reply_search_item/view.dart';
 import 'package:pili_plus/utils/duration_utils.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
 import 'package:pili_plus/utils/latex_to_unicode.dart';
 import 'package:pili_plus/utils/path_utils.dart';
@@ -139,30 +138,22 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
   List<Widget> buildInputView() {
     return [
       Padding(
-        padding: const EdgeInsets.only(
-          top: 12,
-          right: 15,
-          left: 15,
-          bottom: 10,
-        ),
-        child: Obx(
-          () => RichTextField(
-            key: key,
-            controller: editController,
-            minLines: 4,
-            maxLines: 8,
-            autofocus: false,
-            readOnly: readOnly.value,
-            onChanged: onChanged,
-            onSubmitted: onSubmitted,
-            focusNode: focusNode,
-            decoration: InputDecoration(
-              hintText: widget.hint ?? "输入回复内容",
-              border: InputBorder.none,
-              hintStyle: const TextStyle(fontSize: 14),
-            ),
-            style: theme.textTheme.bodyLarge,
+        padding: const .only(top: 12, right: 15, left: 15, bottom: 10),
+        child: RichTextField(
+          key: key,
+          controller: editController,
+          minLines: 4,
+          maxLines: 8,
+          autofocus: false,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            hintText: widget.hint ?? "输入回复内容",
+            border: InputBorder.none,
+            hintStyle: const TextStyle(fontSize: 14),
           ),
+          style: theme.textTheme.bodyLarge,
         ),
       ),
       Divider(
@@ -184,7 +175,7 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
                     ? const Icon(Icons.image, size: 22)
                     : const Icon(Icons.image_not_supported, size: 22),
                 onPressed: widget.canUploadPic
-                    ? onPickImage
+                    ? onPickImageThrottle
                     : () => SmartDialog.showToast('当前评论区不支持发送图片'),
               ),
             ],
@@ -229,7 +220,7 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
 
   @override
   Widget buildMorePanel() {
-    double height = context.isTablet ? 300 : 170;
+    double height = MediaQuery.isTabletOf(context) ? 300 : 170;
     final keyboardHeight = controller.keyboardHeight;
     if (keyboardHeight != 0) {
       height = max(height, keyboardHeight);

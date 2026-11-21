@@ -1,10 +1,13 @@
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/http/video.dart';
 import 'package:pili_plus/models/model_hot_video_item.dart';
+import 'package:pili_plus/pages/common/common_controller.dart'
+    show RefreshImplMixin;
 import 'package:pili_plus/pages/common/common_list_controller.dart';
 
 class HotController
-    extends CommonListController<List<HotVideoItemModel>, HotVideoItemModel> {
+    extends CommonListController<List<HotVideoItemModel>, HotVideoItemModel>
+    with RefreshImplMixin {
   @override
   void onInit() {
     super.onInit();

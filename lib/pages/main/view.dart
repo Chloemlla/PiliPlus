@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:pili_plus/common/assets.dart';
-import 'package:pili_plus/common/constants.dart';
 import 'package:pili_plus/common/style.dart';
 import 'package:pili_plus/common/widgets/floating_navigation_bar.dart';
 import 'package:pili_plus/common/widgets/flutter/pop_scope.dart';
@@ -11,24 +9,20 @@ import 'package:pili_plus/common/widgets/route_aware_mixin.dart';
 import 'package:pili_plus/models/common/nav_bar_config.dart';
 import 'package:pili_plus/pages/home/view.dart';
 import 'package:pili_plus/pages/main/controller.dart';
-import 'package:pili_plus/plugin/pl_player/controller.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/app_scheme.dart';
 import 'package:pili_plus/utils/clipboard_video_link_handler.dart';
-import 'package:pili_plus/utils/device_utils.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
+import 'package:pili_plus/utils/desktop/tray_controller.dart';
+import 'package:pili_plus/utils/desktop/window_controller.dart';
 import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/theme_ext.dart';
 import 'package:pili_plus/utils/mobile_observer.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
-import 'package:pili_plus/utils/persistence.dart';
 import 'package:pili_plus/utils/storage.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:tray_manager/tray_manager.dart' as tray_manager show Image;
-import 'package:tray_manager/tray_manager.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:flutter/material.dart';
+import 'package:nativeapi/nativeapi.dart' as nativeapi;
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -38,9 +32,9 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends PopScopeState<MainApp>
-    with RouteAware, RouteAwareMixin, WidgetsBindingObserver, WindowListener {
+    with RouteAware, RouteAwareMixin, WidgetsBindingObserver {
   final _mainController = Get.put(MainController());
-  late final _settings = GStorage.settingsStore;
+  late EdgeInsets _padding;
   late ColorScheme _colorScheme;
   Brightness? _brightness;
 
@@ -58,12 +52,8 @@ class _MainAppState extends PopScopeState<MainApp>
       HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     }
     if (PlatformUtils.isDesktop) {
-      windowManager
-        ..addListener(this)
-        ..setPreventClose(true);
-      if (_mainController.showTrayIcon) {
-        _initTrayIcon();
-      }
+      WindowController.instance.init();
+      TrayController.instance.init();
     }
     if (!Platform.isMacOS) {
       PiliScheme.init();
@@ -77,6 +67,7 @@ class _MainAppState extends PopScopeState<MainApp>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _padding = MediaQuery.viewPaddingOf(context);
     _colorScheme = ColorScheme.of(context);
     final brightness = _colorScheme.brightness;
     NetworkImgLayer.reduce =
@@ -84,7 +75,9 @@ class _MainAppState extends PopScopeState<MainApp>
     if (PlatformUtils.isDesktop) {
       if (_brightness != brightness) {
         _brightness = brightness;
-        windowManager.setBrightness(brightness);
+        nativeapi.Application.instance.setBrightness(
+          brightness == .dark ? .dark : .light,
+        );
       }
     }
     _mainController.useBottomNav = _shouldUseBottomNav;
@@ -130,8 +123,8 @@ class _MainAppState extends PopScopeState<MainApp>
       HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     }
     if (PlatformUtils.isDesktop) {
-      _destroyTrayIcon();
-      windowManager.removeListener(this);
+      WindowController.instance.dispose();
+      TrayController.instance.dispose();
     }
     removeObserverMobile(this);
     ClipboardVideoLinkHandler.dispose();
@@ -145,206 +138,6 @@ class _MainAppState extends PopScopeState<MainApp>
         event.logicalKey == LogicalKeyboardKey.keyR &&
         HardwareKeyboard.instance.isMetaPressed &&
         _mainController.refreshRecommendations();
-  }
-
-  @override
-  void onWindowMaximize() {
-    Persistence.background(
-      _settings.setWindowMaximized(true),
-      label: 'window maximized state',
-    );
-  }
-
-  @override
-  void onWindowUnmaximize() {
-    Persistence.background(
-      _settings.setWindowMaximized(false),
-      label: 'window restored state',
-    );
-  }
-
-  @override
-  Future<void> onWindowMoved() async {
-    if (PlPlayerController.instance?.updatePipBounds() ?? false) {
-      return;
-    }
-    final Offset offset = await windowManager.getPosition();
-    await _settings.setWindowPosition(left: offset.dx, top: offset.dy);
-  }
-
-  @override
-  Future<void> onWindowResized() async {
-    if (PlPlayerController.instance?.updatePipBounds() ?? false) {
-      return;
-    }
-    final Rect bounds = await windowManager.getBounds();
-    await _settings.setWindowBounds(
-      width: bounds.width,
-      height: bounds.height,
-      left: bounds.left,
-      top: bounds.top,
-    );
-  }
-
-  @override
-  void onWindowClose() {
-    if (_mainController.showTrayIcon && _mainController.minimizeOnExit) {
-      _hide();
-      _onHideWindow();
-    } else {
-      _onClose();
-    }
-  }
-
-  Future<void> _onClose() async {
-    await GStorage.compact();
-    await GStorage.close();
-    _destroyTrayIcon();
-    DeviceUtils.exitApp();
-  }
-
-  @override
-  void onWindowMinimize() {
-    _onHideWindow();
-  }
-
-  @override
-  void onWindowRestore() {
-    _onShowWindow();
-  }
-
-  void _onHideWindow() {
-    if (_mainController.pauseOnMinimize) {
-      if (PlPlayerController.instance case final player?) {
-        if (_mainController.isPlaying = player.playerStatus.isPlaying) {
-          player.pause();
-        }
-      } else {
-        _mainController.isPlaying = false;
-      }
-    }
-  }
-
-  void _onShowWindow() {
-    if (_mainController.pauseOnMinimize && _mainController.isPlaying) {
-      PlPlayerController.instance?.play();
-    }
-  }
-
-  double? _opacity;
-
-  Future<void>? _setOpacity(double opacity) {
-    if (Platform.isWindows && _opacity != opacity) {
-      _opacity = opacity;
-      return windowManager.setOpacity(opacity);
-    }
-    return null;
-  }
-
-  @override
-  Future<void>? onWindowFocus() {
-    return _setOpacity(1.0);
-  }
-
-  /// https://github.com/leanflutter/window_manager/issues/571
-  Future<void> _hide() async {
-    await _setOpacity(0.0);
-    await windowManager.hide();
-  }
-
-  Future<void> _show() {
-    return windowManager.show();
-  }
-
-  TrayIcon? _trayIcon;
-  tray_manager.Image? _icon;
-  int? _trayListenerId;
-  Menu? _trayMenu;
-  int? _showMenuId;
-  MenuItem? _showMenuItem;
-  int? _exitMenuId;
-  MenuItem? _exitMenuItem;
-
-  void _destroyTrayIcon() {
-    if (!_mainController.showTrayIcon) return;
-
-    _showMenuItem
-      ?..removeListener(_showMenuId!)
-      ..dispose();
-    _showMenuId = null;
-    _showMenuItem = null;
-
-    _exitMenuItem
-      ?..removeListener(_exitMenuId!)
-      ..dispose();
-    _exitMenuId = null;
-    _exitMenuItem = null;
-
-    _trayMenu?.dispose();
-    _trayMenu = null;
-
-    _icon?.dispose();
-    _icon = null;
-
-    _trayIcon
-      ?..removeListener(_trayListenerId!)
-      ..dispose();
-    _trayIcon = null;
-  }
-
-  void _showMenuListener(MenuEvent event) {
-    if (event is MenuItemClickedEvent) {
-      _show();
-    }
-  }
-
-  void _exitMenuListener(MenuEvent event) {
-    if (event is MenuItemClickedEvent) {
-      _onClose();
-    }
-  }
-
-  Future<void> _trayListener(TrayIconEvent event) async {
-    switch (event) {
-      case TrayIconClickedEvent():
-        if (await windowManager.isVisible()) {
-          await _hide();
-        } else {
-          await _show();
-        }
-      case TrayIconRightClickedEvent():
-        _trayIcon!.openContextMenu();
-      case TrayIconDoubleClickedEvent():
-    }
-  }
-
-  void _initTrayIcon() {
-    assert(_trayIcon == null);
-
-    final trayIcon = TrayIcon.create();
-    if (trayIcon == null) return;
-
-    _trayIcon = trayIcon;
-    _trayListenerId = trayIcon.addListener(_trayListener);
-    _icon = ImageAsset.fromAsset(
-      Platform.isWindows ? Assets.logoIco : Assets.logoLarge,
-    );
-    trayIcon
-      ..icon = _icon
-      ..setTooltip(Constants.appName);
-
-    _showMenuItem = .createWithLabelAndType('显示窗口', .normal)!;
-    _showMenuId = _showMenuItem!.addListener(_showMenuListener);
-    _exitMenuItem = .createWithLabelAndType('退出 ${Constants.appName}', .normal);
-    _exitMenuId = _exitMenuItem!.addListener(_exitMenuListener);
-    _trayMenu = Menu.create()!
-      ..addItem(_showMenuItem)
-      ..addSeparator()
-      ..addItem(_exitMenuItem);
-
-    trayIcon
-      ..setContextMenu(_trayMenu)
-      ..setVisible(true);
   }
 
   @pragma('vm:prefer-inline')
@@ -457,18 +250,22 @@ class _MainAppState extends PopScopeState<MainApp>
     return bottomNav;
   }
 
-  Widget _sideBar(EdgeInsets viewPadding) {
+  Widget _sideBar() {
     if (_mainController.navigationBars.length > 1) {
-      if (context.isTablet && _mainController.optTabletNav) {
+      if (MediaQuery.isTabletOf(context) && _mainController.optTabletNav) {
         return Padding(
           padding: const .only(top: 25),
           child: MediaQuery.removePadding(
             context: context,
             removeRight: true,
-            child: DrawerTheme(
-              data: DrawerThemeData(width: 130 + viewPadding.left),
-              child: Obx(
-                () => NavigationDrawer(
+            child: Obx(
+              () => DrawerTheme(
+                data: DrawerThemeData(
+                  width:
+                      (_mainController.hideSideBarLabel ? 80 : 130) +
+                      _padding.left,
+                ),
+                child: NavigationDrawer(
                   /// apply `lib/scripts/navigation_drawer.patch`
                   flex: 5,
                   backgroundColor: Colors.transparent,
@@ -476,13 +273,22 @@ class _MainAppState extends PopScopeState<MainApp>
                   selectedIndex: _mainController.selectedIndex.value,
                   header: Expanded(flex: 4, child: userAndSearchVertical()),
                   tilePadding: const .symmetric(vertical: 5, horizontal: 12),
-                  indicatorShape: const RoundedRectangleBorder(
-                    borderRadius: .all(.circular(16)),
-                  ),
+                  indicatorShape: _mainController.hideSideBarLabel
+                      ? const RoundedRectangleBorder(
+                          borderRadius: .all(.circular(12)),
+                        )
+                      : const RoundedRectangleBorder(
+                          borderRadius: .all(.circular(16)),
+                        ),
                   children: _mainController.navigationBars
                       .map(
                         (e) => NavigationDrawerDestination(
-                          label: Text(e.label),
+                          label: _mainController.hideSideBarLabel
+                              ? Semantics(
+                                  label: e.label,
+                                  child: const SizedBox.shrink(),
+                                )
+                              : Text(e.label),
                           icon: _buildIcon(type: e),
                           selectedIcon: _buildIcon(
                             type: e,
@@ -500,7 +306,7 @@ class _MainAppState extends PopScopeState<MainApp>
       return Obx(
         () => NavigationRail(
           groupAlignment: 0.5,
-          labelType: .selected,
+          labelType: _mainController.hideSideBarLabel ? .none : .selected,
           leading: userAndSearchVertical(),
           backgroundColor: Colors.transparent,
           onDestinationSelected: _mainController.setIndex,
@@ -519,28 +325,19 @@ class _MainAppState extends PopScopeState<MainApp>
     }
     return Container(
       width: 80,
-      margin: .only(
-        top: 12 + viewPadding.top,
-        left: viewPadding.left,
-      ),
+      margin: .only(top: 12 + _padding.top, left: _padding.left),
       child: userAndSearchVertical(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewPadding = MediaQuery.viewPaddingOf(context);
-    final useBottomNav = _shouldUseBottomNav;
-    _mainController.useBottomNav = useBottomNav;
-
     Widget child;
     if (_mainController.mainTabBarView) {
       child = TabBarView(
         controller: _mainController.controller,
         physics: const NeverScrollableScrollPhysics(),
-
-        /// apply `lib/scripts/tabs.patch`
-        scrollDirection: useBottomNav ? .horizontal : .vertical,
+        scrollDirection: _mainController.useBottomNav ? .horizontal : .vertical,
         children: _mainController.navigationBars.map((i) => i.page).toList(),
       );
     } else {
@@ -554,7 +351,7 @@ class _MainAppState extends PopScopeState<MainApp>
     Widget? sideBar;
     Widget? bottomNav;
     final EdgeInsets padding;
-    if (useBottomNav) {
+    if (_mainController.useBottomNav) {
       bottomNav = _bottomNav;
       if (bottomNav != null) {
         bottomNav = MediaQuery.removePadding(
@@ -564,7 +361,7 @@ class _MainAppState extends PopScopeState<MainApp>
         );
       }
       // A stale landscape inset here becomes a full-height blank side strip.
-      padding = .only(top: viewPadding.top);
+      padding = .only(top: _padding.top);
     } else {
       sideBar = DecoratedBox(
         decoration: BoxDecoration(
@@ -574,9 +371,9 @@ class _MainAppState extends PopScopeState<MainApp>
             ),
           ),
         ),
-        child: _sideBar(viewPadding),
+        child: _sideBar(),
       );
-      padding = .only(top: viewPadding.top, right: viewPadding.right);
+      padding = .only(top: _padding.top, right: _padding.right);
     }
 
     child = Material(

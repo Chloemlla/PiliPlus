@@ -7,7 +7,6 @@ import 'package:pili_plus/common/widgets/scroll_physics.dart' show tabBarView;
 import 'package:pili_plus/common/widgets/view_insets_safe_area.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/pages/login/controller.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/widget_ext.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/page_utils.dart';
@@ -34,14 +33,22 @@ class _LoginPageState extends State<LoginPage> {
   // 二维码生成时间
   bool showPassword = false;
   GlobalKey globalKey = GlobalKey();
+  late bool isPortrait;
+  late ThemeData theme;
+  late EdgeInsets padding;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loginPageCtr.didChangeDependencies(context);
+    theme = Theme.of(context);
+    isPortrait = MediaQuery.isPortraitOf(context);
+    padding =
+        MediaQuery.viewPaddingOf(context).copyWith(top: 0) +
+        const EdgeInsets.only(bottom: 25);
   }
 
-  Widget loginByQRCode(ThemeData theme) {
+  Widget loginByQRCode() {
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -168,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget loginByCookie(ThemeData theme) {
+  Widget loginByCookie() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -212,45 +219,57 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget loginByPassword(ThemeData theme) {
+  Widget loginByPassword() {
     return Column(
       children: [
         const SizedBox(height: 20),
         const Text('使用账号密码登录'),
-        const SizedBox(height: 10),
+        const SizedBox(height: 20),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: TextField(
-            controller: _loginPageCtr.usernameTextController,
-            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r"\s"))],
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.account_box),
-              border: const UnderlineInputBorder(),
-              labelText: '账号',
-              hintText: '邮箱/手机号',
-              suffixIcon: IconButton(
-                onPressed: _loginPageCtr.usernameTextController.clear,
-                icon: const Icon(Icons.clear),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: TextField(
-            obscureText: !showPassword,
-            keyboardType: TextInputType.visiblePassword,
-            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r"\s"))],
-            controller: _loginPageCtr.passwordTextController,
-            autofillHints: const [AutofillHints.password],
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.password),
-              border: const UnderlineInputBorder(),
-              labelText: '密码',
-              suffixIcon: IconButton(
-                onPressed: _loginPageCtr.passwordTextController.clear,
-                icon: const Icon(Icons.clear),
-              ),
+          padding: const .symmetric(horizontal: 20),
+          child: AutofillGroup(
+            child: Column(
+              spacing: 10,
+              children: [
+                TextField(
+                  controller: _loginPageCtr.usernameTextController,
+                  autofillHints: const [
+                    AutofillHints.telephoneNumber,
+                    AutofillHints.email,
+                  ],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r"\s")),
+                  ],
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.account_box),
+                    border: const UnderlineInputBorder(),
+                    labelText: '账号',
+                    hintText: '邮箱/手机号',
+                    suffixIcon: IconButton(
+                      onPressed: _loginPageCtr.usernameTextController.clear,
+                      icon: const Icon(Icons.clear),
+                    ),
+                  ),
+                ),
+                TextField(
+                  obscureText: !showPassword,
+                  keyboardType: TextInputType.visiblePassword,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r"\s")),
+                  ],
+                  controller: _loginPageCtr.passwordTextController,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.password),
+                    border: const UnderlineInputBorder(),
+                    labelText: '密码',
+                    suffixIcon: IconButton(
+                      onPressed: _loginPageCtr.passwordTextController.clear,
+                      icon: const Icon(Icons.clear),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -272,15 +291,10 @@ class _LoginPageState extends State<LoginPage> {
                   builder: (context) => SimpleDialog(
                     clipBehavior: Clip.hardEdge,
                     title: const Text('忘记密码？'),
-                    contentPadding: const EdgeInsets.fromLTRB(
-                      0.0,
-                      2.0,
-                      0.0,
-                      16.0,
-                    ),
+                    contentPadding: const .only(top: 2, bottom: 16),
                     children: [
                       const Padding(
-                        padding: EdgeInsets.fromLTRB(25, 0, 25, 10),
+                        padding: .fromLTRB(25, 0, 25, 10),
                         child: Text("试试扫码、手机号登录，或选择"),
                       ),
                       ListTile(
@@ -304,9 +318,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                       ),
                       ListTile(
-                        title: const Text(
-                          '找回密码（电脑版）',
-                        ),
+                        title: const Text('找回密码（电脑版）'),
                         leading: const Icon(Icons.desktop_windows_outlined),
                         subtitle: const Text(
                           'https://passport.bilibili.com/pc/passport/findPassword',
@@ -356,7 +368,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget loginBySmS(ThemeData theme) {
+  Widget loginBySmS() {
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -506,15 +518,8 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  late EdgeInsets padding;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    padding =
-        MediaQuery.viewPaddingOf(context).copyWith(top: 0) +
-        const EdgeInsets.only(bottom: 25);
-    final isLandscape = !MediaQuery.sizeOf(context).isPortrait;
     return SimpleScaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -525,7 +530,7 @@ class _LoginPageState extends State<LoginPage> {
         title: Row(
           children: [
             const Text('登录'),
-            if (isLandscape)
+            if (!isPortrait)
               Expanded(
                 child: Align(
                   alignment: Alignment.centerRight,
@@ -570,7 +575,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
       body: Column(
         children: [
-          if (!isLandscape)
+          if (isPortrait)
             TabBar(
               tabs: const [
                 Tab(icon: Icon(Icons.password), text: '密码'),
@@ -592,10 +597,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: tabBarView(
                   controller: _loginPageCtr.tabController,
                   children: [
-                    tabViewOuter(loginByPassword(theme)),
-                    tabViewOuter(loginBySmS(theme)),
-                    tabViewOuter(loginByQRCode(theme)),
-                    tabViewOuter(loginByCookie(theme)),
+                    tabViewOuter(loginByPassword()),
+                    tabViewOuter(loginBySmS()),
+                    tabViewOuter(loginByQRCode()),
+                    tabViewOuter(loginByCookie()),
                   ],
                 ),
               ),

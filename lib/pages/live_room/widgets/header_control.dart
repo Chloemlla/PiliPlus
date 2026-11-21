@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:pili_plus/common/style.dart';
 // DraggableScrollableSheet is from package:flutter/widgets.dart
 import 'package:pili_plus/common/widgets/marquee.dart';
-import 'package:pili_plus/models/common/video/live_quality.dart';
 import 'package:pili_plus/pages/live_room/controller.dart';
 import 'package:pili_plus/pages/setting/models/play_settings.dart'
     show showPlayerVolumeDialog;
@@ -14,8 +13,6 @@ import 'package:pili_plus/plugin/pl_player/widgets/common_btn.dart';
 import 'package:pili_plus/services/shutdown_timer_service.dart'
     show shutdownTimerService;
 import 'package:pili_plus/utils/android/android_helper.dart';
-import 'package:pili_plus/utils/extension/context_ext.dart';
-import 'package:pili_plus/utils/extension/size_ext.dart';
 import 'package:pili_plus/utils/extension/string_ext.dart';
 import 'package:pili_plus/utils/ios/pip_helper.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -321,11 +318,11 @@ Obx(
       useSafeArea: true,
       isScrollControlled: true,
       constraints: BoxConstraints(
-        maxWidth: math.min(640, context.mediaQueryShortestSide),
+        maxWidth: math.min(640, MediaQuery.shortestSideOf(context)),
       ),
       builder: (context) {
         final maxChildSize =
-            PlatformUtils.isMobile && !context.mediaQuerySize.isPortrait
+            PlatformUtils.isMobile && !MediaQuery.isPortraitOf(context)
             ? 1.0
             : 0.7;
         return DraggableScrollableSheet(

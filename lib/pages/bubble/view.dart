@@ -6,6 +6,7 @@ import 'package:pili_plus/common/widgets/loading_widget/loading_widget.dart';
 import 'package:pili_plus/common/widgets/scroll_physics.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models_new/bubble/dyn_list.dart';
+import 'package:pili_plus/pages/article/view.dart';
 import 'package:pili_plus/pages/bubble/controller.dart';
 import 'package:pili_plus/utils/extension/scroll_controller_ext.dart';
 import 'package:pili_plus/utils/grid.dart';
@@ -202,13 +203,8 @@ class _BubblePageState extends State<BubblePage>
                   safeArea: false,
                   visualDensity: .standard,
                   // PageUtils.pushDynFromId(id: item.dynId);
-                  onTap: () => Get.toNamed(
-                    '/articlePage',
-                    parameters: {
-                      'id': item.dynId!,
-                      'type': 'opus',
-                    },
-                  ),
+                  onTap: () =>
+                      ArticlePage.toArticlePage(id: item.dynId!, type: .opus),
                   title: Text(
                     item.title!,
                     maxLines: 1,

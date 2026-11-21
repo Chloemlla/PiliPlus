@@ -1,44 +1,34 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' show max;
 
 import 'package:pili_plus/common/widgets/custom_icon.dart';
 import 'package:pili_plus/common/widgets/dialog/simple_dialog_option.dart';
-import 'package:pili_plus/common/widgets/emote_tooltip.dart';
-import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:pili_plus/common/widgets/flutter/refresh_indicator.dart'
+    show RefreshIndicator, displacement, refreshDragExtent;
 import 'package:pili_plus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show deviceTouchSlop, touchSlopH;
 import 'package:pili_plus/common/widgets/image_grid/image_grid_view.dart'
     show ImageGridView, ImageModel;
-import 'package:pili_plus/common/widgets/pendant_avatar.dart';
-import 'package:pili_plus/grpc/reply.dart';
 import 'package:pili_plus/http/fav.dart';
 import 'package:pili_plus/http/loading_state.dart';
 import 'package:pili_plus/models/common/audio_normalization.dart';
-import 'package:pili_plus/models/common/dynamic/dynamics_type.dart';
 import 'package:pili_plus/models/common/member/tab_type.dart';
 import 'package:pili_plus/models/common/reply/reply_sort_type.dart';
 import 'package:pili_plus/models/common/sponsor_block/segment_type.dart';
 import 'package:pili_plus/models/common/sponsor_block/skip_type.dart';
-import 'package:pili_plus/models/common/super_resolution_type.dart';
-import 'package:pili_plus/models/dynamics/result.dart'
-    show DynamicsDataModel, ItemModulesModel;
 import 'package:pili_plus/pages/common/slide/common_slide_page.dart';
 import 'package:pili_plus/pages/home/controller.dart';
-import 'package:pili_plus/pages/main/controller.dart';
 import 'package:pili_plus/pages/setting/models/model.dart';
-import 'package:pili_plus/pages/setting/widgets/select_dialog.dart';
 import 'package:pili_plus/pages/setting/widgets/slider_dialog.dart';
-import 'package:pili_plus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:pili_plus/services/download/download_service.dart';
 import 'package:pili_plus/utils/accounts.dart';
 import 'package:pili_plus/utils/android/bindings.g.dart';
 import 'package:pili_plus/utils/clash_compat.dart';
 import 'package:pili_plus/http/init.dart' show Request;
+import 'package:pili_plus/utils/desktop/window_controller.dart';
 import 'package:pili_plus/utils/extension/num_ext.dart';
 import 'package:pili_plus/utils/feed_back.dart';
 import 'package:pili_plus/utils/filtering_text.dart';
-import 'package:pili_plus/utils/global_data.dart';
 import 'package:pili_plus/utils/image_utils.dart';
 import 'package:pili_plus/utils/path_utils.dart';
 import 'package:pili_plus/utils/platform_utils.dart';
@@ -55,7 +45,6 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart' hide RefreshIndicator;
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
@@ -66,11 +55,7 @@ List<SettingsModel> get extraSettings => [
       leading: const Icon(Icons.exit_to_app),
       setKey: SettingBoxKey.minimizeOnExit,
       defaultVal: true,
-      onChanged: (value) {
-        try {
-          Get.find<MainController>().minimizeOnExit = value;
-        } catch (_) {}
-      },
+      onChanged: (value) => WindowController.instance.minimizeOnExit = value,
     ),
     NormalModel(
       title: '缓存路径',
@@ -234,28 +219,6 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.badCertificateCallback,
   ),
   const SwitchModel(
-    title: '显示继续播放分P提示',
-    leading: Icon(Icons.local_parking),
-    setKey: SettingBoxKey.continuePlayingPart,
-    defaultVal: true,
-  ),
-  getBanWordModel(
-    title: '评论关键词过滤',
-    key: SettingBoxKey.banWordForReply,
-    onChanged: (value) {
-      ReplyGrpc.replyRegExp = value;
-      ReplyGrpc.enableFilter = value.pattern.isNotEmpty;
-    },
-  ),
-  getBanWordModel(
-    title: '动态关键词过滤',
-    key: SettingBoxKey.banWordForDyn,
-    onChanged: (value) {
-      DynamicsDataModel.banWordForDyn = value;
-      DynamicsDataModel.enableFilter = value.pattern.isNotEmpty;
-    },
-  ),
-  const SwitchModel(
     title: '使用外部浏览器打开链接',
     leading: Icon(Icons.open_in_browser),
     setKey: SettingBoxKey.openInBrowser,
@@ -378,63 +341,10 @@ List<SettingsModel> get extraSettings => [
     onTap: _showRefreshDialog,
   ),
   const SwitchModel(
-    title: '显示会员彩色弹幕',
-    leading: Icon(MdiIcons.gradientHorizontal),
-    setKey: SettingBoxKey.showVipDanmaku,
-    defaultVal: true,
-  ),
-  const SwitchModel(
-    title: '合并弹幕',
-    subtitle: '合并一段时间内获取到的相同弹幕',
-    leading: Icon(Icons.merge),
-    setKey: SettingBoxKey.mergeDanmaku,
-    defaultVal: false,
-  ),
-  const SwitchModel(
     title: '显示热门推荐',
     subtitle: '热门页面显示每周必看等推荐内容入口',
     leading: Icon(Icons.local_fire_department_outlined),
     setKey: SettingBoxKey.showHotRcmd,
-    defaultVal: false,
-    needReboot: true,
-  ),
-  if (kDebugMode || Platform.isAndroid)
-    NormalModel(
-      title: '音量均衡',
-      leading: const Icon(Icons.multitrack_audio),
-      getSubtitle: () {
-        final audioNormalization = AudioNormalization.getTitleFromConfig(
-          Pref.audioNormalization,
-        );
-        String fallback = Pref.fallbackNormalization;
-        if (fallback == '0') {
-          fallback = '';
-        } else {
-          fallback =
-              '，无参数时:「${AudioNormalization.getTitleFromConfig(fallback)}」';
-        }
-        return '当前:「$audioNormalization」$fallback';
-      },
-      onTap: audioNormalization,
-    ),
-  NormalModel(
-    title: '超分辨率',
-    leading: const Icon(Icons.stay_current_landscape_outlined),
-    getSubtitle: () =>
-        '当前:「${Pref.superResolutionType.label}」\n默认设置对番剧生效, 其他视频默认关闭\n超分辨率需要启用硬件解码, 若启用硬件解码后仍然不生效, 尝试切换硬件解码器为 auto-copy',
-    onTap: _showSuperResolutionDialog,
-  ),
-  const SwitchModel(
-    title: '提前初始化播放器',
-    subtitle: '相对减少手动播放加载时间',
-    leading: Icon(Icons.play_circle_outlined),
-    setKey: SettingBoxKey.preInitPlayer,
-    defaultVal: false,
-  ),
-  const SwitchModel(
-    title: '首页切换页面动画',
-    leading: Icon(Icons.home_outlined),
-    setKey: SettingBoxKey.mainTabBarView,
     defaultVal: false,
     needReboot: true,
   ),
@@ -451,27 +361,6 @@ List<SettingsModel> get extraSettings => [
     defaultVal: true,
   ),
   SwitchModel(
-    title: '展示头像/评论/动态装饰',
-    leading: const Icon(MdiIcons.stickerCircleOutline),
-    setKey: SettingBoxKey.showDecorate,
-    defaultVal: true,
-    onChanged: (value) => PendantAvatar.showDecorate = value,
-  ),
-  SwitchModel(
-    title: '点击表情显示 Tooltip',
-    leading: const Icon(Icons.emoji_emotions_outlined),
-    setKey: SettingBoxKey.enableEmoteTooltip,
-    defaultVal: false,
-    onChanged: (value) => enableEmoteTooltip = value,
-  ),
-  SwitchModel(
-    title: '显示粉丝勋章',
-    leading: const Icon(MdiIcons.medalOutline),
-    setKey: SettingBoxKey.showMedal,
-    defaultVal: true,
-    onChanged: (value) => GlobalData().showMedal = value,
-  ),
-  SwitchModel(
     title: '预览 Live Photo',
     subtitle: '开启则以视频形式预览 Live Photo，否则预览静态图片',
     leading: const Icon(Icons.image_outlined),
@@ -479,88 +368,12 @@ List<SettingsModel> get extraSettings => [
     defaultVal: true,
     onChanged: (value) => ImageModel.enableLivePhoto = value,
   ),
-  const SwitchModel(
-    title: '滑动跳转预览视频缩略图',
-    leading: Icon(Icons.preview_outlined),
-    setKey: SettingBoxKey.showSeekPreview,
-    defaultVal: true,
-  ),
-  const SwitchModel(
-    title: '显示高能进度条',
-    subtitle: '高能进度条反应了在时域上，单位时间内弹幕发送量的变化趋势',
-    leading: Icon(Icons.show_chart),
-    setKey: SettingBoxKey.showDmChart,
-    defaultVal: false,
-  ),
-  const SwitchModel(
-    title: '记录评论',
-    leading: Icon(Icons.message_outlined),
-    setKey: SettingBoxKey.saveReply,
-    defaultVal: true,
-    needReboot: true,
-  ),
-  const SwitchModel(
-    title: '发评反诈',
-    subtitle: '发送评论后检查评论是否可见',
-    leading: Icon(CustomIcons.shield_reply),
-    setKey: SettingBoxKey.enableCommAntifraud,
-    defaultVal: false,
-  ),
-  if (Platform.isAndroid)
-    const SwitchModel(
-      title: '使用「哔哩发评反诈」检查评论',
-      leading: Icon(
-        FontAwesomeIcons.b,
-        size: 22,
-      ),
-      setKey: SettingBoxKey.biliSendCommAntifraud,
-      defaultVal: false,
-    ),
-  const SwitchModel(
-    title: '发布/转发动态反诈',
-    subtitle: '发布/转发动态后检查动态是否可见',
-    leading: Icon(CustomIcons.shield_published),
-    setKey: SettingBoxKey.enableCreateDynAntifraud,
-    defaultVal: false,
-  ),
-  SwitchModel(
-    title: '屏蔽带货动态',
-    leading: const Icon(CustomIcons.shopping_bag_not_interested),
-    setKey: SettingBoxKey.antiGoodsDyn,
-    defaultVal: false,
-    onChanged: (value) => DynamicsDataModel.antiGoodsDyn = value,
-  ),
-  SwitchModel(
-    title: '屏蔽带货评论',
-    leading: const Icon(CustomIcons.shopping_bag_not_interested),
-    setKey: SettingBoxKey.antiGoodsReply,
-    defaultVal: false,
-    onChanged: (value) => ReplyGrpc.antiGoodsReply = value,
-  ),
   SwitchModel(
     title: '侧滑关闭二级页面',
     leading: const Icon(CustomIcons.touch_app_rotate_270),
     setKey: SettingBoxKey.slideDismissReplyPage,
     defaultVal: Platform.isIOS,
     onChanged: (value) => CommonSlideMixin.slideDismissReplyPage = value,
-  ),
-  const SwitchModel(
-    title: '启用双指缩小视频',
-    leading: Icon(Icons.pinch),
-    setKey: SettingBoxKey.enableShrinkVideoSize,
-    defaultVal: true,
-  ),
-  const SwitchModel(
-    title: '动态/专栏详情页展示底部操作栏',
-    leading: Icon(Icons.more_horiz),
-    setKey: SettingBoxKey.showDynActionBar,
-    defaultVal: true,
-  ),
-  const SwitchModel(
-    title: '启用拖拽字幕调整底部边距',
-    leading: Icon(MdiIcons.dragVariant),
-    setKey: SettingBoxKey.enableDragSubtitle,
-    defaultVal: false,
   ),
   const SwitchModel(
     title: '展示追番时间表',
@@ -633,14 +446,6 @@ List<SettingsModel> get extraSettings => [
     onTap: _showFavDialog,
     defaultVal: false,
   ),
-  SwitchModel(
-    title: '评论区搜索关键词',
-    subtitle: '展示评论区搜索关键词',
-    leading: const Icon(Icons.search_outlined),
-    setKey: SettingBoxKey.enableWordRe,
-    defaultVal: false,
-    onChanged: (value) => ReplyItemGrpc.enableWordRe = value,
-  ),
   const SwitchModel(
     title: '启用AI总结',
     subtitle: '视频详情页开启AI总结',
@@ -653,13 +458,6 @@ List<SettingsModel> get extraSettings => [
     subtitle: '禁止打开入口，降低网络社交依赖',
     leading: Icon(Icons.beach_access_outlined),
     setKey: SettingBoxKey.disableLikeMsg,
-    defaultVal: false,
-  ),
-  const SwitchModel(
-    title: '默认展示评论区',
-    subtitle: '在视频详情页默认切换至评论区页（仅Tab型布局）',
-    leading: Icon(Icons.mode_comment_outlined),
-    setKey: SettingBoxKey.defaultShowComment,
     defaultVal: false,
   ),
   const SwitchModel(
@@ -1035,129 +833,6 @@ void _showDownPathDialog(BuildContext context, VoidCallback setState) {
   );
 }
 
-void _showDynDialog(BuildContext context) {
-  String dynamicPeriod = Pref.dynamicPeriod.toString();
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('检查周期'),
-      content: TextFormField(
-        autofocus: true,
-        initialValue: dynamicPeriod,
-        keyboardType: TextInputType.number,
-        onChanged: (value) => dynamicPeriod = value,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(suffixText: 'min'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: Get.back,
-          child: Text(
-            '取消',
-            style: TextStyle(color: ColorScheme.of(context).outline),
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            try {
-              final val = int.parse(dynamicPeriod);
-              Get.back();
-              GStorage.setting.put(SettingBoxKey.dynamicPeriod, val);
-              Get.find<MainController>().dynamicPeriod = val * 60 * 1000;
-            } catch (e) {
-              SmartDialog.showToast(e.toString());
-            }
-          },
-          child: const Text('确定'),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showReplyLengthDialog(BuildContext context, VoidCallback setState) {
-  String replyLengthLimit = ReplyItemGrpc.replyLengthLimit.toString();
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('评论折叠行数'),
-      content: TextFormField(
-        autofocus: true,
-        initialValue: replyLengthLimit,
-        keyboardType: TextInputType.number,
-        onChanged: (value) => replyLengthLimit = value,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(suffixText: '行'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: Get.back,
-          child: Text(
-            '取消',
-            style: TextStyle(color: ColorScheme.of(context).outline),
-          ),
-        ),
-        TextButton(
-          onPressed: () async {
-            try {
-              final val = int.parse(replyLengthLimit);
-              Get.back();
-              ReplyItemGrpc.replyLengthLimit = val == 0 ? null : val;
-              await GStorage.setting.put(SettingBoxKey.replyLengthLimit, val);
-              setState();
-            } catch (e) {
-              SmartDialog.showToast(e.toString());
-            }
-          },
-          child: const Text('确定'),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showDmHeightDialog(BuildContext context, VoidCallback setState) {
-  String danmakuLineHeight = Pref.danmakuLineHeight.toString();
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('弹幕行高'),
-      content: TextFormField(
-        autofocus: true,
-        initialValue: danmakuLineHeight,
-        keyboardType: const .numberWithOptions(decimal: true),
-        onChanged: (value) => danmakuLineHeight = value,
-        inputFormatters: FilteringText.decimal,
-      ),
-      actions: [
-        TextButton(
-          onPressed: Get.back,
-          child: Text(
-            '取消',
-            style: TextStyle(color: ColorScheme.of(context).outline),
-          ),
-        ),
-        TextButton(
-          onPressed: () async {
-            try {
-              final val = max(
-                1.0,
-                double.parse(danmakuLineHeight).toPrecision(1),
-              );
-              Get.back();
-              await GStorage.setting.put(SettingBoxKey.danmakuLineHeight, val);
-              setState();
-            } catch (e) {
-              SmartDialog.showToast(e.toString());
-            }
-          },
-          child: const Text('确定'),
-        ),
-      ],
-    ),
-  );
-}
-
 void _showTouchSlopDialog(BuildContext context, VoidCallback setState) {
   String initialValue = Pref.touchSlopH.toString();
   showDialog(
@@ -1254,27 +929,6 @@ void _visitor(Element context) {
   }
 }
 
-Future<void> _showSuperResolutionDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<SuperResolutionType>(
-    context: context,
-    builder: (context) => SelectDialog<SuperResolutionType>(
-      title: '超分辨率',
-      value: Pref.superResolutionType,
-      values: SuperResolutionType.values.map((e) => (e, e.label)).toList(),
-    ),
-  );
-  if (res != null) {
-    await GStorage.setting.put(
-      SettingBoxKey.superResolutionType,
-      res.index,
-    );
-    setState();
-  }
-}
-
 Future<void> _showFavDialog(BuildContext context) async {
   if (Accounts.main.isLogin) {
     final res = await FavHttp.allFavFolders(Accounts.main.mid);
@@ -1363,24 +1017,6 @@ Future<void> _showReplyDelayDialog(
     await GStorage.setting.put(SettingBoxKey.retryDelay, res.toInt());
     setState();
     SmartDialog.showToast('重启生效');
-  }
-}
-
-Future<void> _showMemberTabDialog(
-  BuildContext context,
-  VoidCallback setState,
-) async {
-  final res = await showDialog<MemberTabType>(
-    context: context,
-    builder: (context) => SelectDialog<MemberTabType>(
-      title: '用户页默认展示TAB',
-      value: Pref.memberTab,
-      values: MemberTabType.values.map((e) => (e, e.title)).toList(),
-    ),
-  );
-  if (res != null) {
-    await GStorage.setting.put(SettingBoxKey.memberTab, res.index);
-    setState();
   }
 }
 
