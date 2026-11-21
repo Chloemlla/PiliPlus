@@ -26,6 +26,7 @@ void main() {
     AccountSecretStore.init(tempDir.path);
     GStorage.regAdapter();
     GStorage.setting = await Hive.openBox('setting');
+    GStorage.localCache = await Hive.openBox('localCache');
     Accounts.account = await Hive.openBox<LoginAccount>('account');
   });
 

@@ -25,6 +25,7 @@ void main() {
       ..registerAdapter(LoginAccountAdapter())
       ..registerAdapter(AccountTypeAdapter());
     GStorage.setting = await Hive.openBox('setting');
+    GStorage.localCache = await Hive.openBox('localCache');
   });
 
   setUp(() async {
